@@ -40,6 +40,14 @@ function Home({data,loading,error}){
   const activePromo=(data.promotions||[]).find(item=>item.active&&item.enabled&&(!item.starts_at||new Date(item.starts_at)<=new Date())&&(!item.ends_at||new Date(item.ends_at)>=new Date()));
   useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';localStorage.setItem('mv-theme',dark?'dark':'light');},[dark]);
   useEffect(()=>{
+    const targets=document.querySelectorAll('.intro-section .value-item,.work-card,.service-card,.process-grid article,.care-strip,.team-card,.enquiry-form');
+    if(!('IntersectionObserver' in window)||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:.12,rootMargin:'0px 0px -35px 0px'});
+    targets.forEach((target,index)=>{target.classList.add('reveal-on-scroll');target.style.setProperty('--reveal-delay',`${(index%4)*65}ms`);observer.observe(target);});
+    return()=>observer.disconnect();
+  },[]);
+  useEffect(()=>{const update=()=>{const max=document.documentElement.scrollHeight-window.innerHeight;document.documentElement.style.setProperty('--scroll-progress',max>0?`${window.scrollY/max}`:'0');};update();window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);return()=>{window.removeEventListener('scroll',update);window.removeEventListener('resize',update);};},[]);
+  useEffect(()=>{
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,'');
     const title=content.seo_title||'Web Design & Development for Small Businesses | MV Studio';
     const description=content.seo_description||content.hero_description;
@@ -65,6 +73,7 @@ function Home({data,loading,error}){
   const dismissPromo=()=>{if(promo)localStorage.setItem(`mv-promo-dismissed-${promo.id}`,String(Date.now()));setPromo(null);};
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),2200);};
   return <>
+    <div className="scroll-progress" aria-hidden="true"/>
     <header className="site-nav"><div className="nav-inner"><a className="brand" href="#home" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a>
       <nav className={menuOpen?'nav-links open':'nav-links'} aria-label="Main navigation">{[['Studio','#studio'],['Work','#work'],['Services','#services'],['Contact','#contact']].map(([label,href])=><a key={href} onClick={()=>setMenuOpen(false)} href={href}>{label}</a>)}</nav>
       <div className="nav-end"><button className="icon-button theme-button" onClick={()=>setDark(!dark)} aria-label="Toggle colour theme">{dark?<Sun size={17}/>:<Moon size={17}/>}</button><a className="button button-dark nav-cta" href="#enquiry">Start a project <ArrowRight size={15}/></a><button className="icon-button mobile-menu" onClick={()=>setMenuOpen(!menuOpen)} aria-label="Toggle navigation">{menuOpen?<X/>:<Menu/>}</button></div>
