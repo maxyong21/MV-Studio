@@ -49,6 +49,6 @@ export const entityConfig = {
     ['title','Headline','text'],['message','Offer details','textarea'],['button_label','Button label','text'],['button_url','Button link','text'],['image_url','Image path or URL (optional)','text'],['enabled','Popup enabled','checkbox'],['active','Published','checkbox'],['starts_at','Starts at (optional)','datetime-local'],['ends_at','Ends at (optional)','datetime-local'],
   ]},
   feature_options: { title: 'Enquiry features', singular: 'feature', fields: [
-    ['name','Feature name','text'],['description','Description','textarea'],['category','Category (core / third_party / maintenance)','text'],['billing_type','Billing type (one_time / monthly / quote)','text'],['price','Price (RM)','number'],['annual_free_months','Free months on annual plan','number'],['active','Available to customers','checkbox'],['sort_order','Display order','number'],
+    ['name','Feature name','text'],['description','Description','textarea'],['category','Category','select:core|third_party|maintenance'],['billing_type','Billing type','select:one_time|monthly|quote'],['price','Price (RM)','number'],['annual_free_months','Free months on annual plan','number'],['active','Available to customers','checkbox'],['sort_order','Display order','number'],
   ]},
 };
