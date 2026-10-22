@@ -293,6 +293,11 @@ grant insert, update, delete on public.feature_options to authenticated;
 grant select, update, delete on public.enquiries to authenticated;
 grant select on public.admin_users to authenticated;
 
+-- The submit-enquiry Edge Function uses the server-only service_role client
+-- to validate selected features and save/update enquiry records.
+grant select on public.feature_options to service_role;
+grant select, insert, update on public.enquiries to service_role;
+
 -- Public website media: project previews, team avatars, promotion images, and project demo clips.
 -- 50 MiB is compatible with Supabase Free's documented global maximum; the project global limit still applies.
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
