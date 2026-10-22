@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MV Studio - Creative Digital Agency</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Background Video/Animation -->
+    <div class="background-animation">
+        <canvas id="particleCanvas"></canvas>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Uni-V <span class="logo-accent">Studio</span></h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#home" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#about" class="nav-link">About</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#portfolio" class="nav-link">Portfolio</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#services" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#team" class="nav-link">Team</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#contact" class="nav-link">Contact</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+   <!-- Hero Section -->
+<section id="home" class="hero">
+    <div class="hero-background">
+        <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-container">
+        <div class="hero-content">
+            <!-- The hero-badge div has been removed here -->
+            <h1 class="hero-title">
+                Welcome to <span class="highlight">Uni-V Studio</span>
+            </h1>
+            <h2 class="hero-subtitle">Full Stack Development</h2>
+            <p class="hero-description">
+                We craft modern, responsive websites and powerful web applications using cutting-edge technologies. Let's bring your digital vision to life with immersive experiences.
+            </p>
+            <div class="hero-buttons">
+                <a href="#portfolio" class="btn btn-primary">
+                    <span>View Our Work</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                <a href="#contact" class="btn btn-secondary">
+                    <span>Get In Touch</span>
+                    <i class="fas fa-envelope"></i>
+                </a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-elements">
+                <div class="tech-orb" data-tech="react">
+                    <div class="orb-inner">
+                        <i class="fab fa-react"></i>
+                    </div>
+                    <span class="orb-label">React</span>
+                </div>
+                <div class="tech-orb" data-tech="node">
+                    <div class="orb-inner">
+                        <i class="fab fa-node-js"></i>
+                    </div>
+                    <span class="orb-label">Node.js</span>
+                </div>
+                <div class="tech-orb" data-tech="database">
+                    <div class="orb-inner">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <span class="orb-label">Database</span>
+                </div>
+                <div class="tech-orb" data-tech="javascript">
+                    <div class="orb-inner">
+                        <i class="fab fa-js-square"></i>
+                    </div>
+                    <span class="orb-label">JavaScript</span>
+                </div>
+                <div class="tech-orb" data-tech="python">
+                    <div class="orb-inner">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <span class="orb-label">Python</span>
+                </div>
+            </div>
+            <div class="hologram-effect">
+                <div class="hologram-lines"></div>
+            </div>
+        </div>
+    </div>
+    <div class="scroll-indicator">
+        <div class="scroll-line"></div>
+        <span>Scroll to explore</span>
+    </div>
+</section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">About Us</div>
+                <h2 class="section-title">Innovative solutions for modern businesses</h2>
+                <p class="section-subtitle">At Uni-V Studio, we specialize in creating cutting-edge digital solutions that drive business growth.</p>
+            </div>
+            <div class="about-content">
+                <div class="about-text">
+                    <div class="text-block">
+                        <h3>Our Mission</h3>
+                        <p>Our team of experienced developers and designers work together to deliver exceptional web applications and systems that exceed expectations and drive real business results.</p>
+                    </div>
+                    <div class="text-block">
+                        <h3>Our Approach</h3>
+                        <p>We combine cutting-edge technology with creative design thinking to build solutions that are not only functional but also engaging and user-friendly.</p>
+                    </div>
+                </div>
+                <div class="tech-showcase">
+                    <div class="tech-category">
+                        <div class="category-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <h3>Frontend</h3>
+                        <div class="tech-items">
+                            <span class="tech-item">HTML</span>
+                            <span class="tech-item">CSS</span>
+                            <span class="tech-item">JavaScript</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="category-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <h3>Backend</h3>
+                        <div class="tech-items">
+                            <span class="tech-item">Node.js</span>
+                            <span class="tech-item">Python</span>
+                            <span class="tech-item">PHP</span>
+                            <span class="tech-item">C#</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="category-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3>Database</h3>
+                        <div class="tech-items">
+                            <span class="tech-item">MySQL</span>
+                            <span class="tech-item">PostgreSQL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+<section id="portfolio" class="portfolio">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-badge">Our Work</div>
+            <h2 class="section-title">Featured Projects</h2>
+            <p class="section-subtitle">Explore our latest projects and see how we bring ideas to life</p>
+        </div>
+        <div class="portfolio-grid">
+            <div class="project-card featured">
+                <div class="card-background">
+                    <div class="card-overlay"></div>
+                </div>
+                <div class="card-content">
+                    <div class="project-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3 class="project-title">HyperText Edu</h3>
+                    <p class="project-subtitle">Web Quiz for HyperText Markup Language</p>
+                    <p class="project-description">A web-based platform helping students master HTML with gamified quizzes, coding challenges, and role-based content management.</p>
+                    <div class="project-tech">
+                        <span class="tech-tag">HTML</span>
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">CSS</span>
+                        <span class="tech-tag">Gamification</span>
+                    </div>
+                    <div class="project-link">
+                        <a href="hypertextedu.html" class="link-btn">
+                            <span>View Project</span>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="card-background">
+                    <div class="card-overlay"></div>
+                </div>
+                <div class="card-content">
+                    <div class="project-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <h3 class="project-title">Psychology Consultation Management System</h3>
+                    <p class="project-subtitle">Java-based desktop application for appointment scheduling</p>
+                    <p class="project-description">Java desktop app for managing consultation appointments between psychology students and lecturers, with booking and feedback features.</p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Java</span>
+                        <span class="tech-tag">Desktop App</span>
+                    </div>
+                    <div class="project-link">
+                        <a href="PsychologyConsultationManagementSystem.html" class="link-btn">
+                            <span>View Project</span>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="card-background">
+                    <div class="card-overlay"></div>
+                </div>
+                <div class="card-content">
+                    <div class="project-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <h3 class="project-title">Super Maths Bros</h3>
+                    <p class="project-subtitle">Game-based learning for differentiation in algebra & calculus</p>
+                    <p class="project-description">Gamified learning system for mastering differentiation, with interactive NPC lessons, quizzes, rewards, and real-time tracking for lecturers.</p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">MySQL</span>
+                        <span class="tech-tag">Gamification</span>
+                    </div>
+                    <div class="project-link">
+                        <a href="SuperMathsBros.html" class="link-btn">
+                            <span>View Project</span>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">Services</div>
+                <h2 class="section-title">What We Offer</h2>
+                <p class="section-subtitle">Complete website solutions — from design to deployment</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-glow"></div>
+                    <div class="service-icon">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <h3 class="service-title">Frontend Development</h3>
+                    <p class="service-description">We craft responsive, visually appealing, and user-friendly websites using the latest web technologies.</p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> HTML & CSS</li>
+                        <li><i class="fas fa-check"></i> JavaScript</li>
+                        <li><i class="fas fa-check"></i> Responsive Design</li>
+                        <li><i class="fas fa-check"></i> Modern UI/UX</li>
+                    </ul>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-glow"></div>
+                    <div class="service-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3 class="service-title">Backend Development</h3>
+                    <p class="service-description">We build secure, scalable, and efficient server-side applications to power your website or system.</p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> Python & Node.js</li>
+                        <li><i class="fas fa-check"></i> PHP & C#</li>
+                    </ul>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-glow"></div>
+                    <div class="service-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3 class="service-title">Database Solutions</h3>
+                    <p class="service-description">We design and optimize databases to store, manage, and secure your business data effectively.</p>
+                    <ul class="service-features">
+                        <li><i class="fas fa-check"></i> MySQL & PostgreSQL</li>
+                        <li><i class="fas fa-check"></i> Database Design</li>
+                        <li><i class="fas fa-check"></i> Performance Optimization</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+ <!-- Team Section -->
+<section id="team" class="team">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-badge">Our Team</div>
+            <h2 class="section-title">Meet the Team</h2>
+            <p class="section-subtitle">The talented individuals behind Uni-V Studio</p>
+        </div>
+        <div class="team-grid">
+            <div class="team-member-card">
+                <div class="member-avatar">
+                    <div class="avatar-glow"></div>
+                    <img src="yongzhenfeng.jpg" alt="Max Yong">
+                    <div class="member-overlay">
+                        <div class="member-social">
+                            <a href="https://www.linkedin.com/in/yong-zhen-feng-2a8415312" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                            <a href="https://github.com/maxyong21" class="social-icon"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="member-info">
+                    <h3 class="member-name">Max Yong</h3>
+                    <p class="member-role">Lead Developer</p>
+                    <p class="member-description">As Lead Developer, Max oversees the technical direction of projects, ensuring clean architecture, scalability, and smooth integration across frontend and backend systems.</p>
+                </div>
+            </div>
+
+            <!-- <div class="team-member-card">
+                <div class="member-avatar">
+                    <div class="avatar-glow"></div>
+                    <img src="zy.jpg" alt="Zhi Yoong">
+                    <div class="member-overlay">
+                        <div class="member-social">
+                            <a href="https://www.linkedin.com/in/wong-zhi-yoong-baa4842b1/" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                            <a href="https://github.com/ZyWong1234" class="social-icon"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="member-info">
+                    <h3 class="member-name">Zhi Yoong</h3>
+                    <p class="member-role">Marketing & UI/UX Designer</p>
+                    <p class="member-description">Zhi Yoong bridges creativity and strategy, designing user-friendly interfaces while also shaping marketing campaigns that highlight Uni-V Studio’s vision and products.</p>
+                </div>
+            </div>
+
+            <div class="team-member-card">
+                <div class="member-avatar">
+                    <div class="avatar-glow"></div>
+                    <img src="jim.jpeg" alt="Jim Loong">
+                    <div class="member-overlay">
+                        <div class="member-social">
+                            <a href="https://www.linkedin.com/in/jimloong-wang-708b04291" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                            <a href="https://github.com/jimloong " class="social-icon"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="member-info">
+                    <h3 class="member-name">Jim Loong</h3>
+                    <p class="member-role">Project Manager</p>
+                    <p class="member-description">Jim coordinates the team’s workflow, manages timelines, and ensures every project milestone is achieved with efficiency and clarity from start to finish.</p>
+                </div>
+            </div>
+
+            <div class="team-member-card">
+                <div class="member-avatar">
+                    <div class="avatar-glow"></div>
+                    <img src="yn.jpeg" alt="Yoong Ning">
+                    <div class="member-overlay">
+                        <div class="member-social">
+                            <a href=" https://www.linkedin.com/in/yoong-ning-yeoh-9ba9a135b/" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                            <a href="https://github.com/yning625" class="social-icon"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="member-info">
+                    <h3 class="member-name">Jasmine</h3>
+                    <p class="member-role">Full-Stack Developer</p>
+                    <p class="member-description">Jasmine works across both frontend and backend development, building scalable features and ensuring seamless integration between user interfaces and server-side systems.</p>
+                </div>
+            </div>
+
+            <div class="team-member-card">
+                <div class="member-avatar">
+                    <div class="avatar-glow"></div>
+                    <img src="ben.jpeg" alt="Ben Chen">
+                    <div class="member-overlay">
+                        <div class="member-social">
+                            <a href="https://www.linkedin.com/in/chen-ling-yau-7045932b1/" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                            <a href="https://github.com/BennChen23" class="social-icon"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="member-info">
+                    <h3 class="member-name">Ben Chen</h3>
+                    <p class="member-role">Full-Stack Developer</p>
+                    <p class="member-description">Ben contributes to both frontend and backend systems, creating interactive user experiences while also developing reliable backend services that support project performance.</p>
+                </div>
+            </div> -->
+        </div>
+    </div>
+</section>
+
+
+<!-- Contact Section -->
+<section id="contact" class="contact">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-badge">Contact</div>
+            <h2 class="section-title">Let's Work Together</h2>
+            <p class="section-subtitle">Ready to start your next project? Get in touch with us today.</p>
+        </div>
+        <div class="contact-content">
+            <div class="contact-info">
+
+                <!-- Email Section -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="contact-details">
+                        <h3>Email Us 
+                            <i class="fas fa-exclamation-circle info-icon"></i>
+                            <span class="tooltip">You may press the email below to send an Email</span>
+                        </h3>
+                        <p>
+                            <a href="mailto:maxyong798@gmail.com" class="email-link">
+                                maxyong798@gmail.com
+                            </a>
+                        </p>
+                        <!-- <p>
+                            <a href="mailto:wongzhiyoong@gmail.com" class="email-link">
+                                wongzhiyoong@gmail.com
+                            </a>
+                        </p> -->
+                    </div>
+                </div>
+
+                <!-- WhatsApp Section -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div class="contact-details">
+                        <h3>WhatsApp 
+                            <i class="fas fa-exclamation-circle info-icon"></i>
+                            <span class="tooltip">You may press the numbers below to open WhatsApp</span>
+                        </h3>
+                        <p>
+                            <a href="https://wa.me/60162238196" target="_blank" class="whatsapp-link">
+                                +60 16-223 8196
+                            </a>
+                        </p>
+                        <!-- <p>
+                            <a href="https://wa.me/60126175992" target="_blank" class="whatsapp-link">
+                                +60 12-617 5992
+                            </a>
+                        </p> -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3>Uni-V <span class="logo-accent">Studio</span></h3>
+                    <p>Creating digital experiences that matter.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h4>Services</h4>
+                        <a href="#services">Frontend Development</a>
+                        <a href="#services">Backend Development</a>
+                        <a href="#services">Database Solutions</a>
+                    </div>
+                    <div class="link-group">
+                        <h4>Company</h4>
+                        <a href="#about">About Us</a>
+                        <a href="#team">Our Team</a>
+                        <a href="#portfolio">Portfolio</a>
+                    </div>
+                    <div class="link-group">
+                        <h4>Connect</h4>
+                        <a href="#contact">Contact Us</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Uni-V Studio. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
