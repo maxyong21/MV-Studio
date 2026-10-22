@@ -1,173 +1,97 @@
-# MV Studio — Cloudflare Web Studio Website
+﻿# MV Studio — React + Supabase
 
-MV Studio is a React website for a small web development studio serving startups, small businesses, and SMEs. Visitors can browse services and prices, view project demos, configure a project estimate, send an enquiry, and request a short meeting. The `/admin` workspace manages the content and enquiry inbox.
+MV Studio's customer website and private content manager are built with React, Vite, and Supabase. The original project detail pages and their media remain in the project root and are linked from the project cards.
 
-## Technology
+## What this website is for
 
-- React 19 + Vite for the website and admin interface.
-- Cloudflare Workers for the same-origin API, admin authorization, SEO routes, enquiries, and media delivery.
-- Cloudflare D1 (SQLite) for site content, services, projects, promotion settings, feature options, and enquiries.
-- Cloudflare R2 for project images, avatars, advertisement artwork, and uploaded demo videos. The bucket stays private; media is streamed through the Worker.
-- Cloudflare Access protects `/admin` and `/api/admin/*`; the Worker also verifies signed Access JWTs and an email allowlist.
-- Resend can email new enquiry notifications. Enquiries are saved in D1 even when email delivery is not configured or temporarily fails.
+MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. Supabase stores the website content and enquiry records; Resend sends enquiry notifications when configured.
 
-Supabase is no longer used by the application. D1 is accessed only by the Worker, so database credentials never go in the browser bundle.
+## Create a Git branch for this work
 
-## Important: Vercel versus Cloudflare deployment
-
-The complete production app (including D1, R2 uploads, Access-protected admin APIs, and the live database-backed sitemap) must run through the Cloudflare Worker. A Vercel static deployment can serve the React pages and a small fallback sitemap, but it does not provide the Worker bindings or Cloudflare Access integration. The repository's `vercel.json` sets the correct Vite client output and SPA fallback; it does **not** host the `/api/*` Worker. For a fully working admin, enquiry, and live-content site, deploy with `npm.cmd run deploy` to Cloudflare and point the production hostname to that Worker. The Worker serves `/sitemap.xml` dynamically from active D1 projects.
-
-If you keep a Vercel preview for the frontend, set `VITE_SITE_URL` to `https://mv-aistudio.vercel.app` in Vercel's Production Environment Variables and redeploy. Vercel will publish a homepage-only fallback at `/sitemap.xml`; it cannot list live D1 projects unless requests are served by the Cloudflare Worker. The build falls back to Vercel's production-domain system variable, then to `https://mv-aistudio.vercel.app`.
-
-## Run it locally
-
-Prerequisites: Node.js 20.19+ and npm.
-
-```powershell
-npm.cmd install
-Copy-Item .dev.vars.example .dev.vars
-npm.cmd run db:setup:local
-npm.cmd run dev
-```
-
-Open the local URL printed by Vite (usually `http://localhost:5173`). The local D1 schema includes sample services and feature options. Local admin access is enabled by `.dev.vars` only; use a local-only email there. Never deploy `ENVIRONMENT=development` or `DEV_ADMIN_EMAIL` to production. Local D1 and R2 data are separate from your Cloudflare account.
-
-Useful commands:
-
-```powershell
-npm.cmd run build
-npm.cmd run db:setup:local
-npm.cmd run db:setup:remote
-npm.cmd run deploy
-```
-
-`db:setup:remote` applies the schema and starter records to the configured production D1 database. Run it once for a new database, and review `cloudflare/schema.sql` before rerunning it on a database with live content. It uses `CREATE TABLE IF NOT EXISTS` and `INSERT OR IGNORE` for the starter records.
-
-## Create Cloudflare resources
-
-1. Create/sign in to a Cloudflare account and install Wrangler through this project's dependencies (`npm install`). Authenticate:
-
-   ```powershell
-   npx wrangler login
-   ```
-
-2. Create a D1 database:
-
-   ```powershell
-   npx wrangler d1 create mv-studio
-   ```
-
-   Copy the returned database ID into `database_id` in `wrangler.jsonc`, replacing the all-zero placeholder. Keep `database_name` as `mv-studio`.
-
-3. Create the media bucket:
-
-   ```powershell
-   npx wrangler r2 bucket create mv-studio-media
-   ```
-
-   The `preview_bucket_name` in the Wrangler config is for local development; it does not need to exist in production.
-
-4. Apply the schema and starter content:
-
-   ```powershell
-   npm.cmd run db:setup:remote
-   ```
-
-   This creates tables for `services`, `projects`, `team_members`, `promotions`, `feature_options`, `site_content`, `enquiries`, and enquiry rate limits. The authoritative SQL is [`cloudflare/schema.sql`](cloudflare/schema.sql).
-
-5. Add server-side secrets to the Worker. Wrangler prompts for each value:
-
-   ```powershell
-   npx wrangler secret put ADMIN_EMAILS
-   npx wrangler secret put ACCESS_TEAM_DOMAIN
-   npx wrangler secret put ACCESS_AUD
-   npx wrangler secret put ENQUIRY_RATE_SALT
-   npx wrangler secret put ENQUIRY_TO_EMAIL
-   npx wrangler secret put RESEND_API_KEY
-   npx wrangler secret put RESEND_FROM_EMAIL
-   ```
-
-   - `ADMIN_EMAILS`: comma-separated email addresses permitted to manage content.
-   - `ACCESS_TEAM_DOMAIN`: your Zero Trust team domain, e.g. `your-team.cloudflareaccess.com` (without `https://`).
-   - `ACCESS_AUD`: the Application Audience (AUD) tag for the Cloudflare Access application protecting the admin/API paths. If separate applications are used for `/admin*` and `/api/admin*`, provide both AUDs separated by commas.
-   - `ENQUIRY_RATE_SALT`: a long random secret used to hash IPs in the enquiry rate limiter.
-   - `ENQUIRY_TO_EMAIL`: one or more notification recipients, comma-separated.
-   - `RESEND_API_KEY` and `RESEND_FROM_EMAIL`: a Resend key and verified sender, e.g. `MV Studio <hello@yourdomain.com>`. These three email secrets may be omitted if you want enquiries stored in D1 without email notifications.
-
-   Do not put any of these values in `VITE_*` variables or commit them to Git. The local `.dev.vars` file is ignored by Git; `.dev.vars.example` contains placeholders only.
-
-## Protect the admin site with Cloudflare Access
-
-1. In the Cloudflare Zero Trust dashboard, create a self-hosted Access application for your production hostname. Protect `/admin*` and allow only the administrator emails you intend to use.
-2. Protect `/api/admin*` too. An Access application for the API can use the same administrator policy. If the paths require two applications, put both application AUD tags in `ACCESS_AUD`.
-3. Copy the team domain and application AUD tag(s) into the Worker secrets above. The Worker validates the Access JWT signature, issuer, expiry, audience, and email allowlist on every admin API request.
-4. The Access app should be live before you expose the production hostname. The admin page's API is same-origin and relies on the browser's Access session cookie.
-
-There is no public admin password or public sign-up. For production, do not rely on the local development bypass.
-
-## Deploy to Cloudflare
-
-1. Set the production site URL for the build. For PowerShell in the current terminal:
-
-   ```powershell
-   $env:VITE_SITE_URL = 'https://your-domain.com'
-   npm.cmd run build
-   ```
-
-   The post-build step removes local `.dev.vars` from the generated Worker output. Production secrets must be supplied through Wrangler secrets, never bundled into the assets.
-
-   Or set `VITE_SITE_URL` in your deployment environment. This writes canonical/share metadata and `robots.txt` into the Vite client asset directory. The Worker creates the sitemap dynamically from active projects.
-
-2. Add the Worker custom domain in Cloudflare (Workers & Pages → your Worker → Settings → Domains & Routes). The hostname/DNS should use Cloudflare. Keep the website and API on the same hostname so Access and media uploads work without cross-origin configuration.
-3. Deploy:
-
-   ```powershell
-   npm.cmd run deploy
-   ```
-
-   This builds the client and deploys the Worker/API/assets. Cloudflare's Vite plugin reads `wrangler.jsonc` and bundles the Worker plus static assets.
-
-4. Visit `/`, `/admin`, `/sitemap.xml`, and `/robots.txt` on the deployed hostname. Verify Access blocks visitors who are not on the admin allowlist, then sign in as an allowed email and confirm an edit in the admin appears on the public page.
-5. Submit `https://your-domain.com/sitemap.xml` to Google Search Console and Bing Webmaster Tools. Project detail routes include project-specific title, description, canonical URL, Open Graph tags, and structured metadata.
-
-## Admin content and media
-
-- Services: manage package name, category, price, discount/original price, features, timeline, publication, and order.
-- Projects: manage summaries, SEO titles/descriptions, tags, active/featured state, project image, and demo/video URL. Use a YouTube link for an externally hosted demo, or upload an MP4/WebM/MOV clip to R2.
-- Team: manage profiles and avatar images.
-- Promotions: manage popup copy, date range, destination and artwork. The browser remembers a dismissed or clicked promotion for 30 minutes.
-- Feature options: manage one-time and monthly quote options. Annual maintenance estimates apply the configured free months; one free month makes the annual total 11 monthly payments. Change the monthly price and `annual_free_months` in the admin.
-- Enquiries: review contact details, selected features, server-calculated estimate, meeting request, email delivery status, and update enquiry status.
-- Site content: manage the homepage copy and contact emails/phone numbers.
-- Media: upload project images, avatars, promotions, and supported video files in the relevant admin forms. The Worker stores objects in R2 and returns same-site `/media/...` URLs. A private bucket avoids exposing bucket credentials or allowing anonymous writes.
-
-## Enquiry email setup (optional)
-
-Create a Resend account, verify your sending domain, and set `ENQUIRY_TO_EMAIL`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL` as Worker secrets. The Worker recalculates estimates from active D1 feature records, applies a five submissions per IP-hash-per-hour limit, stores each valid request, then sends the notification. If Resend rejects or cannot send it, the customer request is still saved and the failure is visible in the admin inbox. A meeting time is a callback preference, not a confirmed booking.
-
-## Moving existing content from Supabase
-
-This codebase cannot access your Supabase account, so it has not copied live hosted records or bucket objects automatically. Before changing your public DNS, migrate any content you want to keep:
-
-1. Back up the Supabase project. In the Supabase dashboard, export the rows from `services`, `projects`, `team_members`, `promotions`, `feature_options`, and `site_content` as CSV/JSON. Keep enquiry exports private because they contain personal information.
-2. Create the Cloudflare D1 database, then apply `cloudflare/schema.sql`. It seeds starter content; remove/replace those rows if you are importing your own catalogue.
-3. Import the exported rows into the matching D1 tables using Cloudflare's D1 dashboard import or `wrangler d1 execute mv-studio --remote --file <migration.sql>`. Map Supabase UUIDs to D1 text IDs, and preserve project `image_url` / `demo_url` values until media is migrated. D1 is SQLite, so use SQLite-compatible SQL and quote text values safely.
-4. Download existing Supabase Storage objects and upload them with the admin media uploader after Cloudflare Access is configured. Update the corresponding D1 `image_url` fields to the returned `/media/<object-key>` URLs. You can leave YouTube or other external demo URLs as they are.
-5. Verify services, projects, media, enquiries, and admin editing on a staging hostname. Enquiries may contain customer personal data; restrict the export and delete temporary files after the migration.
-6. Switch the public domain only after that verification. Keep the Supabase project as a temporary backup until the Cloudflare deployment is confirmed.
-
-For a brand-new site, skip this migration section: the starter data from `cloudflare/schema.sql` is sufficient and all ongoing content is managed in the Cloudflare-backed admin.
-
-## Git workflow
-
-Create a feature branch before committing changes:
+From the project folder, create and switch to a branch before committing these changes:
 
 ```powershell
 git status --short
-git switch -c feature/cloudflare-migration
+git switch -c feature/supabase-media-demos
 git add -A
 git diff --cached --stat
-git commit -m "Migrate MV Studio backend to Cloudflare"
+git commit -m "Add Supabase project media and video demos"
 ```
 
-If the branch already exists, switch to it with `git switch feature/cloudflare-migration`. Review staged files before committing, and do not stage `.dev.vars` or production secrets.
+`git switch -c` creates the branch from your current commit and switches to it. Existing uncommitted edits remain in your working tree; `git add -A` stages all project changes, and `git diff --cached --stat` lets you review the staged files before committing. If you only want selected files, replace `git add -A` with paths you choose.
+
+## Run locally
+
+1. Install Node.js 20.19 or newer.
+2. Install packages and start Vite:
+
+   ```powershell
+   npm.cmd install
+   npm.cmd run dev
+   ```
+
+3. Open the local URL Vite prints (usually `http://localhost:5173`). The customer website works with preview content even before Supabase is configured.
+
+## Connect Supabase
+
+1. Create a Supabase project.
+2. In **SQL Editor**, run all of [`supabase/schema.sql`](supabase/schema.sql). This creates the tables, starter content, RLS policies, and public `site-media` storage bucket for images and project demo videos (up to 50 MiB per file; the Supabase project's global upload limit also applies).
+3. In Supabase **Project Settings → API**, copy the Project URL and the publishable key (or legacy anon key). Never put a `service_role` key in a browser app.
+4. Copy `.env.example` to `.env.local` and fill in the values:
+
+   ```env
+   VITE_SUPABASE_URL=https://your-project-id.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+   VITE_SITE_URL=https://your-domain.com
+   ```
+
+5. Create your administrator in **Authentication → Users → Add user**. Use a strong password and turn off public sign-ups if you do not need customer accounts.
+6. In SQL Editor, grant the user admin access. Replace the email with the email used in step 5:
+
+   ```sql
+   insert into public.admin_users (user_id)
+   select id from auth.users where email = 'you@example.com'
+   on conflict (user_id) do nothing;
+   ```
+
+7. Restart Vite after changing `.env.local`, then open `/admin` and sign in.
+
+## Admin features
+
+- **Services & pricing:** create, edit, publish/hide, reorder, or delete packages; manage discounts, features, and delivery estimates.
+- **Projects:** manage project descriptions, demo links, tags, featured status, preview images, and demo video URLs. Add a YouTube URL to embed it on the project detail page, or upload an MP4/WebM/MOV clip to Supabase Storage. The existing project demo URL can also be a YouTube link.
+- **Project SEO:** set a unique search title and description for each portfolio project. The same project records power the customer site and the JSON-LD portfolio data.
+- **Team:** manage names, biographies, social links, order, and photos.
+- **Promotions:** manage popup offer copy, destination, image, publication, enablement, and start/end dates. A visitor who dismisses or follows the offer will not see it again in that browser for 30 minutes.
+- **Enquiry features:** manage the customer-facing feature catalogue, third-party options, pricing, availability, and annual free-month rules.
+- **Enquiries:** view customer requests, selected features, server-calculated estimates, meeting requests, email delivery state, and update the enquiry status.
+- **Site content:** edit the home hero, about copy, business contact information, and multiple contact emails / phone numbers (one per line).
+- **Media:** project preview images, team avatar photos, promotion/advertisement images, and project demo clips all use the same public `site-media` bucket. Their admin editors can upload images; project editors can upload MP4/WebM/MOV clips or embed a YouTube link. You can also upload through the Supabase Storage dashboard and paste the resulting public URL into an image or video URL field. Public bucket URLs are accessible to anyone who has the URL.
+
+All persistent content mutations go to Supabase. Row-level security makes website content readable publicly while restricting changes to users explicitly listed in `admin_users`. Do not expose a service-role key in this frontend. To publish, build with `VITE_SITE_URL` set to the canonical HTTPS domain, then deploy the Vite `dist/` output on a static host and add the same public Supabase environment variables to that host. The build writes `robots.txt` and `sitemap.xml` for that domain. Configure the host to serve `index.html` for the `/admin` route.
+
+The public homepage includes a descriptive title and summary, Open Graph and Twitter sharing tags, a canonical URL, and structured data for the studio and portfolio. The `/admin` route is marked `noindex`. After deployment, submit `https://your-domain.com/sitemap.xml` in Google Search Console and Bing Webmaster Tools.
+
+## Database SQL
+
+The complete setup and seed query is [`supabase/schema.sql`](supabase/schema.sql). It is safe to run again: seeded records have unique names and are inserted only if missing.
+
+## Enquiry email (Resend)
+
+The enquiry form stores customer data only through the `submit-enquiry` Supabase Edge Function. The function recalculates prices from active feature records, inserts the enquiry, then sends an email notification with Resend. The public browser key cannot read or insert enquiries. The database keeps a request even if Resend is temporarily unavailable; its email status and error are visible in the admin inbox. The displayed estimate is a guide, and the team confirms final scope and any third-party charges.
+
+1. Verify a sending domain in Resend and create an API key. Set a verified sender address such as `MV Studio <hello@yourdomain.com>`.
+2. Install and authenticate the [Supabase CLI](https://supabase.com/docs/guides/cli), link your project, then set server-only secrets (never add these to `.env.local` or Vite variables):
+
+   ```powershell
+   supabase login
+   supabase link --project-ref YOUR_PROJECT_REF
+   supabase secrets set RESEND_API_KEY=re_xxx ENQUIRY_TO_EMAIL=you@example.com RESEND_FROM_EMAIL="MV Studio <hello@yourdomain.com>" ALLOWED_ORIGIN=https://your-domain.com
+   supabase functions deploy submit-enquiry
+   ```
+
+   For multiple recipients, comma-separate `ENQUIRY_TO_EMAIL`. For local development, leaving `ALLOWED_ORIGIN` unset permits localhost origins.
+3. Run the current [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor. For an existing install, rerun the full script; it adds feature and enquiry tables and preserves saved website content.
+4. Add the production Supabase URL and publishable key to the host as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then rebuild/redeploy the site. Keep `VITE_SITE_URL` set to the canonical domain for SEO output.
+
+The function rate-limits to five attempts per IP hash per hour. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
