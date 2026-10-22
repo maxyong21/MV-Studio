@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APMoodle - Project Details | MV Studio</title>
+    <meta name="description" content="APMoodle: a learning management system for APU students to facilitate teaching, learning, and tracking. A MV Studio project.">
+    <script>
+        (function () {
+            var t;
+            try { t = localStorage.getItem('theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.classList.add('js');
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <nav class="nav-container" aria-label="Main">
+            <a href="index.html" class="nav-logo" aria-label="MV Studio home">
+                <span class="logo-mark">MV</span>
+                <span class="logo-text">MV <span class="logo-accent">Studio</span></span>
+            </a>
+            <div class="nav-actions">
+                <a href="index.html#projects" class="back-btn">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    <span>Back to Projects</span>
+                </a>
+                <button class="theme-toggle" type="button" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon icon-moon" aria-hidden="true"></i>
+                    <i class="fas fa-sun icon-sun" aria-hidden="true"></i>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main">
+        <!-- Project Header -->
+        <section class="detail-hero">
+            <div class="hero-bg" aria-hidden="true"></div>
+            <div class="container reveal">
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <a href="index.html">Home</a>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    <a href="index.html#projects">Projects</a>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    <span>APMoodle</span>
+                </nav>
+                <span class="section-badge">Learning Management System</span>
+                <h1 class="detail-title">APMoodle</h1>
+                <p class="detail-subtitle">Teach, learn &amp; track — beautifully.</p>
+                <div class="detail-meta">
+                    <span class="meta-item"><i class="fas fa-calendar"></i> 2026</span>
+                    <span class="meta-item"><i class="fas fa-users"></i> University LMS for APU</span>
+                    <span class="meta-item"><i class="fas fa-code"></i> Full-Stack Development (.NET &amp; PostgreSQL)</span>
+                </div>
+                <div class="detail-links">
+                    <a href="https://apmoodle.onrender.com/" target="_blank" rel="noopener" class="btn btn-primary">
+                        <i class="fas fa-globe"></i>
+                        <span>Live Demo</span>
+                    </a>
+                    <!-- <a href="https://github.com/VincentTeo1116/APMoodle" target="_blank" rel="noopener" class="btn btn-secondary">
+                        <i class="fab fa-github"></i>
+                        <span>View on GitHub</span>
+                    </a> -->
+                </div>
+            </div>
+        </section>
+
+        <div class="container project-body">
+            <!-- Cover -->
+            <div class="detail-cover reveal">
+                <div class="mockup-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+                <img src="aphome.png" alt="APMoodle landing page">
+            </div>
+
+            <!-- Image Gallery -->
+            <section class="media-section reveal">
+                <div class="media-head">
+                    <h2 class="media-title">Project Screenshots &amp; Features</h2>
+                    <span class="media-hint">Click an image to enlarge</span>
+                </div>
+
+                <!-- Student -->
+                <h3 class="gallery-group-title"><i class="fas fa-user-graduate"></i> Student Portal</h3>
+                <div class="image-gallery">
+                    <figure class="gallery-item main-image">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Student Dashboard">
+                            <img src="apstudash.png" alt="Student Dashboard">
+                        </button>
+                        <figcaption>
+                            <h4>Student Dashboard</h4>
+                            <p>KPI tiles, quiz score trend, and recent attempts at a glance</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Module Overview">
+                            <img src="apstuover.png" alt="Module Overview" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Module Overview</h4>
+                            <p>Browse enrolled modules and join new ones by invitation code</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Quiz System">
+                            <img src="apstuquizinterface.png" alt="Quiz Interface" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Quiz System</h4>
+                            <p>Multiple quiz themes with instant results and answer review</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Quiz History">
+                            <img src="apstuquizhistory.png" alt="Quiz History" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Quiz History</h4>
+                            <p>Track past attempts with scores, dates, and detailed reviews</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Teaching Material">
+                            <img src="apstuteaching.png" alt="Teaching Material" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Teaching Material</h4>
+                            <p>Access files, links, and text content uploaded by lecturers</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Chat System">
+                            <img src="apstuchat.png" alt="Chat System" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Chat System</h4>
+                            <p>Real-time messaging with lecturers for quick support</p>
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <!-- Lecturer -->
+                <h3 class="gallery-group-title"><i class="fas fa-chalkboard-teacher"></i> Lecturer Portal</h3>
+                <div class="image-gallery">
+                    <figure class="gallery-item main-image">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Lecturer Dashboard">
+                            <img src="aplecdash.png" alt="Lecturer Dashboard" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Lecturer Dashboard</h4>
+                            <p>Cohort metrics, quiz averages, and student distribution charts</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Module Management">
+                            <img src="aplecover.png" alt="Module Management" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Module Management</h4>
+                            <p>View assigned modules and regenerate invitation codes</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Teaching Material CRUD">
+                            <img src="aplecteach.png" alt="Teaching Material CRUD" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Teaching Material CRUD</h4>
+                            <p>Upload files, links, or text content with full CRUD control</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Quiz Creation">
+                            <img src="aplecover.png" alt="Quiz Creation" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Quiz Creation</h4>
+                            <p>Create quizzes with themes, questions, and correct answer keys</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Manage Quiz">
+                            <img src="aplecquizview.png" alt="Manage Quiz" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Manage Quiz</h4>
+                            <p>Edit, delete, and preview quizzes with public/private access</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Student Attempts">
+                            <img src="aplecquizhistory.png" alt="Student Attempts" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Student Attempts</h4>
+                            <p>Review individual student performance with score breakdowns</p>
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <!-- Admin -->
+                <h3 class="gallery-group-title"><i class="fas fa-user-shield"></i> Admin Portal</h3>
+                <div class="image-gallery">
+                    <figure class="gallery-item main-image">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Admin Dashboard">
+                            <img src="apaddash.png" alt="Admin Dashboard" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Admin Dashboard</h4>
+                            <p>System-wide KPIs, module distribution, and enrollment trends</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Announcement Management">
+                            <img src="apadannoucement.png" alt="Announcement Management" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Announcement Management</h4>
+                            <p>3-step wizard to create, review, and publish announcements</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: User Management">
+                            <img src="apaduser.png" alt="User Management" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>User Management</h4>
+                            <p>Create, edit, approve, and deactivate student and lecturer accounts</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Module Management">
+                            <img src="apadmodule.png" alt="Module Management" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Module Management</h4>
+                            <p>Category-driven module creation with auto-generated codes</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Database Overview">
+                            <img src="apaddb.png" alt="Database Overview" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Database Overview</h4>
+                            <p>Verify Supabase connectivity with terminal-style table previews</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Soft Delete System">
+                            <img src="apaddelete.png" alt="Soft Delete System" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Soft Delete System</h4>
+                            <p>Status changes to "Removed" instead of permanent deletion</p>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <!-- Project Details -->
+            <div class="content-grid">
+                <div class="content-main">
+                    <div class="content-section reveal">
+                        <h3>Project Overview</h3>
+                        <p>APMoodle is a .NET-based Learning Management System (LMS) developed for university students at Asia Pacific University of Technology and Innovation (APU). The platform provides a centralized learning environment where students can access digital learning resources, participate in self-assessment quizzes, and track their academic progress, while lecturers upload teaching materials and administrators manage system content and user data through a secure backend.</p>
+                        <p>Built with ASP.NET Core, Entity Framework Core, and PostgreSQL (hosted on Supabase), the system implements role-based authentication and authorization, form validation, dynamic content management, and responsive navigation to deliver a secure and structured learning experience.</p>
+                    </div>
+
+                    <div class="content-section reveal">
+                        <h3>Key Features</h3>
+                        <div class="features-grid">
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-gamepad"></i></div>
+                                <h4>Gamified Learning</h4>
+                                <p>Quizzes with five selectable themes (Default, Forest, Comic, Watercolor, Kahoot Game Show) and instant results to motivate students</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-code"></i></div>
+                                <h4>Quiz Feature</h4>
+                                <p>Full CRUD quiz system where lecturers create multiple-choice quizzes with correct answer keys, and students attempt and review them</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                                <h4>Progress Tracking</h4>
+                                <p>Detailed analytics including quiz score trends, average scores, performance breakdown charts, and recent attempt history</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-users"></i></div>
+                                <h4>Role-based Access</h4>
+                                <p>Four distinct user roles — Guests, Students, Lecturers, and Administrators — each with tailored dashboards and permissions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section reveal">
+                        <h3>Technical Implementation</h3>
+                        <p>The platform is built using ASP.NET Core (.NET 10.0) with Razor Pages for dynamic content generation, Entity Framework Core 9.0 as the ORM, and PostgreSQL via Supabase for cloud-based database hosting. All database interactions are handled through EF Core, eliminating manual SQL writing while supporting version-controlled migrations.</p>
+                        <p>Key technical highlights include two-tier form validation (client-side JavaScript and server-side Data Annotations), a reusable modal system for consistent feedback, soft delete with a "Removed" status to prevent data loss, Google reCAPTCHA v2 integration for password recovery, and a responsive design supporting desktop, tablet, and mobile devices.</p>
+                    </div>
+                </div>
+
+                <aside class="content-sidebar">
+                    <div class="sidebar-card reveal">
+                        <h4>Technology Stack</h4>
+                        <div class="tech-tags">
+                            <span class="chip">ASP.NET Core</span>
+                            <span class="chip">C#</span>
+                            <span class="chip">Entity Framework Core</span>
+                            <span class="chip">PostgreSQL</span>
+                            <span class="chip">Supabase</span>
+                            <span class="chip">Razor Pages</span>
+                            <span class="chip">HTML / CSS / JavaScript</span>
+                            <span class="chip">Google reCAPTCHA v2</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-card reveal">
+                        <h4>Project Statistics</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Development Time</span>
+                            <span class="stat-value">3 months</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Team Members</span>
+                            <span class="stat-value">5</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">User Roles</span>
+                            <span class="stat-value">4</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Quiz Themes</span>
+                            <span class="stat-value">5</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-card sidebar-cta reveal">
+                        <h4>Have a similar idea?</h4>
+                        <p>Let's talk about bringing your project to life.</p>
+                        <a href="index.html#contact" class="btn btn-primary btn-sm">Get In Touch <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Previous / next project -->
+            <nav class="project-navigation" aria-label="More projects">
+                <a href="SuperMathsBros.html" class="nav-btn prev-btn">
+                    <small><i class="fas fa-arrow-left"></i> Previous project</small>
+                    <strong>Super Maths Bros</strong>
+                </a>
+                <a href="hypertextedu.html" class="nav-btn next-btn">
+                    <small>Next project <i class="fas fa-arrow-right"></i></small>
+                    <strong>HyperText Edu</strong>
+                </a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-compact">
+        <div class="container">
+            <div class="footer-bottom">
+                <a href="index.html" class="nav-logo">
+                    <span class="logo-mark">MV</span>
+                    <span class="logo-text">MV <span class="logo-accent">Studio</span></span>
+                </a>
+                <p>&copy; <span class="year">2025</span> MV Studio. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="demo.js"></script>
+</body>
+</html>
