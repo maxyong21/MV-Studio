@@ -7,7 +7,74 @@ document.addEventListener('DOMContentLoaded', function () {
     initCopyButtons();
     initPackageDialog();
     initFooterYear();
+    initStudioContent();
+    initPromo();
 });
+
+// Editable studio content is stored locally for this static prototype.
+function initStudioContent() {
+    let data;
+    try { data = JSON.parse(localStorage.getItem('mvStudioContent') || 'null'); } catch (e) {}
+    if (!data) return;
+    (data.packages || []).forEach(item => {
+        const card = Array.from(document.querySelectorAll('.price-card')).find(el => el.querySelector('.price-name')?.textContent.trim() === item.name);
+        const amount = card?.querySelector('.price-now .amount');
+        if (amount && item.price) amount.textContent = item.price;
+    });
+    if (Array.isArray(data.projects)) {
+        const grid = document.querySelector('.projects-grid');
+        if (grid && data.projects.length) {
+            grid.replaceChildren(...data.projects.map((project, index) => {
+                const card = document.createElement('article');
+                card.className = 'project-card card';
+                const content = document.createElement('div');
+                content.className = 'card-content';
+                const kicker = document.createElement('div');
+                kicker.className = 'project-kicker';
+                kicker.textContent = 'Featured project';
+                const title = document.createElement('h3');
+                title.className = 'project-title';
+                const link = document.createElement('a');
+                link.href = project.url || '#contact';
+                link.textContent = project.name;
+                title.append(link);
+                const description = document.createElement('p');
+                description.className = 'project-description';
+                description.textContent = project.detail || 'A project by MV Studio.';
+                const action = document.createElement('a');
+                action.className = 'link-btn';
+                action.href = project.url || '#contact';
+                action.textContent = 'View project →';
+                content.append(kicker, title, description, action);
+                card.append(content);
+                return card;
+            }));
+        }
+    }
+}
+
+function initPromo() {
+    const dialog = document.getElementById('promoDialog');
+    if (!dialog) return;
+    let config;
+    try { config = JSON.parse(localStorage.getItem('mvStudioPromo') || 'null'); } catch (e) {}
+    if (config?.enabled === false) return;
+    if (config?.title) dialog.querySelector('#promoTitle').textContent = config.title;
+    if (config?.copy) dialog.querySelector('[data-promo-copy]').textContent = config.copy;
+    if (config?.link) dialog.querySelector('[data-promo-link]').href = config.link;
+    const key = 'mvStudioPromoDismissedAt';
+    let dismissedAt = 0;
+    try { dismissedAt = Number(localStorage.getItem(key)) || 0; } catch (e) {}
+    if (Date.now() - dismissedAt < 30 * 60 * 1000) return;
+    const close = () => {
+        try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+        if (dialog.open) dialog.close();
+    };
+    dialog.querySelector('.dialog-close').addEventListener('click', close);
+    dialog.addEventListener('click', e => { if (e.target === dialog) close(); });
+    dialog.querySelector('[data-promo-link]').addEventListener('click', close);
+    window.setTimeout(() => { if (!dialog.open) dialog.showModal(); }, 700);
+}
 
 // "Learn More" popup for the pricing packages
 function initPackageDialog() {

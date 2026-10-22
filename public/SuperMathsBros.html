@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Maths Bros - Project Details | MV Studio</title>
+    <meta name="description" content="Super Maths Bros — game-based learning for differentiation in algebra and calculus. A MV Studio project.">
+    <script>
+        (function () {
+            var t;
+            try { t = localStorage.getItem('theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.classList.add('js');
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <nav class="nav-container" aria-label="Main">
+            <a href="index.html" class="nav-logo" aria-label="MV Studio home">
+                <span class="logo-mark">MV</span>
+                <span class="logo-text">MV <span class="logo-accent">Studio</span></span>
+            </a>
+            <div class="nav-actions">
+                <a href="index.html#projects" class="back-btn">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    <span>Back to Projects</span>
+                </a>
+                <button class="theme-toggle" type="button" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon icon-moon" aria-hidden="true"></i>
+                    <i class="fas fa-sun icon-sun" aria-hidden="true"></i>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main">
+        <!-- Project Header -->
+        <section class="detail-hero">
+            <div class="hero-bg" aria-hidden="true"></div>
+            <div class="container reveal">
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <a href="index.html">Home</a>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    <a href="index.html#projects">Projects</a>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    <span>Super Maths Bros</span>
+                </nav>
+                <span class="section-badge">Educational Game</span>
+                <h1 class="detail-title">Super Maths Bros</h1>
+                <p class="detail-subtitle">Game-based learning for differentiation in algebra &amp; calculus</p>
+                <div class="detail-meta">
+                    <span class="meta-item"><i class="fas fa-calendar"></i> 2025</span>
+                    <span class="meta-item"><i class="fas fa-gamepad"></i> Educational Game</span>
+                    <span class="meta-item"><i class="fas fa-calculator"></i> Mathematics Learning</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="container project-body">
+            <!-- Video -->
+            <section class="media-section reveal">
+                <div class="media-head">
+                    <h2 class="media-title">Gameplay Demo</h2>
+                </div>
+                <div class="video-frame">
+                    <video controls preload="metadata" poster="supermathsbrologo.png">
+                        <source src="SuperMaths Bros.mp4" type="video/mp4">
+                        Your browser does not support HTML5 video.
+                    </video>
+                </div>
+            </section>
+
+            <!-- Image Gallery -->
+            <section class="media-section reveal">
+                <div class="media-head">
+                    <h2 class="media-title">Game Screenshots</h2>
+                    <span class="media-hint">Click an image to enlarge</span>
+                </div>
+                <div class="image-gallery">
+                    <figure class="gallery-item main-image">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Interactive Game World">
+                            <img src="supermathsbrologo.png" alt="Super Maths Bros Game World">
+                        </button>
+                        <figcaption>
+                            <h4>Interactive Game World</h4>
+                            <p>Immersive 2D game environment with mathematical challenges</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: NPC Lessons">
+                            <img src="NPCLesson.png" alt="NPC Lessons" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>NPC Lessons</h4>
+                            <p>Interactive characters teaching differentiation concepts</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Quiz Challenges">
+                            <img src="QuizChallege.png" alt="Quiz System" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Quiz Challenges</h4>
+                            <p>Engaging mathematical quizzes with instant feedback</p>
+                        </figcaption>
+                    </figure>
+                    <figure class="gallery-item">
+                        <button type="button" class="gallery-open" aria-label="Enlarge: Progress Dashboard">
+                            <img src="super5.jpg" alt="Progress Dashboard" loading="lazy">
+                        </button>
+                        <figcaption>
+                            <h4>Progress Dashboard</h4>
+                            <p>Real-time tracking for students</p>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <!-- Project Details -->
+            <div class="content-grid">
+                <div class="content-main">
+                    <div class="content-section reveal">
+                        <h3>Project Overview</h3>
+                        <p>Super Maths Bros is an innovative educational game that transforms the traditionally challenging subject of mathematical differentiation into an engaging, interactive learning experience. Inspired by classic platformer games, this application combines entertainment with education to help students master differentiation concepts in algebra and calculus.</p>
+                        <p>The game features a comprehensive learning system where students navigate through different levels, interact with Non-Player Characters (NPCs) who provide lessons, complete mathematical challenges, and earn rewards for their progress. This gamified approach significantly improves student engagement and retention of complex mathematical concepts.</p>
+                    </div>
+
+                    <div class="content-section reveal">
+                        <h3>Key Features</h3>
+                        <div class="features-grid">
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-gamepad"></i></div>
+                                <h4>Gamified Learning</h4>
+                                <p>Interactive 2D game world with rewards, achievements, and progression systems</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-robot"></i></div>
+                                <h4>Interactive NPCs</h4>
+                                <p>AI-driven characters that provide personalized lessons and guidance</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                                <h4>Real-time Tracking</h4>
+                                <p>Comprehensive analytics for both students and lecturers</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                                <h4>Reward System</h4>
+                                <p>Points, and achievements to motivate continuous learning</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section reveal">
+                        <h3>Technical Implementation</h3>
+                        <p>Built using Python with Pygame for the game engine, Super Maths Bros demonstrates advanced programming skills in game development and educational software design. The application utilizes MySQL for robust data management, ensuring reliable storage of user progress, quiz results, and learning analytics.</p>
+                        <p>The game architecture follows object-oriented design principles, with modular components for game mechanics, educational content, and user management. The system includes sophisticated algorithms for adaptive learning, adjusting difficulty based on individual student performance.</p>
+                    </div>
+
+                    <div class="content-section reveal">
+                        <h3>Educational Impact</h3>
+                        <p>The game addresses the common challenge of making abstract mathematical concepts accessible and engaging for students. By incorporating visual representations, interactive problem-solving, and immediate feedback, Super Maths Bros helps students develop a deeper understanding of differentiation principles.</p>
+                        <p>Lecturers benefit from detailed analytics that provide insights into student progress, common areas of difficulty, and overall class performance, enabling more targeted and effective teaching strategies.</p>
+                    </div>
+                </div>
+
+                <aside class="content-sidebar">
+                    <div class="sidebar-card reveal">
+                        <h4>Technology Stack</h4>
+                        <div class="tech-tags">
+                            <span class="chip">Python</span>
+                            <span class="chip">Pygame</span>
+                            <span class="chip">MySQL</span>
+                            <span class="chip">Game Development</span>
+                            <span class="chip">Educational Design</span>
+                            <span class="chip">Analytics</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-card reveal">
+                        <h4>Project Statistics</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Development Time</span>
+                            <span class="stat-value">3 months</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Lines of Code</span>
+                            <span class="stat-value">5,000+</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Game Levels</span>
+                            <span class="stat-value">5</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Math Problems</span>
+                            <span class="stat-value">30+</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-card sidebar-cta reveal">
+                        <h4>Have a similar idea?</h4>
+                        <p>Let's talk about bringing your project to life.</p>
+                        <a href="index.html#contact" class="btn btn-primary btn-sm">Get In Touch <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Previous / next project -->
+            <nav class="project-navigation" aria-label="More projects">
+                <a href="PsychologyConsultationManagementSystem.html" class="nav-btn prev-btn">
+                    <small><i class="fas fa-arrow-left"></i> Previous project</small>
+                    <strong>Psychology Consultation Management System</strong>
+                </a>
+                <a href="APMoodle.html" class="nav-btn next-btn">
+                    <small>Next project <i class="fas fa-arrow-right"></i></small>
+                    <strong>APMoodle</strong>
+                </a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-compact">
+        <div class="container">
+            <div class="footer-bottom">
+                <a href="index.html" class="nav-logo">
+                    <span class="logo-mark">MV</span>
+                    <span class="logo-text">MV <span class="logo-accent">Studio</span></span>
+                </a>
+                <p>&copy; <span class="year">2025</span> MV Studio. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="demo.js"></script>
+</body>
+</html>
