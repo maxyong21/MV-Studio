@@ -60,7 +60,7 @@ function Home({data,loading,error}){
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),2200);};
   return <>
     <header className="site-nav"><div className="nav-inner"><a className="brand" href="#home" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a>
-      <nav className={menuOpen?'nav-links open':'nav-links'} aria-label="Main navigation">{[['Work','#work'],['Services','#services'],['Studio','#studio'],['Contact','#contact']].map(([label,href])=><a key={href} onClick={()=>setMenuOpen(false)} href={href}>{label}</a>)}</nav>
+      <nav className={menuOpen?'nav-links open':'nav-links'} aria-label="Main navigation">{[['Studio','#studio'],['Work','#work'],['Services','#services'],['Contact','#contact']].map(([label,href])=><a key={href} onClick={()=>setMenuOpen(false)} href={href}>{label}</a>)}</nav>
       <div className="nav-end"><button className="icon-button theme-button" onClick={()=>setDark(!dark)} aria-label="Toggle colour theme">{dark?<Sun size={17}/>:<Moon size={17}/>}</button><Link to="/admin" className="admin-link">Admin <ArrowUpRight size={14}/></Link><a className="button button-dark nav-cta" href="#enquiry">Start a project <ArrowRight size={15}/></a><button className="icon-button mobile-menu" onClick={()=>setMenuOpen(!menuOpen)} aria-label="Toggle navigation">{menuOpen?<X/>:<Menu/>}</button></div>
     </div></header>
     {isSupabaseConfigured&&error&&<div className="connection-note">Couldn’t load live content. Showing the preview data. <span>{error}</span></div>}
