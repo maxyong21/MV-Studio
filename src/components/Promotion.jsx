@@ -27,15 +27,27 @@ export function PromotionDialog({promotion,onClose,preview=false}) {
         <h2 id="promotion-title">{promotion.title||'Promotion preview'}</h2>
         {promotion.message&&<p>{promotion.message}</p>}
         <div className="promotion-actions"><a className="button button-dark" href={preview?'#promotion-preview':publicHref(promotion.button_url||'#services')} aria-disabled={preview||undefined} onClick={event=>{if(preview)event.preventDefault();else onClose();}}>{promotion.button_label||'Explore the offer'}<ArrowUpRight size={16}/></a><button type="button" className="button button-light" onClick={onClose}>{preview?'Close preview':'Continue browsing'}</button></div>
-        <small>{preview?'Showing your current edits. Offer links are inactive here. You can preview again without affecting the daily display limit.':'We won’t show another offer in this browser today.'}</small>
+        <small>{preview?'Showing your current edits. Offer links are inactive here. You can preview again without affecting the daily display limit.':'You can reopen this promotion from Offers in the navigation or the services section.'}</small>
       </div>
     </section>
   </div>;
 }
 
-export default function Promotion({items,menuOpen=false}) {
+export default function Promotion({items,menuOpen=false,openRequest=0,onDismiss}) {
   const [shown,setShown]=useState(null);
-  const close=useRef(()=>setShown(null)).current;
+  const handledRequest=useRef(0);
+  const dismissRef=useRef(onDismiss);dismissRef.current=onDismiss;
+  const close=useRef(()=>{setShown(null);dismissRef.current?.();}).current;
+  useEffect(()=>{
+    if(!openRequest||handledRequest.current===openRequest)return;
+    handledRequest.current=openRequest;
+    const next=eligiblePromotion(items);
+    if(!next)return;
+    // A deliberate view also suppresses today's automatic interruption.
+    // Manual reopening remains available even when storage is blocked.
+    try{claimPromotion(window.localStorage);}catch{}
+    setShown(next);
+  },[openRequest,items]);
   useEffect(()=>{
     if(menuOpen||shown)return;
     let storage;

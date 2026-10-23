@@ -79,8 +79,24 @@ try{
   assert.equal(await evaluate("document.querySelector('#dialog-enabled').checked"),false);
   await click('.dialog-actions .button-dark');await wait("!document.querySelector('.entity-dialog')");
   assert.equal((await servers.db.query('select count(*)::int as n from promotions')).rows[0].n,count+1);
+  await servers.db.query('update promotions set active=true,enabled=true');
+  await navigate('http://127.0.0.1:4188/');await wait("!!document.querySelector('.nav-offers')");
+  for(const width of [1440,1024,900,800,768,390,320]){
+    await viewport(width);
+    const layout=await evaluate("(()=>{const nav=document.querySelector('.nav-links'),brand=document.querySelector('.brand').getBoundingClientRect(),end=document.querySelector('.nav-end').getBoundingClientRect(),r=nav.getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,overlap:getComputedStyle(nav).display!=='none'&&(r.left<brand.right||r.right>end.left)}})()");
+    assert.equal(layout.overflow,false,`Customer overflow at ${width}`);assert.equal(layout.overlap,false,`Navigation overlap at ${width}`);
+  }
+  await viewport(390);await click('.mobile-menu');await click('.nav-offers');await wait("!!document.querySelector('.promotion-dialog')");
+  assert.equal(await evaluate("document.querySelector('.mobile-menu').getAttribute('aria-expanded')"),'false');
+  await click('.promotion-dialog header button');await wait("!document.querySelector('.promotion-dialog')&&document.activeElement.classList.contains('mobile-menu')");
+  const day=await evaluate("localStorage.getItem('mv-promotion-seen-day-v1')");assert.notEqual(day,'already-viewed');
+  await click('.current-offer button');await wait("!!document.querySelector('.promotion-dialog')");await click('.promotion-dialog header button');await wait("!document.querySelector('.promotion-dialog')");
+  await viewport(1440);await click('.nav-offers');await wait("!!document.querySelector('.promotion-dialog')");await click('.promotion-dialog header button');await wait("!document.querySelector('.promotion-dialog')");
+  assert.equal(await evaluate("localStorage.getItem('mv-promotion-seen-day-v1')"),day);
+  await servers.db.query('update promotions set enabled=false');await navigate('http://127.0.0.1:4188/');await wait("!!document.querySelector('.service-grid')");
+  assert.equal(await evaluate("!!document.querySelector('.nav-offers,.current-offer')"),false);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({passed:true,checks:['upload preview','unsaved and disabled offer preview','five responsive sizes','uncropped full-width poster','keyboard focus trap and restoration','Escape closes only preview','repeat preview retains edits','preview does not navigate, publish or consume daily limit','save still works'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['upload preview','unsaved and disabled offer preview','five responsive sizes','uncropped full-width poster','keyboard focus trap and restoration','Escape closes only preview','repeat preview retains edits','preview does not navigate, publish or consume daily limit','save still works','seven customer navigation widths','repeated customer offer viewing after daily impression','mobile menu closes and regains focus','disabled offers hide customer controls'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();
