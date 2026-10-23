@@ -28,7 +28,7 @@ export const fallbackContent = {
   ],
   team_members: [
     { id: 'seed-t1', name: 'Max Yong', role: 'Full-Stack Developer', bio: 'Max leads the technical direction of projects, bringing clean architecture and thoughtful integrations together.', image_url: 'yongzhenfeng.jpg', linkedin_url: 'https://www.linkedin.com/in/yong-zhen-feng-2a8415312', github_url: 'https://github.com/maxyong21', website_url: 'http://yongzhenfeng.netlify.app/', active: true, sort_order: 1 },
-    { id: 'seed-t2', name: 'Vincent Teo', role: 'Full-Stack Developer', bio: 'Vincent builds responsive websites and reliable web applications with care for the details people use every day.', image_url: 'Vincent.webp', linkedin_url: 'https://www.linkedin.com/in/kai-qi-vincent-teo-1596ab286/', github_url: 'https://github.com/VincentTeo1116/', website_url: 'https://vincent16-portfolio.vercel.app/', active: true, sort_order: 2 },
+    { id: 'seed-t2', name: 'Vincent Teo', role: 'Full-Stack Developer', bio: 'Vincent builds responsive websites and reliable web applications with care for the details people use every day.', image_url: 'vincent-teo.jpg', linkedin_url: 'https://www.linkedin.com/in/kai-qi-vincent-teo-1596ab286/', github_url: 'https://github.com/VincentTeo1116/', website_url: 'https://vincent16-portfolio.vercel.app/', active: true, sort_order: 2 },
   ],
   promotions: [],
 };
