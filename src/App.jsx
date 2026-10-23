@@ -3,9 +3,6 @@ import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Code2, Database, Github, Globe2, HeartHandshake, Home as HomeIcon, Layers3, Linkedin, Mail, Menu, Moon, Pencil, Plus, Search, ShieldCheck, Sparkles, Sun, Trash2, X, Zap } from 'lucide-react';
 import { entityConfig, fallbackContent } from './content.js';
 import { isCurrentUserAdmin, isSupabaseConfigured, supabase } from './supabase.js';
-import './admin.css';
-import './footer.css';
-import './responsive.css';
 
 const sortRows = (rows=[]) => [...rows].filter(row => row.active !== false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 const money = (value,currency='RM') => value === null || value === '' || value === undefined ? 'Let’s talk' : `${currency} ${Number(value).toLocaleString('en-MY')}`;
@@ -129,8 +126,8 @@ function Home({data,loading,error}){
     if(!('IntersectionObserver' in window)||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:.12,rootMargin:'0px 0px -35px 0px'});
     targets.forEach((target,index)=>{target.classList.add('reveal-on-scroll');target.style.setProperty('--reveal-delay',`${(index%4)*65}ms`);observer.observe(target);});
-    return()=>observer.disconnect();
-  },[]);
+    return()=>{observer.disconnect();targets.forEach(target=>target.classList.remove('reveal-on-scroll'));};
+  },[data.projects,data.services,data.team_members]);
   useEffect(()=>{const update=()=>{const max=document.documentElement.scrollHeight-window.innerHeight;document.documentElement.style.setProperty('--scroll-progress',max>0?`${window.scrollY/max}`:'0');};update();window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);return()=>{window.removeEventListener('scroll',update);window.removeEventListener('resize',update);};},[]);
   useEffect(()=>{
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,'');
@@ -159,6 +156,7 @@ function Home({data,loading,error}){
   const dismissPromo=()=>{if(promo)localStorage.setItem(`mv-promo-dismissed-${promo.id}`,String(Date.now()));setPromo(null);};
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),2200);};
   return <>
+    <a className="skip-link" href="#home">Skip to main content</a>
     <div className="scroll-progress" aria-hidden="true"/>
     <header className="site-nav"><div className="nav-inner"><a className="brand" href="#home" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a>
       <nav className={menuOpen?'nav-links open':'nav-links'} id="site-navigation" aria-label="Main navigation">{[['Studio','#studio'],['Work','#work'],['Services','#services'],['Contact','#contact']].map(([label,href])=><a key={href} onClick={()=>setMenuOpen(false)} href={href}>{label}</a>)}</nav>
@@ -166,7 +164,7 @@ function Home({data,loading,error}){
     </div></header>
     {isSupabaseConfigured&&error&&<div className="connection-note">Couldn’t load live content. Showing the preview data. <span>{error}</span></div>}
     {!isSupabaseConfigured&&<div className="setup-note"><Database size={14}/> Preview mode · Add Supabase credentials to connect live website content.</div>}
-    <main id="home">
+    <main id="home" tabIndex={-1}>
       <section className="hero"><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/><div className="hero-inner"><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line"/>{content.hero_eyebrow}</div><h1>{content.hero_title}</h1><p className="hero-lead">{content.hero_description}</p><div className="hero-actions"><a className="button button-dark" href="#contact">{content.hero_cta} <ArrowUpRight size={16}/></a><a className="text-link" href="#work">Explore our work <ArrowDown size={15}/></a></div><div className="hero-proof"><div className="avatar-stack"><img src="yongzhenfeng.jpg"/><img src="Vincent.webp"/></div><span>Small team. Thoughtful work.<br/><strong>Built together with you.</strong></span></div></div>
       <div className="hero-art" aria-label="A glimpse at MV Studio work"><div className="art-note note-top"><span className="note-dot"/>Made with intention</div><div className="art-window"><div className="window-top"><span/><span/><span/><b>your-next-big-thing.my</b><i>↗</i></div><div className="window-body"><div className="window-brand">GOOD<span>FORM</span><div>MENU&nbsp; ☰</div></div><div className="window-copy"><small>MADE FOR THE EVERYDAY</small><strong>Make room<br/>for <em>better.</em></strong><span>Thoughtful design for the way you live.</span><button>Discover the collection&nbsp; ↗</button></div><div className="window-sticker">DESIGNED<br/>TO GROW <ArrowUpRight size={18}/></div><div className="window-shape shape-a"/><div className="window-shape shape-b"/></div></div><div className="art-float float-code"><Code2 size={17}/><span>Clean code<br/><b>Clear thinking</b></span></div><div className="art-float float-spark"><Sparkles size={19}/></div><div className="art-caption">A thoughtful first impression<br/><b>does a lot of heavy lifting.</b></div></div></div><div className="hero-bottom"><span>GOOD IDEAS DESERVE A GOOD HOME</span><div className="hero-tags"><span>Websites</span><i/> <span>Web apps</span><i/> <span>Digital systems</span></div></div></section>
       <section className="intro-section section-pad" id="studio"><div className="section-overline"><span>01</span> WHY MV STUDIO</div><div className="intro-layout"><h2>{content.about_title}</h2><div><p>{content.about_text}</p><a className="inline-link" href="#contact">A little more about us <ArrowUpRight size={15}/></a></div></div><div className="value-row"><div className="value-item"><span className="value-icon"><HeartHandshake/></span><div><b>Good people, close by</b><p>Work directly with the developers on your project.</p></div></div><div className="value-item"><span className="value-icon"><BadgeCheck/></span><div><b>Clear from day one</b><p>Know the scope, price, and next step before we start.</p></div></div><div className="value-item"><span className="value-icon"><Zap/></span><div><b>Made to move you forward</b><p>Useful digital work built around your real goals.</p></div></div></div></section>
@@ -190,9 +188,9 @@ function SiteFooter({projects,content}){
   const emails=normalizeContactList(content.contact_emails),phones=normalizeContactList(content.contact_phones);
   return <footer className="site-footer site-footer-full">
     <div className="site-footer-main">
-      <div className="site-footer-brand"><a className="brand" href={sectionLink('home')}><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a><p>Independent by nature.<br/>Collaborative by choice.</p><a className="footer-contact-cta" href="#enquiry">Start a project <ArrowUpRight size={15}/></a></div>
+      <div className="site-footer-brand"><a className="brand" href={sectionLink('home')}><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a><p>Independent by nature.<br/>Collaborative by choice.</p><a className="footer-contact-cta" href={sectionLink('enquiry')}>Start a project <ArrowUpRight size={15}/></a></div>
       <nav className="site-footer-column" aria-label="Explore the website"><h2>Explore</h2><a href={sectionLink('studio')}>Studio</a><a href={sectionLink('work')}>Selected work</a><a href={sectionLink('services')}>Services</a><a href={sectionLink('process')}>How we work</a><a href={sectionLink('contact')}>Contact us</a></nav>
-      <div className="site-footer-column"><h2>Popular projects</h2>{footerProjects.length?footerProjects.map(project=><Link key={project.id} to={`/projects/${project.id}`}>{project.name}<ArrowUpRight size={13}/></Link>):<span className="footer-empty">Choose up to four projects in Admin → Projects.</span>}</div>
+      <div className="site-footer-column"><h2>Popular projects</h2>{footerProjects.length?footerProjects.map(project=><Link key={project.id} to={`/projects/${project.id}`}>{project.name}<ArrowUpRight size={13}/></Link>):<a href={sectionLink('work')}>Explore our work <ArrowUpRight size={13}/></a>}</div>
       <div className="site-footer-column footer-contact-column"><h2>Contact us</h2>{emails.map((email,index)=><a key={`${email}-${index}`} href={`mailto:${email}`}><Mail size={14}/>{email}</a>)}{phones.map((phone,index)=><a key={`${phone}-${index}`} href={`tel:${phone.replace(/[^+\d]/g,'')}`}><Globe2 size={14}/>{phone}</a>)}<a href={sectionLink('contact')}>Send an enquiry <ArrowRight size={14}/></a></div>
     </div>
     <div className="site-footer-bottom"><span>© {new Date().getFullYear()} MV Studio</span><a href={sectionLink('home')}>Back to top ↑</a><span>Made with care in Malaysia.</span></div>

@@ -43,7 +43,7 @@ if (!configuredUrl) {
   };
   const jsonLd = `<script id="mv-studio-jsonld" type="application/ld+json">${JSON.stringify(graph).replace(/</g, '\\u003c')}</script>`;
   const canonical = `<link rel="canonical" href="${configuredUrl}/" />`;
-  const socialTags = `<meta property="og:url" content="${configuredUrl}/" />\n    <meta property="og:image" content="${configuredUrl}/aphome.png" />`;
+  const socialTags = `<meta property="og:url" content="${configuredUrl}/" />`;
   const enriched = html
     .replace('content="/aphome.png"', `content="${configuredUrl}/aphome.png"`)
     .replace('</head>', `    ${canonical}\n    ${socialTags}\n    ${jsonLd}\n  </head>`);
