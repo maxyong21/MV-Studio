@@ -9,6 +9,8 @@ import InlineFieldError from './components/InlineFieldError.jsx';
 import SmartImage from './components/SmartImage.jsx';
 import Launcher from './chatbot/Launcher.jsx';
 import Availability,{PublicBoundary} from './components/Availability.jsx';
+import Analytics from './components/Analytics.jsx';
+import {trackEvent} from './lib/analytics.mjs';
 import {emptyPublicContent,hasPublicContent,publicFailure} from './lib/availability.mjs';
 const Admin=lazy(()=>import('./admin/Admin.jsx'));
 
@@ -35,7 +37,7 @@ function App({initialData}){
   const {pathname,hash}=useLocation(),site=useSiteData(initialData,pathname!=='/admin');
   useEffect(()=>{if(!hash||site.availability!=='ready')return;requestAnimationFrame(()=>document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView());},[pathname,hash,site.availability]);
   const publicPage=children=><PublicBoundary key={pathname}>{site.availability==='ready'?children:<Availability kind={site.availability} onRetry={site.availability==='maintenance'?site.reload:undefined} busy={site.loading}/>}</PublicBoundary>;
-  return <><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher/>}</>;
+  return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher/>}</>;
 }
 
 function NotFoundPage({project=false}){
@@ -181,6 +183,7 @@ function FeatureRequestForm({options}){
       if(submissionRef.current?.signature!==signature)submissionRef.current={signature,id:crypto.randomUUID()};
       const result=await submitEnquiry({...body,request_id:submissionRef.current.id});
       if(!result?.ok)throw new Error('Enquiry confirmation was unavailable.');
+      trackEvent('generate_lead',{method:'enquiry_form'});
       setFeedback('Thanks — your enquiry has been saved. We will contact you to confirm the scope and any meeting time.'+(result.id?' Reference: '+result.id:''));
       submissionRef.current=null;
       setValues(emptyValues);setSelected([]);setErrors({});setTouched({});setAttempted(false);
