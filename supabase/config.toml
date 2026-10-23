@@ -4,3 +4,10 @@ verify_jwt = false
 [functions.retry-enquiry]
 # This function verifies JWTs with auth.getUser and checks admin_users itself.
 verify_jwt = false
+
+[functions.chatbot]
+verify_jwt = false
+
+[functions.chatbot-admin]
+# JWT + admin membership are verified inside the handler.
+verify_jwt = false

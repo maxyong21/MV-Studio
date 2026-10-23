@@ -4,6 +4,7 @@ import {resolve,join,sep,extname} from 'node:path';
 import {database,client} from './database.mjs';
 import {createSubmitHandler} from '../../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../../supabase/functions/_shared/retry-handler.mjs';
+import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.xml':'application/xml','.txt':'text/plain'};
 export async function staticFile(req,res,folder){
   const root=resolve(folder),url=new URL(req.url,'http://localhost');
@@ -19,8 +20,8 @@ export async function browserServers(){
   const b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   const token=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.fixture`;
   const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
-  const deps={env,createAdmin:()=>client(db,adminId),fetcher:async()=>{mails++;return Response.json({id:`local-email-${mails}`});}};
-  const submit=createSubmitHandler(deps),retry=createRetryHandler(deps);
+  const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async()=>{mails++;return Response.json({id:`local-email-${mails}`});}};
+  const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
@@ -49,7 +50,9 @@ export async function browserServers(){
       if(url.pathname.startsWith('/functions/v1/')){
         const bytes=[];for await(const chunk of req)bytes.push(chunk);
         const request=new Request(url,{method:req.method,headers:req.headers,body:Buffer.concat(bytes)});
-        const result=await (url.pathname.endsWith('retry-enquiry')?retry:submit)(request);
+        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin};
+        const handler=handlers[url.pathname.split('/').at(-1)];if(!handler){send({error:'Unknown function'},404);return;}
+        const result=await handler(request);
         res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
       }
       if(url.pathname.startsWith('/rest/v1/')){

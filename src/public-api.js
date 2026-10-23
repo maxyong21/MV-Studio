@@ -19,3 +19,10 @@ export async function submitEnquiry(body){
   if(!response.ok||!result.ok){const error=new Error(result.error||'We could not confirm your submission. Please try again.');error.fields=result.errors;throw error;}
   return result;
 }
+export async function chatbotRequest(body){
+  if(!isSupabaseConfigured)throw new Error('The assistant is not connected yet. Please use the enquiry form.');
+  const response=await fetch(`${base}/functions/v1/chatbot`,{method:'POST',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok){const error=new Error(result.error||'The assistant is unavailable. Please use the enquiry form.');error.fields=result.errors;error.status=response.status;throw error;}
+  return result;
+}

@@ -6,6 +6,18 @@ MV Studio's customer website and private content manager are built with React, V
 
 MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. The public footer links to key sections, selected projects, and configured contact channels. Supabase stores the website content and enquiry records; Resend sends enquiry notifications when configured.
 
+## Guided project assistant
+
+Visitors can open **Plan your project** to describe an idea, complete adaptive cards, review an itemized preliminary estimate and send a confirmed enquiry. Admins manage approved knowledge, questions, options, branching and regression tests under **Project assistant**, with private preview, review, publication and rollback. Prices come from the existing feature catalogue and are calculated on the backend.
+
+Follow the detailed [chatbot setup and operating guide](docs/CHATBOT.md). Existing installations need the new [`20261025_chatbot.sql`](supabase/migrations/20261025_chatbot.sql) migration and the `chatbot`, `chatbot-admin` and updated `submit-enquiry` functions. New installations can use the complete `supabase/schema.sql`. Default BM25 retrieval works without AI keys; optional Gemini/Groq settings stay server-side. Review and publish the starter draft before the public assistant becomes available.
+
+### Enquiry email design
+
+Admin notifications use the branded HTML template in [`supabase/functions/_shared/email-template.mjs`](supabase/functions/_shared/email-template.mjs): a forest-green header, readable contact details, selected features, a preliminary estimate, optional chatbot scope, meeting preferences and a reply button. Core styles are inline, the layout uses presentation tables, and a small media query adjusts spacing on mobile. The existing plain-text version is also sent. Customer-entered values are HTML-escaped, and the email uses system fonts without external images or stylesheets. Rendering can vary between email clients.
+
+After changing this shared template, redeploy **both** `submit-enquiry` and `retry-enquiry` so new notifications and retried notifications use it. No SQL changes are required for email styling. This project currently sends notifications to the configured team inbox; automatic customer confirmation emails are a separate sending flow. Styling does not change Resend's sender or recipient restrictions: `onboarding@resend.dev` can be used for testing to your own Resend account email, while sending to other recipients requires a verified sending domain.
+
 ## Create a Git branch for this work
 
 From the project folder, create and switch to a branch before committing these changes:
