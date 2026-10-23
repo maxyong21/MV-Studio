@@ -32,7 +32,16 @@ export async function browserServers(){
         if(req.method==='POST'){
           if(req.headers.authorization!==`Bearer ${token}`){send({message:'Not authorized'},403);return;}
           const chunks=[];for await(const chunk of req)chunks.push(chunk);
-          const path=url.pathname.slice('/storage/v1/object/'.length);images.set(path,{bytes:Buffer.concat(chunks),type:req.headers['content-type']});
+          let bytes=Buffer.concat(chunks),type=req.headers['content-type'];
+          // Supabase's browser SDK wraps Blob/File uploads in multipart form data.
+          // Serve the file bytes, as Storage does, rather than the multipart envelope.
+          if(type?.startsWith('multipart/form-data')){
+            const form=await new Response(bytes,{headers:{'Content-Type':type}}).formData();
+            const file=[...form.values()].find(value=>typeof value!=='string'&&typeof value.arrayBuffer==='function');
+            if(!file)throw new Error('Missing uploaded image');
+            bytes=Buffer.from(await file.arrayBuffer());type=file.type;
+          }
+          const path=url.pathname.slice('/storage/v1/object/'.length);images.set(path,{bytes,type});
           send({Id:crypto.randomUUID(),Key:path});return;
         }
         if(req.method==='GET'){

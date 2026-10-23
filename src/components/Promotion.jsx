@@ -6,8 +6,10 @@ import {eligiblePromotion,canShowPromotion,claimPromotion} from '../lib/promotio
 import {publicHref} from '../lib/site.js';
 import './promotion.css';
 
-function PromotionDialog({promotion,onClose}) {
+export function PromotionDialog({promotion,onClose,preview=false}) {
   const dialog=useRef(null);
+  const [imageFailed,setImageFailed]=useState(false);
+  useEffect(()=>setImageFailed(false),[promotion.image_url]);
   useDialogFocus(dialog);
   useEffect(()=>{
     const previous=document.body.style.overflow;
@@ -18,13 +20,14 @@ function PromotionDialog({promotion,onClose}) {
   },[onClose]);
   return <div className="promotion-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
     <section ref={dialog} className="promotion-dialog" role="dialog" aria-modal="true" aria-labelledby="promotion-title">
-      <header><span>A little something for you</span><button type="button" onClick={onClose} aria-label="Close advertisement"><X size={22}/></button></header>
+      <header><span>{preview?'Promotion preview':'A little something for you'}</span><button type="button" onClick={onClose} aria-label={preview?'Close promotion preview':'Close advertisement'}><X size={22}/></button></header>
       <div className="promotion-body">
-        {promotion.image_url&&<SmartImage record={promotion} alt={`${promotion.title} — promotional poster`} sizes="(max-width:600px) 90vw, 520px" priority/>}
-        <h2 id="promotion-title">{promotion.title}</h2>
+        {promotion.image_url&&!imageFailed&&<SmartImage record={promotion} alt={`${promotion.title} — promotional poster`} sizes="(max-width:600px) 95vw, 560px" priority onError={()=>setImageFailed(true)}/>}
+        {preview&&imageFailed&&<p role="status">The poster could not be loaded. Check the image URL or upload it again.</p>}
+        <h2 id="promotion-title">{promotion.title||'Promotion preview'}</h2>
         {promotion.message&&<p>{promotion.message}</p>}
-        <div className="promotion-actions"><a className="button button-dark" href={publicHref(promotion.button_url||'#services')} onClick={onClose}>{promotion.button_label||'Explore the offer'}<ArrowUpRight size={16}/></a><button type="button" className="button button-light" onClick={onClose}>Continue browsing</button></div>
-        <small>We won’t show another offer in this browser today.</small>
+        <div className="promotion-actions"><a className="button button-dark" href={preview?'#promotion-preview':publicHref(promotion.button_url||'#services')} aria-disabled={preview||undefined} onClick={event=>{if(preview)event.preventDefault();else onClose();}}>{promotion.button_label||'Explore the offer'}<ArrowUpRight size={16}/></a><button type="button" className="button button-light" onClick={onClose}>{preview?'Close preview':'Continue browsing'}</button></div>
+        <small>{preview?'Showing your current edits. Offer links are inactive here. You can preview again without affecting the daily display limit.':'We won’t show another offer in this browser today.'}</small>
       </div>
     </section>
   </div>;

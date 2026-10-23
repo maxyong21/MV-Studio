@@ -1,9 +1,11 @@
 import {normalizeContactList} from '../lib/site.js';
 import {entityConfig} from './config.js';
+import {sitemapPaths} from '../lib/sitemap.mjs';
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const phonePattern = /^[+()\d.\s-]+$/;
 export function validateContentField(key,value){
   const text=String(value??'').trim(), values=Array.isArray(value)?normalizeContactList(value):text.split('\n').map(item=>item.trim()).filter(Boolean);
+  if(key==='sitemap_paths_text')return sitemapPaths(value).errors.length?'Enter one site path per line, starting with /. External URLs, project URLs and admin paths are not allowed.':'';
   if(['hero_title','hero_description','hero_eyebrow','hero_cta','about_title','about_text','seo_title','seo_description'].includes(key)&&!text)return 'This field is required.';
   if(key==='contact_emails'&&Array.isArray(value)){if(value.length>1&&!values.length)return 'Remove extra blank email fields or enter a contact email.';if(values.length&&value.some(item=>!String(item).trim()||!emailPattern.test(String(item).trim())))return 'Enter a valid email address in each contact field.';}
   else if(key==='contact_phones'&&Array.isArray(value)){if(value.length>1&&!values.length)return 'Remove extra blank phone fields or enter a contact number.';if(values.length&&value.some(item=>{const phone=String(item).trim(),digits=phone.replace(/\D/g,'').length;return !phone||!phonePattern.test(phone)||digits<7||digits>15;}))return 'Enter a valid phone number with 7-15 digits in each contact field.';}

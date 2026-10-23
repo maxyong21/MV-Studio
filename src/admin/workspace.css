@@ -31,6 +31,8 @@
 .admin-status a { color: #a7472a; text-decoration: underline; }
 .admin-theme-toggle { border-radius: 9px; width: 44px; height: 44px; background: #fffdf8; color: #193e32; }
 .entity-dialog .dialog-head .modal-close { width: 44px; height: 44px; }
+.entity-dialog .dialog-actions { flex-wrap: wrap; }
+.entity-dialog .promotion-preview-button { margin-right: auto; }
 :root[data-theme=dark] .login-page { background: radial-gradient(ellipse at 85% 10%, #304e36 0, transparent 65%), #1c2720; }
 :root[data-theme=dark] .login-card { background: #252d27; border-color: #4b5b50; }
 :root[data-theme=dark] .login-card :is(h1,p,label,.brand-light,.back-home), :root[data-theme=dark] .dialog-head p,

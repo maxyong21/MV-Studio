@@ -10,6 +10,7 @@ export const fallbackContent = {
       about_text: 'Starting or growing a business is already a lot. We make the digital part feel clearer, with honest advice, considered design, and the people building your site by your side.',
       seo_title: 'Web Design & Development for Small Businesses | MV Studio',
       seo_description: 'Affordable web design and development for small businesses in Malaysia. Websites, e-commerce stores, custom web apps, and ongoing support.',
+      sitemap_paths_text: '',
       contact_emails: [],
       contact_phones: [],
     },
