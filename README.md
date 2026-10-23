@@ -52,6 +52,10 @@ Administrators can open **System status** to check the anonymous public database
 
 Healthy content is still prerendered for search engines. Builds without content render a coming-soon page with `noindex,follow` and omit sample project listings. Builds with configured Supabase credentials still stop if public reads fail rather than publishing a broken snapshot. Runtime maintenance screens in this static frontend do not change HTTP response status codes; a true HTTP 503/Retry-After response would need hosting/server support. Redeploy the `chatbot` function after updating it so the widget can distinguish an unpublished release from an admin pause.
 
+## Analytics and website review
+
+GA4 measurement ID `G-D92C2BPTH3` is integrated for the production customer site with optional visitor consent. Follow [the GA4 setup guide](docs/ANALYTICS.md) to finish stream settings and verify events after deployment. The [website review](docs/WEBSITE_REVIEW.md) records the desktop/mobile findings and recommended improvements.
+
 ## Upgrade an existing installation
 
 Apply these changes in this order so the frontend and Edge Functions can use the new columns and policies:
