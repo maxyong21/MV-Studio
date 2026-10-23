@@ -1,0 +1,38 @@
+.site-footer-full {
+  display: block;
+  padding: 58px clamp(22px, 6vw, 88px) 20px;
+  background: #202a25;
+  color: #eff3ed;
+  font-size: 14px;
+}
+.site-footer-main {
+  display: grid;
+  grid-template-columns: 1.35fr .8fr 1fr 1.15fr;
+  gap: clamp(24px, 4vw, 60px);
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-bottom: 46px;
+}
+.site-footer-full .brand { color: #f4f5ef; font-size: 23px; }
+.site-footer-full .brand-light { color: #a9b6aa; }
+.site-footer-brand p { margin: 18px 0 24px; color: #b8c2b8; font-size: 14px; line-height: 1.8; }
+.footer-contact-cta { display: inline-flex; align-items: center; gap: 9px; color: #f2a283; font-size: 14px; font-weight: 650; }
+.site-footer-column { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.site-footer-column h2 { margin: 2px 0 7px; color: #9aa99b; font-size: 11px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.site-footer-column a { display: inline-flex; align-items: center; gap: 9px; color: #e4ebe3; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; transition: color .18s ease; }
+.site-footer-column a:hover, .site-footer-bottom a:hover { color: #f2a283; }
+.footer-empty { max-width: 230px; color: #aeb9ae; font-size: 13px; line-height: 1.7; }
+.site-footer-bottom { display: flex; justify-content: space-between; gap: 18px; max-width: 1440px; margin: 0 auto; padding-top: 17px; border-top: 1px solid #ffffff24; color: #aeb9ae; font-size: 12px; }
+.site-footer-bottom a { color: #e4ebe3; }
+.check-field small { flex-basis: 100%; margin: -2px 0 0 26px; color: #7a887c; font-size: 11px; font-weight: 450; line-height: 1.5; }
+:root[data-theme=dark] .check-field small { color: #aab8ac; }
+@media (max-width: 900px) {
+  .site-footer-main { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 34px 28px; }
+}
+@media (max-width: 520px) {
+  .site-footer-full { padding: 42px 20px 18px; }
+  .site-footer-main { grid-template-columns: 1fr 1fr; gap: 30px 18px; padding-bottom: 32px; }
+  .site-footer-brand { grid-column: 1 / -1; }
+  .site-footer-bottom { flex-wrap: wrap; justify-content: flex-start; font-size: 11px; }
+  .site-footer-bottom span:last-child { flex-basis: 100%; }
+}

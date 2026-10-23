@@ -1,10 +1,10 @@
-﻿# MV Studio — React + Supabase
+# MV Studio — React + Supabase
 
 MV Studio's customer website and private content manager are built with React, Vite, and Supabase. The original project detail pages and their media remain in the project root and are linked from the project cards.
 
 ## What this website is for
 
-MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. Supabase stores the website content and enquiry records; Resend sends enquiry notifications when configured.
+MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. The public footer links to key sections, selected projects, and configured contact channels. Supabase stores the website content and enquiry records; Resend sends enquiry notifications when configured.
 
 ## Create a Git branch for this work
 
@@ -59,13 +59,13 @@ git commit -m "Add Supabase project media and video demos"
 ## Admin features
 
 - **Services & pricing:** create, edit, publish/hide, reorder, or delete packages; manage discounts, features, and delivery estimates.
-- **Projects:** manage project descriptions, demo links, tags, featured status, preview images, and demo video URLs. Add a YouTube URL to embed it on the project detail page, or upload an MP4/WebM/MOV clip to Supabase Storage. The existing project demo URL can also be a YouTube link.
+- **Projects:** manage project descriptions, demo links, tags, featured status, preview images, and demo video URLs. Select up to four projects for the customer-site footer with the “Show in footer” checkbox; the database enforces this limit too. Add a YouTube URL to embed it on the project detail page, or upload an MP4/WebM/MOV clip to Supabase Storage. The existing project demo URL can also be a YouTube link.
 - **Project SEO:** set a unique search title and description for each portfolio project. The same project records power the customer site and the JSON-LD portfolio data.
 - **Team:** manage names, biographies, social links, order, and photos.
 - **Promotions:** manage popup offer copy, destination, image, publication, enablement, and start/end dates. A visitor who dismisses or follows the offer will not see it again in that browser for 30 minutes.
 - **Enquiry features:** manage the customer-facing feature catalogue, third-party options, pricing, availability, and annual free-month rules.
 - **Enquiries:** view customer requests, selected features, server-calculated estimates, meeting requests, email delivery state, and update the enquiry status.
-- **Site content:** edit the home hero, about copy, business contact information, and multiple contact emails / phone numbers (one per line).
+- **Site content:** edit the home hero, about copy, business contact information, and contact email addresses and phone numbers with add/remove controls. These are stored as JSON arrays in Supabase.
 - **Media:** project preview images, team avatar photos, promotion/advertisement images, and project demo clips all use the same public `site-media` bucket. Their admin editors can upload images; project editors can upload MP4/WebM/MOV clips or embed a YouTube link. You can also upload through the Supabase Storage dashboard and paste the resulting public URL into an image or video URL field. Public bucket URLs are accessible to anyone who has the URL.
 
 All persistent content mutations go to Supabase. Row-level security makes website content readable publicly while restricting changes to users explicitly listed in `admin_users`. Do not expose a service-role key in this frontend. To publish, build with `VITE_SITE_URL` set to the canonical HTTPS domain, then deploy the Vite `dist/` output on a static host and add the same public Supabase environment variables to that host. The build writes `robots.txt` and `sitemap.xml` for that domain. Configure the host to serve `index.html` for the `/admin` route.
@@ -91,7 +91,7 @@ The enquiry form stores customer data only through the `submit-enquiry` Supabase
    ```
 
    For multiple recipients, comma-separate `ENQUIRY_TO_EMAIL`. For local development, leaving `ALLOWED_ORIGIN` unset permits localhost origins.
-3. Run the current [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor. For an existing install, rerun the full script; it adds feature and enquiry tables and preserves saved website content.
+3. Run the current [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor. For an existing install, rerun the full script; it adds feature and enquiry tables, preserves saved website content, and converts legacy newline-separated contact values into JSON arrays.
 4. Add the production Supabase URL and publishable key to the host as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then rebuild/redeploy the site. Keep `VITE_SITE_URL` set to the canonical domain for SEO output.
 
 The function rate-limits to five attempts per IP hash per hour. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
