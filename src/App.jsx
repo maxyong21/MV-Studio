@@ -7,6 +7,7 @@ import {sortRows,money,normalizeContactList,normalizeSiteContent,publicHref} fro
 import {estimateFeatures,validateContact} from '../supabase/functions/_shared/enquiry.mjs';
 import InlineFieldError from './components/InlineFieldError.jsx';
 import SmartImage from './components/SmartImage.jsx';
+import Launcher from './chatbot/Launcher.jsx';
 const Admin=lazy(()=>import('./admin/Admin.jsx'));
 
 function youtubeEmbed(url){try{const parsed=new URL(url);const host=parsed.hostname.replace(/^www\./,'');const isYoutube=host==='youtube.com'||host.endsWith('.youtube.com');const id=host==='youtu.be'?parsed.pathname.slice(1):isYoutube?(parsed.searchParams.get('v')||parsed.pathname.match(/\/(?:embed|shorts)\/([^/]+)/)?.[1]):null;return id?`https://www.youtube-nocookie.com/embed/${id}`:null;}catch{return null;}}
@@ -26,7 +27,7 @@ function useSiteData(initialData,enabled=true) {
   return {data,loading,error,reload};
 }
 
-function App({initialData}){const {pathname,hash}=useLocation();const site=useSiteData(initialData,pathname!=='/admin');useEffect(()=>{if(!hash)return;requestAnimationFrame(()=>document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView());},[pathname,hash,site.loading]);return <Routes><Route path="/" element={<Home {...site}/>} /><Route path="/projects/:id" element={<ProjectDetails {...site}/>} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace…</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>}
+function App({initialData}){const {pathname,hash}=useLocation();const site=useSiteData(initialData,pathname!=='/admin');useEffect(()=>{if(!hash)return;requestAnimationFrame(()=>document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView());},[pathname,hash,site.loading]);return <><Routes><Route path="/" element={<Home {...site}/>} /><Route path="/projects/:id" element={<ProjectDetails {...site}/>} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace…</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher/>}</>}
 
 function NotFoundPage({project=false}){
   const navigate=useNavigate();const [seconds,setSeconds]=useState(6);

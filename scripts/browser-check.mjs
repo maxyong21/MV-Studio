@@ -35,6 +35,7 @@ try{
   await wait("!!document.querySelector('.theme-button')");
   assert.ok(!requests.some(url=>/\/Admin-[^/]+\.js/.test(url)),'Admin bundle must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/supabase-[^/]+\.js/.test(url)),'Admin authentication SDK must not be requested by the homepage');
+  assert.ok(!requests.some(url=>/\/(ChatDialog|ChatPanel)-[^/]+\.js/.test(url)),'Chatbot bundles load only after opening the assistant');
   assert.ok((await readFile('dist/index.html','utf8')).includes('<h1>Digital, made more human.</h1>'));
   for(const width of [1440,768,760,520,390,320]){
     await viewport(width);
@@ -79,6 +80,37 @@ try{
   await fill('#content-contact_phones-0','+1 202-555-0123');await evaluate("document.querySelector('#content-contact_phones-0').closest('.contact-list-editor').querySelector('.contact-add-button').click()");await fill('#content-contact_phones-1','+1 202-555-0124');
   await click('.content-editor-head .button');await wait("document.querySelector('.admin-toast')?.textContent==='Website content saved'");
   const contacts=(await servers.db.query('select content from site_content')).rows[0].content;assert.equal(contacts.contact_emails.length,2);assert.equal(contacts.contact_phones.length,2);
+  // Build, preview, test and publish the actual assistant using its admin UI.
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Project assistant').click()");
+  await wait("!!document.querySelector('.bot-overview')");
+  await click('.bot-section-head .button-dark');await fill('#bot-title','Browser knowledge article');await fill('#bot-body','Our browser test policy is approved for published retrieval only.');
+  await click('.bot-editor .button-dark');await wait("!document.querySelector('.bot-editor')");
+  await fill('input[aria-label="Candidate label"]','Browser reviewed release');await click('.bot-build .button-dark');
+  await wait("document.querySelector('select[aria-label=\"Review release\"]')?.value");
+  await evaluate("[...document.querySelectorAll('.bot-action-bar button')].find(el=>el.textContent==='Open private preview').click()");
+  await wait("!!document.querySelector('.chat-prompt textarea')");
+  await fill('.chat-prompt textarea','I want an online system for my bakery shop');await click('.chat-prompt button');
+  await wait("!!document.querySelector('.chat-assistant-message')");
+  assert.match(await evaluate("document.querySelector('.chat-assistant-message').textContent"),/scope/);
+  await wait("!!document.querySelector('.chat-option.chosen')");
+  const choose=async text=>{await evaluate(`[...document.querySelectorAll('.chat-option')].find(el=>el.textContent.includes(${JSON.stringify(text)})).click()`);};
+  const nextCard=async title=>{await click('.chat-actions .button-dark');if(title)await wait(`document.querySelector('.chat-panel h3')?.textContent.includes(${JSON.stringify(title)})`);};
+  await nextCard('how many');await fill('.chat-field input[type=number]','24');await nextCard('place orders');await choose('Website cart');
+  await nextCard('collect payments');await choose('Online payments');await nextCard('receive their orders');await choose('Customer pickup');
+  await nextCard('features do you need');await choose('Landing page');await nextCard('budget');await click('.chat-unsure');
+  await nextCard('launch date');await click('.chat-unsure');await nextCard('additional services');await choose('Website maintenance');
+  await nextCard('pay for recurring');await choose('Annual');await nextCard('Does this sound right');await click('.chat-wide');
+  await wait("document.querySelector('.chat-quote-total')?.textContent.includes('1,320')");
+  assert.equal((await servers.db.query('select count(*)::int n from enquiries')).rows[0].n,0,'Admin preview must not save enquiries');
+  await evaluate("[...document.querySelectorAll('.bot-preview-wrap aside button')].find(el=>el.textContent.includes('Create quote test')).click()");
+  await fill('#bot-name','Bakery annual maintenance quote');await fill('#bot-expected_one_time','449');await fill('#bot-expected_monthly','120');await fill('#bot-expected_annual','1320');
+  await click('.bot-editor .button-dark');await wait("!document.querySelector('.bot-editor')");
+  await evaluate("[...document.querySelectorAll('.bot-action-bar button')].find(el=>el.textContent.includes('Run release checks')).click()");
+  await wait("document.querySelector('.bot-test-results h4')?.textContent.startsWith('Checks passed')");
+  await fill('.bot-publication textarea','Reviewed bakery branching, source answers and annual maintenance totals.');await click('.bot-publication input[type=checkbox]');
+  await evaluate("[...document.querySelectorAll('.bot-publication button')].find(el=>el.textContent.includes('Publish candidate')).click()");
+  await wait("document.querySelector('.bot-live-status b')?.textContent==='Published assistant is live'");
+  await viewport(320);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'Assistant admin must fit mobile');await screenshot('chatbot-admin-mobile.png');
   await viewport(390);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);await screenshot('admin-mobile.png');
   await navigate(`http://127.0.0.1:4188/projects/${editedProject.id}`);await wait("document.querySelectorAll('.case-study-block').length===3");
   assert.ok(await evaluate("document.querySelector('.project-detail-image img').srcset.includes('480w')"));
@@ -93,10 +125,25 @@ try{
   await click('.meeting-toggle input');await fill('#enquiry-preferred_meeting_at','2099-01-01T10:00');await click('.enquiry-form > button');
   await wait("document.querySelector('.enquiry-feedback')?.textContent.includes('has been saved')");
   assert.equal(servers.mails,1);const saved=(await servers.db.query('select * from enquiries')).rows;assert.equal(saved.length,1);assert.equal(saved[0].meeting_requested,true);assert.equal(+saved[0].annual_estimate,1320);
+  // Public assistant at mobile sizes, client validation and real DB-backed submission.
+  await click('.chat-launcher');await wait("!!document.querySelector('.chat-prompt')");
+  for(const width of [390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);assert.equal(await evaluate("getComputedStyle(document.querySelector('.chat-scroll')).scrollbarWidth"),'none');}
+  await viewport(390);await click('.chat-wide');await choose('Manage internal operations');await nextCard('features do you need');await choose('Landing page');
+  await nextCard('budget');await click('.chat-unsure');await nextCard('launch date');await click('.chat-unsure');await nextCard('additional services');await choose('Website maintenance');
+  await nextCard('pay for recurring');await choose('Annual');await nextCard('Does this sound right');
+  await evaluate("[...document.querySelectorAll('.chat-scope button')].find(el=>el.getAttribute('aria-label').includes('main goals')||el.getAttribute('aria-label').includes('system help')).click()");
+  await nextCard('features do you need');await nextCard('budget');await nextCard('launch date');await nextCard('additional services');await nextCard('pay for recurring');await nextCard('Does this sound right');
+  await click('.chat-wide');await wait("!!document.querySelector('.chat-quote-total')");await click('.chat-actions .button-dark');await wait("!!document.querySelector('#chat-name')");
+  await click('.chat-contact .button-dark');await wait("!!document.querySelector('#chat-name-error')");assert.equal((await servers.db.query('select count(*)::int n from enquiries')).rows[0].n,1);
+  for(const [key,value] of Object.entries({name:'Jia Tan',company_name:'Mobile Bakery',phone:'+60 12-345 6789',email:'bakery@example.test'}))await fill(`#chat-${key}`,value);
+  await evaluate("[...document.querySelectorAll('.chat-contact .chat-check input')].at(-1).click()");await screenshot('chatbot-contact-mobile.png');
+  await click('.chat-contact .button-dark');await wait("!!document.querySelector('.chat-success')");assert.equal(servers.mails,2);
+  const chatEnquiry=(await servers.db.query("select * from enquiries where company_name='Mobile Bakery'")).rows[0];assert.ok(chatEnquiry.chatbot_estimate_id);assert.equal(+chatEnquiry.one_time_estimate,449);assert.equal(+chatEnquiry.annual_estimate,1320);assert.ok(chatEnquiry.chatbot_answers.summary.length);
+  await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");assert.equal(await evaluate("document.activeElement.className"),'chat-launcher');
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await screenshot('footer-mobile.png');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['prerendered HTML and hydration','public bundle excludes admin and auth SDK','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();
