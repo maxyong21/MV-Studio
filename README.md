@@ -32,6 +32,48 @@ git commit -m "Add Supabase project media and video demos"
 
 3. Open the local URL Vite prints (usually `http://localhost:5173`). The customer website works with preview content even before Supabase is configured.
 
+## Upgrade an existing installation
+
+Apply these changes in this order so the frontend and Edge Functions can use the new columns and policies:
+
+1. In **Supabase → SQL Editor**, run [`supabase/migrations/20261024_growth_and_reliability.sql`](supabase/migrations/20261024_growth_and_reliability.sql). It adds package terms, project case studies, image variants, testimonials, and duplicate-submission protection. It preserves existing records. A new project can run the complete [`supabase/schema.sql`](supabase/schema.sql), which includes this migration.
+2. Install the updated dependencies with `npm.cmd install`.
+3. Deploy both Edge Functions from the repository root, replacing `YOUR_PROJECT_REF`:
+
+   ```powershell
+   npx.cmd supabase login
+   npx.cmd supabase functions deploy submit-enquiry --project-ref YOUR_PROJECT_REF --no-verify-jwt
+   npx.cmd supabase functions deploy retry-enquiry --project-ref YOUR_PROJECT_REF --no-verify-jwt
+   ```
+
+   `submit-enquiry` accepts public requests. `retry-enquiry` verifies the bearer token through Supabase Auth and checks the `admin_users` table before allowing a retry. Its server-side authorization is required even though gateway JWT verification is disabled.
+4. Check server secrets in **Supabase → Edge Functions → Secrets**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ENQUIRY_TO_EMAIL`, and `ALLOWED_ORIGIN`. For this deployment, set `ALLOWED_ORIGIN` to `https://mv-aistudio.vercel.app`; add local origins separated by commas if required. `RATE_LIMIT_SALT` is optional. Keep all these secrets out of Vite variables. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to the functions by Supabase.
+5. In **Vercel → Project → Settings → Environment Variables**, set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_SITE_URL=https://mv-aistudio.vercel.app`. Redeploy with build command `npm run build` and output directory `dist`.
+6. In `/admin`, edit **Services & pricing** to enter actual scope, revisions, hosting/domain charges, maintenance costs, support, and payment terms. Empty policies stay hidden; the website does not invent guarantees.
+7. In **Projects**, add the challenge, approach, and verified outcome for each case study. In **Client feedback**, add genuine quotes and confirm permission before publishing. There are no seeded testimonials or fabricated results.
+8. Rebuild/redeploy after publishing content to refresh the HTML snapshots, project metadata, and sitemap. The browser continues to fetch current database content. Builds with configured Supabase credentials stop if public content cannot be read, so preview data cannot silently replace production content in search snapshots.
+9. After deployment, check `/sitemap.xml`, `/robots.txt`, a `/projects/PROJECT_ID` URL, and `/admin`. Send one enquiry with your own details and confirm that it appears in **Admin → Enquiries** and reaches the configured notification inbox. Email “accepted by provider” means Resend accepted it; actual delivery still depends on the recipient/provider. Failed notifications show an error and an admin-only **Retry email** action.
+
+The React app and the build use the same public page components. The build renders visible homepage/project HTML and a safe public content snapshot, then React hydrates it in the browser. Unknown routes still use the animated error page. Vercel serves generated files before applying the SPA fallback; see [Vercel rewrite precedence](https://vercel.com/docs/project-configuration/vercel-json#rewrites).
+
+## Performance and image handling
+
+Public visitors load the public page code and React/router. Public content and enquiries use lightweight HTTP requests; the Supabase authentication SDK, admin editor, and admin styles load only when `/admin` is opened. The build generates responsive WebP copies of local images; the original files stay available to legacy demo pages. New admin image uploads generate WebP variants up to 480, 960, and 1600 pixels before uploading them to `site-media`. GIF uploads keep their animation. Pasting an external image URL uses that image as provided. Video uploads and YouTube embeds retain their existing behavior.
+
+Package estimates show one-time work and recurring charges separately. Annual discounts use each selected feature's configured free months. A yearly maintenance plan with one free month charges eleven monthly payments. Items requiring a custom quote are listed separately from the numeric estimate.
+
+## Checks
+
+```powershell
+npm.cmd test
+npm.cmd run build
+npm.cmd run test:browser
+```
+
+`npm test` uses an in-memory PostgreSQL runtime to run the schema, repeat migrations, check RLS/grants, and exercise enquiry handlers against database records. Resend is mocked; no real emails are sent. The test bootstrap supplies minimal Supabase Auth/Storage schemas and uses PostgreSQL's built-in UUID generator instead of loading the hosted `pgcrypto` extension.
+
+`test:browser` requires Node.js 22 or newer and Chrome or Edge (set `BROWSER_PATH` if it is not detected). It uses ports 4187, 4188, and 9228, a temporary browser profile, a separate fixture build under `.generated/`, and temporary local database records. It checks production hydration, responsive layouts, lazy admin loading, admin editing, contact lists, testimonial permissions, enquiry submission, meetings, and notification handoff. Screenshots are saved to the temporary directory printed by the command. It does not modify your online database or send notifications. Run a production build first.
+
 ## Connect Supabase
 
 1. Create a Supabase project.

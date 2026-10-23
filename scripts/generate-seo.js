@@ -1,83 +1,62 @@
-﻿import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { loadEnv } from 'vite';
+import {mkdir,readFile,writeFile,access} from 'node:fs/promises';
+import {loadEnv} from 'vite';
+import {fallbackContent} from '../src/content.js';
+import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
+import {renderPage} from '../.generated/ssr/entry-server.js';
 
-const env = loadEnv('production', process.cwd(), 'VITE_');
-const configuredUrl = (process.env.VITE_SITE_URL || env.VITE_SITE_URL)?.trim().replace(/\/$/, '');
-const detailPages = ['APMoodle.html', 'hypertextedu.html', 'PsychologyConsultationManagementSystem.html', 'SuperMathsBros.html'];
-
-const robots = ['User-agent: *', 'Allow: /', 'Disallow: /admin', ...(configuredUrl ? [`Sitemap: ${configuredUrl}/sitemap.xml`] : []), ''].join('\n');
-await writeFile('dist/robots.txt', robots);
-
-if (!configuredUrl) {
-  console.log('robots.txt generated. Set VITE_SITE_URL before building to also generate sitemap.xml.');
-} else {
-  let projects = [];
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL;
-  const publicKey = process.env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
-  if (supabaseUrl && publicKey) {
-    try {
-      const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/projects?select=id,name,summary,seo_title,seo_description,image_url&active=eq.true`, {
-        headers: { apikey: publicKey, Authorization: `Bearer ${publicKey}` },
-      });
-      if (response.ok) projects = await response.json();
-      else console.warn(`Could not fetch project URLs for sitemap: ${response.status}`);
-    } catch (error) {
-      console.warn(`Could not fetch project URLs for sitemap: ${error.message}`);
-    }
-  }
-
-  const projectRoutes = projects.map(project => `${configuredUrl}/projects/${encodeURIComponent(project.id)}`);
-  const locations = [configuredUrl, ...projectRoutes, ...detailPages.map(page => `${configuredUrl}/${page}`)];
-  const xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', ...locations.map(url => `  <url><loc>${url}</loc></url>`), '</urlset>', ''].join('\n');
-  await writeFile('dist/sitemap.xml', xml);
-
-  const indexPath = 'dist/index.html';
-  const html = await readFile(indexPath, 'utf8');
-  const graph = {
-    '@context': 'https://schema.org',
-    '@type': 'ProfessionalService',
-    name: 'MV Studio',
-    url: `${configuredUrl}/`,
-    description: 'Web design and development for small businesses, startups, and growing teams in Malaysia.',
-    areaServed: { '@type': 'Country', name: 'Malaysia' },
-  };
-  const jsonLd = `<script id="mv-studio-jsonld" type="application/ld+json">${JSON.stringify(graph).replace(/</g, '\\u003c')}</script>`;
-  const canonical = `<link rel="canonical" href="${configuredUrl}/" />`;
-  const socialTags = `<meta property="og:url" content="${configuredUrl}/" />`;
-  const enriched = html
-    .replace('content="/aphome.png"', `content="${configuredUrl}/aphome.png"`)
-    .replace('</head>', `    ${canonical}\n    ${socialTags}\n    ${jsonLd}\n  </head>`);
-  await writeFile(indexPath, enriched);
-
-  const htmlEscape = value => String(value || '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-  const replaceMeta = (source, key, value, attribute = 'property') => {
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(`<meta\\s+${attribute}=["']${escapedKey}["'][^>]*>`, 'i');
-    const tag = `<meta ${attribute}="${htmlEscape(key)}" content="${htmlEscape(value)}" />`;
-    return pattern.test(source) ? source.replace(pattern, tag) : source.replace('</head>', `    ${tag}\n  </head>`);
-  };
-
-  for (const project of projects) {
-    // IDs are UUIDs in the database; restrict the output path to that format.
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(project.id)) continue;
-    const url = `${configuredUrl}/projects/${project.id}`;
-    const title = project.seo_title || `${project.name} | MV Studio Projects`;
-    const description = project.seo_description || project.summary || `Explore the ${project.name} project by MV Studio.`;
-    const image = project.image_url ? new URL(project.image_url, `${configuredUrl}/`).href : `${configuredUrl}/aphome.png`;
-    const projectGraph = { '@context': 'https://schema.org', '@type': 'CreativeWork', name: project.name, headline: title, description, url, image, creator: { '@type': 'Organization', name: 'MV Studio', url: `${configuredUrl}/` } };
-    let page = enriched.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`);
-    page = replaceMeta(page, 'description', description, 'name');
-    page = replaceMeta(page, 'og:title', title);
-    page = replaceMeta(page, 'og:description', description);
-    page = replaceMeta(page, 'og:url', url);
-    page = replaceMeta(page, 'og:image', image);
-    page = replaceMeta(page, 'twitter:title', title, 'name');
-    page = replaceMeta(page, 'twitter:description', description, 'name');
-    page = page.replace(/<link rel="canonical" href="[^"]*"\s*\/>/i, `<link rel="canonical" href="${url}" />`);
-    page = page.replace(/<script id="mv-studio-jsonld" type="application\/ld\+json">[\s\S]*?<\/script>/i, `<script id="mv-studio-jsonld" type="application/ld+json">${JSON.stringify(projectGraph).replace(/</g, '\\u003c')}</script>`);
-    const outputDirectory = `dist/projects/${project.id}`;
-    await mkdir(outputDirectory, { recursive: true });
-    await writeFile(`${outputDirectory}/index.html`, page);
-  }
-  console.log(`SEO files generated for ${configuredUrl}${projects.length ? ` (${projects.length} project pages)` : ''}`);
+const env=loadEnv('production',process.cwd(),'VITE_');
+const base=siteUrl(process.env.VITE_SITE_URL||env.VITE_SITE_URL);
+const supabaseUrl=process.env.VITE_SUPABASE_URL||env.VITE_SUPABASE_URL;
+const key=process.env.VITE_SUPABASE_ANON_KEY||env.VITE_SUPABASE_ANON_KEY;
+let data=fallbackContent;
+if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
+  const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials'];
+  const responses=await Promise.all(tables.map(async table=>{
+    const filter=table==='site_content'?'id=eq.1':`active=eq.true&order=sort_order.asc${table==='testimonials'?'&permission_confirmed=eq.true':''}`;
+    const response=await fetch(`${supabaseUrl.replace(/\/$/,'')}/rest/v1/${table}?select=*&${filter}`,{headers:{apikey:key,Authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw new Error(`Cannot prerender ${table}: HTTP ${response.status}. Check Supabase public read policies and run the latest migration. No preview data will be published over live content.`);
+    return [table,await response.json()];
+  }));
+  data=Object.fromEntries(responses.map(([table,rows])=>[table,table==='site_content'?rows[0]||fallbackContent.site_content:rows]));
 }
+const template=await readFile('dist/index.html','utf8');
+const content=data.site_content?.content||fallbackContent.site_content.content;
+const locations=[];
+async function page(route,project){
+  const url=base?`${base}${route}`:'';
+  const title=project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
+  const description=project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
+  const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
+  let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
+  html=meta(html,'description',description,'name');
+  for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
+  for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
+  if(base){
+    const graph=project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
+    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n</head>`);
+    locations.push(url);
+  }
+  const markup=renderPage(data,route);
+  html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${escapeHtml(route)}">${markup}</div>\n<script id="mv-initial-data" type="application/json">${safeJson(data)}</script>\n<noscript>For the interactive enquiry form, enable JavaScript or use the contact details on this page.</noscript>`);
+  const directory=route==='/'?'dist':`dist${route}`;
+  await mkdir(directory,{recursive:true});await writeFile(`${directory}/index.html`,html);
+}
+await page('/');
+for(const project of data.projects||[]){
+  if(!project.active||!/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i.test(project.id))continue;
+  await page(`/projects/${project.id}`,project);
+}
+// Keep legacy demo pages discoverable when they are present in the output.
+for(const name of ['APMoodle.html','hypertextedu.html','PsychologyConsultationManagementSystem.html','SuperMathsBros.html']){
+  try{await access(`dist/${name}`);if(base)locations.push(`${base}/${name}`);}catch{}
+}
+const robots=['User-agent: *','Allow: /','Disallow: /admin',...(base?[`Sitemap: ${base}/sitemap.xml`]:[]),''].join('\n');
+await writeFile('dist/robots.txt',robots);
+if(base)await writeFile('dist/sitemap.xml',['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',...[...new Set(locations)].map(url=>`  <url><loc>${escapeHtml(url)}</loc></url>`),'</urlset>',''].join('\n'));
+else console.warn('Set VITE_SITE_URL to generate canonical URLs and sitemap.xml.');
+// A dedicated shell prevents the public homepage appearing in an admin response.
+let adminHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Studio Admin | MV Studio</title>');
+adminHtml=meta(adminHtml,'robots','noindex,nofollow','name');
+await mkdir('dist/admin',{recursive:true});await writeFile('dist/admin/index.html',adminHtml);
+await writeFile('dist/404.html',meta(template,'robots','noindex,follow','name'));
+console.log(`Prerendered homepage and ${(data.projects||[]).filter(p=>p.active).length} project pages${base?` for ${base}`:''}.`);

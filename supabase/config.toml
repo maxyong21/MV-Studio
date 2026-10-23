@@ -1,2 +1,6 @@
 ﻿[functions.submit-enquiry]
 verify_jwt = false
+
+[functions.retry-enquiry]
+# This function verifies JWTs with auth.getUser and checks admin_users itself.
+verify_jwt = false
