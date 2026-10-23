@@ -1,0 +1,61 @@
+/* The content manager shares the public studio's palette and controls. */
+.admin-app { --admin-muted: #586258; --admin-accent: #a7472a; background: #f6f5ed; }
+.admin-rail { background: #142b24; }
+.admin-rail .brand-light, .admin-rail .rail-label, .rail-bottom .admin-user-email { color: #c3d5c4; }
+.admin-rail .rail-item.selected { background: #284b3b; border-color: #6b8a77; box-shadow: inset 3px 0 #f3b591; }
+.admin-header { border-color: #d9dfd4; }
+.admin-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.entity-toolbar .entity-toolbar-actions { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.admin-app .button, .login-page .button, .entity-dialog .button { border-radius: 9px; min-height: 46px; font-size: 14px; }
+.admin-app .button-dark, .login-page .button-dark, .entity-dialog .button-dark { background: #193e32; color: #fffdf8; }
+.admin-app .button-dark:hover, .login-page .button-dark:hover, .entity-dialog .button-dark:hover { background: #285843; }
+.admin-app .button-light, .entity-dialog .button-light { background: #edf0e7; color: #193e32; }
+.admin-app :is(button,a,input,textarea,select):focus-visible, .login-page :is(button,a,input):focus-visible,
+.entity-dialog :is(button,input,textarea,select):focus-visible { outline: 3px solid #a7472a; outline-offset: 3px; }
+.admin-app button:disabled, .login-page button:disabled, .entity-dialog button:disabled { opacity: .6; cursor: wait; transform: none; }
+.admin-app :is(.entity-info > span,.entity-toolbar small,.enquiry-admin-main > span,.enquiry-admin-main > p,.enquiry-admin-main > small,.content-editor-head p) { color: #586258; }
+.admin-search input::placeholder, .login-card > p, .back-home, .dialog-head p { color: #586258; }
+.entity-row, .content-editor, .entity-dialog, .login-card { background: #fffdf8; }
+.entity-info b { overflow-wrap: anywhere; }
+.login-page { background: radial-gradient(ellipse at 85% 10%, #d7e4ce 0, transparent 55%), radial-gradient(ellipse at 0 100%, #f0ddc9 0, transparent 60%), #f6f5ed; }
+.login-card { width: min(100%,480px); border-color: #d9dfd4; }
+.login-card .brand-light { color: #586258; }
+.enquiry-notification-error { color: #a33e2b !important; }
+.enquiry-admin-controls { align-items: flex-start; flex-wrap: wrap; }
+.enquiry-admin-controls .retry-notification { min-height: 44px; border-radius: 8px; }
+.entity-loading { padding: 28px; color: #586258; }
+.entity-dialog .check-field { flex-wrap: wrap; }
+.entity-dialog .check-field .field-error { flex-basis: 100%; }
+.upload-control > small { flex-basis: 100%; color: #586258; }
+.admin-status { padding: 12px 16px; border: 1px solid #d9dfd4; border-radius: 9px; background: #fffdf8; color: #586258; margin-bottom: 20px; font-size: 14px; }
+.admin-status a { color: #a7472a; text-decoration: underline; }
+.admin-theme-toggle { border-radius: 9px; width: 44px; height: 44px; background: #fffdf8; color: #193e32; }
+.entity-dialog .dialog-head .modal-close { width: 44px; height: 44px; }
+:root[data-theme=dark] .login-page { background: radial-gradient(ellipse at 85% 10%, #304e36 0, transparent 65%), #1c2720; }
+:root[data-theme=dark] .login-card { background: #252d27; border-color: #4b5b50; }
+:root[data-theme=dark] .login-card :is(h1,p,label,.brand-light,.back-home), :root[data-theme=dark] .dialog-head p,
+:root[data-theme=dark] .admin-app :is(.entity-info > span,.entity-toolbar small,.enquiry-admin-main > span,.enquiry-admin-main > p,.enquiry-admin-main > small,.content-editor-head p) { color: #c3d5c4; }
+:root[data-theme=dark] .login-card input, :root[data-theme=dark] .admin-theme-toggle { background: #1b261e; border-color: #73866f; color: #f0f5ed; }
+:root[data-theme=dark] .admin-app :focus-visible, :root[data-theme=dark] .entity-dialog :focus-visible { outline-color: #f3b591; }
+:root[data-theme=dark] .field-error, :root[data-theme=dark] .enquiry-notification-error { color: #ffb7a6 !important; }
+:root[data-theme=dark] [aria-invalid=true] { color: #29362e !important; }
+:root[data-theme=dark] .admin-status { background: #252d27; border-color: #4b5b50; color: #c3d5c4; }
+@media(max-width:900px) {
+  .entity-toolbar-actions .admin-search { flex: 1; width: auto; min-width: 0; }
+}
+@media(max-width:760px) {
+  .admin-rail .rail-bottom { grid-column: 2; grid-row: 1; }
+  .admin-rail .admin-nav-list { grid-row: 2; }
+  .content-fields input, .content-fields textarea, .dialog-fields input:not([type=checkbox]):not([type=file]),
+  .dialog-fields textarea, .dialog-fields select, .login-card input, .admin-search input { font-size: 16px; }
+}
+@media(max-width:520px) {
+  .admin-header-actions { width: 100%; }
+  .admin-header-actions .admin-preview { flex: 1; justify-content: center; }
+  .admin-nav-list { scroll-snap-type: x proximity; }
+  .admin-nav-list .rail-item { scroll-snap-align: start; }
+  .entity-toolbar .entity-toolbar-actions { align-items: stretch; flex-direction: column; }
+  .entity-row { grid-template-columns: 39px minmax(0,1fr) 92px; }
+  .entity-actions { gap: 4px; }
+  .entity-actions button { width: 44px; height: 44px; }
+}
