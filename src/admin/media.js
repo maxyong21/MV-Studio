@@ -1,6 +1,8 @@
 export async function uploadImage(file,storage){
   const folder=`images/${crypto.randomUUID()}`;
-  if(file.type==='image/gif'||!('createImageBitmap' in window)){
+  // Store WebP uploads unchanged. Re-encoding an already-WebP image through
+  // canvas fails on browsers that cannot encode WebP, even though upload works.
+  if(file.type==='image/gif'||file.type==='image/webp'||!('createImageBitmap' in window)){
     const path=`${folder}/original.${file.name.split('.').pop().replace(/[^a-z0-9]/gi,'')}`;
     const result=await storage.upload(path,file,{contentType:file.type});if(result.error)throw result.error;
     return {image_url:storage.getPublicUrl(path).data.publicUrl,image_variants:[]};
