@@ -26,8 +26,8 @@
 .site-nav { border-bottom-color: #dce1d7; box-shadow: 0 4px 24px #182d2306; }
 .brand-symbol { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .site-nav .brand-light { color: #5a655b; }
-.nav-links a { color: #47564a; font-weight: 600; }
-.nav-links a:hover { color: #a7472a; }
+.nav-links :is(a,.nav-offers) { color: #47564a; font-weight: 600; }
+.nav-links :is(a,.nav-offers):hover { color: #a7472a; }
 .site-nav .button, #home .button { border-radius: 9px; }
 .field-error { display: block; color: #a33e2b; font-size: 13px; line-height: 1.5; font-weight: 500; }
 .enquiry-form [aria-invalid=true] { border-color: #a33e2b; }
@@ -167,10 +167,10 @@
   .site-footer-column a:hover svg, .footer-contact-cta:hover svg { transform: translate(2px, -2px); }
 }
 
-:root[data-theme=dark] .nav-links a { color: #d2e0d2; }
+:root[data-theme=dark] .nav-links :is(a,.nav-offers) { color: #d2e0d2; }
 :root[data-theme=dark] .site-nav .brand-light { color: #c3d5c4; }
-:root[data-theme=dark] .nav-links a:hover { color: #f3b591; }
-:root[data-theme=dark] .nav-links a:hover { background: #2b372d; }
+:root[data-theme=dark] .nav-links :is(a,.nav-offers):hover { color: #f3b591; }
+:root[data-theme=dark] .nav-links :is(a,.nav-offers):hover { background: #2b372d; }
 :root[data-theme=dark] #home .hero { background: radial-gradient(ellipse at 85% 20%, #304e36 0, transparent 65%), #1c2720; }
 :root[data-theme=dark] .hero-proof, :root[data-theme=dark] .hero-bottom,
 :root[data-theme=dark] .text-link, :root[data-theme=dark] .art-caption,
