@@ -248,7 +248,7 @@ update public.projects set seo_title='Super Maths Bros Educational Game | MV Stu
 
 insert into public.team_members (name,role,bio,image_url,linkedin_url,github_url,website_url,active,sort_order) values
 ('Max Yong','Full-Stack Developer','Max leads the technical direction of projects, bringing clean architecture and thoughtful integrations together.','yongzhenfeng.jpg','https://www.linkedin.com/in/yong-zhen-feng-2a8415312','https://github.com/maxyong21','http://yongzhenfeng.netlify.app/',true,1),
-('Vincent Teo','Full-Stack Developer','Vincent builds responsive websites and reliable web applications with care for the details people use every day.','Vincent.webp','https://www.linkedin.com/in/kai-qi-vincent-teo-1596ab286/','https://github.com/VincentTeo1116/','https://vincent16-portfolio.vercel.app/',true,2)
+('Vincent Teo','Full-Stack Developer','Vincent builds responsive websites and reliable web applications with care for the details people use every day.','vincent-teo.jpg','https://www.linkedin.com/in/kai-qi-vincent-teo-1596ab286/','https://github.com/VincentTeo1116/','https://vincent16-portfolio.vercel.app/',true,2)
 on conflict do nothing;
 
 alter table public.admin_users enable row level security;
