@@ -5,7 +5,7 @@
 .promotion-dialog header button{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border:0;border-radius:50%;background:var(--green,#dce8d8);color:#173c31}
 .promotion-body{padding:20px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;min-height:0;overflow-wrap:anywhere}
 .promotion-body::-webkit-scrollbar{display:none}
-.promotion-body>img{width:100%;height:auto;max-height:42vh;max-height:42dvh;object-fit:contain;margin:0 0 20px;border-radius:8px}
+.promotion-body>img{display:block;width:calc(100% + 40px);max-width:none;height:auto;max-height:none;object-fit:contain;margin:-20px -20px 20px;border-radius:0}
 .promotion-body h2{font-size:clamp(24px,5vw,34px);line-height:1.2;margin:0 0 12px}
 .promotion-body p{font-size:16px;line-height:1.6;white-space:pre-line;margin:0 0 20px}
 .promotion-actions{display:flex;gap:10px;flex-wrap:wrap}
@@ -13,5 +13,5 @@
 .promotion-body small{display:block;font-size:13px;line-height:1.5;margin-top:16px}
 .promotion-dialog :focus-visible{outline:3px solid #c45731;outline-offset:3px}
 @keyframes promotion-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:380px){.promotion-overlay{padding:10px}.promotion-dialog{max-height:calc(100dvh - 20px);border-radius:14px}.promotion-body{padding:16px}.promotion-actions{flex-direction:column}}
+@media(max-width:380px){.promotion-overlay{padding:10px}.promotion-dialog{max-height:calc(100dvh - 20px);border-radius:14px}.promotion-body{padding:16px}.promotion-body>img{width:calc(100% + 32px);margin:-16px -16px 16px}.promotion-actions{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.promotion-dialog{animation:none}}

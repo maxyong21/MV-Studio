@@ -1,4 +1,4 @@
-import {mkdir,readFile,writeFile,access} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {loadEnv} from 'vite';
 import {fallbackContent} from '../src/content.js';
 import {emptyPublicContent,hasPublicContent} from '../src/lib/availability.mjs';
@@ -23,7 +23,6 @@ if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
 const published=hasPublicContent(data);
 const template=await readFile('dist/index.html','utf8');
 const content=data.site_content?.content||fallbackContent.site_content.content;
-const locations=[];
 async function page(route,project){
   const url=base?`${base}${route}`:'';
   const title=!published?'Coming soon | MV Studio':project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
@@ -37,7 +36,6 @@ async function page(route,project){
   if(base){
     const graph=project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
     html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
-    locations.push(url);
   }
   const markup=renderPage(data,route);
   html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${escapeHtml(route)}">${markup}</div>\n<script id="mv-initial-data" type="application/json">${safeJson(data)}</script>\n<noscript>For the interactive enquiry form, enable JavaScript or use the contact details on this page.</noscript>`);
@@ -49,14 +47,9 @@ for(const project of data.projects||[]){
   if(!project.active||!/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i.test(project.id))continue;
   await page(`/projects/${project.id}`,project);
 }
-// Keep legacy demo pages discoverable when they are present in the output.
-for(const name of published?['APMoodle.html','hypertextedu.html','PsychologyConsultationManagementSystem.html','SuperMathsBros.html']:[]){
-  try{await access(`dist/${name}`);if(base)locations.push(`${base}/${name}`);}catch{}
-}
 const robots=['User-agent: *','Allow: /','Disallow: /admin',...(base?[`Sitemap: ${base}/sitemap.xml`]:[]),''].join('\n');
 await writeFile('dist/robots.txt',robots);
-if(base)await writeFile('dist/sitemap.xml',['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',...[...new Set(locations)].map(url=>`  <url><loc>${escapeHtml(url)}</loc></url>`),'</urlset>',''].join('\n'));
-else console.warn('Set VITE_SITE_URL to generate canonical URLs and sitemap.xml.');
+if(!base)console.warn('Set VITE_SITE_URL to generate canonical URLs and configure the dynamic sitemap.');
 // A dedicated shell prevents the public homepage appearing in an admin response.
 let adminHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Studio Admin | MV Studio</title>');
 adminHtml=meta(adminHtml,'robots','noindex,nofollow','name');
