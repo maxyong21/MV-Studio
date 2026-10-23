@@ -55,6 +55,7 @@ create table if not exists public.projects (
   video_url text not null default '',
   tags jsonb not null default '[]'::jsonb,
   featured boolean not null default false,
+  show_in_footer boolean not null default false,
   active boolean not null default true,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
@@ -65,6 +66,32 @@ create table if not exists public.projects (
 alter table public.projects add column if not exists seo_title text not null default '';
 alter table public.projects add column if not exists seo_description text not null default '';
 alter table public.projects add column if not exists video_url text not null default '';
+alter table public.projects add column if not exists show_in_footer boolean not null default false;
+
+create or replace function public.enforce_footer_project_limit()
+returns trigger
+language plpgsql
+as $$
+declare
+  selected_count integer;
+begin
+  if new.show_in_footer then
+    perform pg_advisory_xact_lock(hashtext('mv_studio_footer_projects'));
+    select count(*) into selected_count
+    from public.projects
+    where show_in_footer is true and id is distinct from new.id;
+    if selected_count >= 4 then
+      raise exception 'You can select up to four footer projects.' using errcode = 'check_violation';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists projects_footer_limit on public.projects;
+create trigger projects_footer_limit
+before insert or update of show_in_footer on public.projects
+for each row execute function public.enforce_footer_project_limit();
 
 create table if not exists public.team_members (
   id uuid primary key default gen_random_uuid(),
@@ -180,19 +207,24 @@ insert into public.site_content (id, content) values (1, '{
   "about_text":"Starting or growing a business is already a lot. We make the digital part feel clearer, with honest advice, considered design, and the people building your site by your side.",
   "seo_title":"Web Design & Development for Small Businesses | MV Studio",
   "seo_description":"Affordable web design and development for small businesses in Malaysia. Websites, e-commerce stores, custom web apps, and ongoing support.",
-  "email_max":"fengzhen221@gmail.com",
-  "email_vincent":"teovincentkq1611@gmail.com",
-  "whatsapp_max":"60162238196",
-  "whatsapp_vincent":"601154039173"
+  "contact_emails":[],
+  "contact_phones":[]
 }'::jsonb) on conflict (id) do nothing;
 
+-- Keep contact information as JSON arrays, not newline-separated text. This
+-- migration also converts values from earlier schema versions and removes the
+-- old person-specific keys from the shared site-content document.
 update public.site_content
-set content = jsonb_build_object(
-  'seo_title', 'Web Design & Development for Small Businesses | MV Studio',
-  'seo_description', 'Affordable web design and development for small businesses in Malaysia. Websites, e-commerce stores, custom web apps, and ongoing support.',
-  'contact_emails', 'fengzhen221@gmail.com\nteovincentkq1611@gmail.com',
-  'contact_phones', '+60 16-223 8196\n+60 11-5403 9173'
-) || content
+set content = (content - 'email_max' - 'email_vincent' - 'whatsapp_max' - 'whatsapp_vincent') || jsonb_build_object(
+  'contact_emails', case
+    when jsonb_typeof(content->'contact_emails') = 'array' then content->'contact_emails'
+    else to_jsonb(array_remove(regexp_split_to_array(coalesce(nullif(content->>'contact_emails',''), concat_ws(E'\n', nullif(content->>'email_max',''), nullif(content->>'email_vincent',''))), E'\\s*\\n\\s*'), ''))
+  end,
+  'contact_phones', case
+    when jsonb_typeof(content->'contact_phones') = 'array' then content->'contact_phones'
+    else to_jsonb(array_remove(regexp_split_to_array(coalesce(nullif(content->>'contact_phones',''), concat_ws(E'\n', nullif(content->>'whatsapp_max',''), nullif(content->>'whatsapp_vincent',''))), E'\\s*\\n\\s*'), ''))
+  end
+)
 where id = 1;
 
 insert into public.services (name,category,price,original_price,currency,summary,features,timeline,active,sort_order) values

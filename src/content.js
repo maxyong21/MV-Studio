@@ -10,10 +10,8 @@
       about_text: 'Starting or growing a business is already a lot. We make the digital part feel clearer, with honest advice, considered design, and the people building your site by your side.',
       seo_title: 'Web Design & Development for Small Businesses | MV Studio',
       seo_description: 'Affordable web design and development for small businesses in Malaysia. Websites, e-commerce stores, custom web apps, and ongoing support.',
-      email_max: 'fengzhen221@gmail.com', email_vincent: 'teovincentkq1611@gmail.com',
-      whatsapp_max: '60162238196', whatsapp_vincent: '601154039173',
-      contact_emails: 'fengzhen221@gmail.com\nteovincentkq1611@gmail.com',
-      contact_phones: '+60 16-223 8196\n+60 11-5403 9173',
+      contact_emails: [],
+      contact_phones: [],
     },
   },
   services: [
@@ -40,7 +38,7 @@ export const entityConfig = {
     ['name','Name','text'],['category','Eyebrow / tier','text'],['price','Sale price (RM)','number'],['original_price','Original price (RM)','number'],['summary','Description','textarea'],['features','Features (one per line)','lines'],['timeline','Timeline label','text'],['active','Visible on website','checkbox'],['sort_order','Display order','number'],
   ]},
   projects: { title: 'Projects', singular: 'project', fields: [
-    ['name','Project name','text'],['category','Project type','text'],['summary','Description','textarea'],['seo_title','Search title','text'],['seo_description','Search description','textarea'],['image_url','Image path or URL','text'],['demo_url','Demo / detail page URL','text'],['video_url','Demo video · YouTube URL or Supabase video URL','text'],['tags','Technology tags (one per line)','lines'],['featured','Featured project','checkbox'],['active','Visible on website','checkbox'],['sort_order','Display order','number'],
+    ['name','Project name','text'],['category','Project type','text'],['summary','Description','textarea'],['seo_title','Search title','text'],['seo_description','Search description','textarea'],['image_url','Image path or URL','text'],['demo_url','Demo / detail page URL','text'],['video_url','Demo video · YouTube URL or Supabase video URL','text'],['tags','Technology tags (one per line)','lines'],['featured','Featured project','checkbox'],['show_in_footer','Show in footer (maximum 4)','checkbox'],['active','Visible on website','checkbox'],['sort_order','Display order','number'],
   ]},
   team_members: { title: 'Team', singular: 'team member', fields: [
     ['name','Name','text'],['role','Role','text'],['bio','Biography','textarea'],['image_url','Photo path or URL','text'],['linkedin_url','LinkedIn URL','text'],['github_url','GitHub URL','text'],['website_url','Website URL','text'],['active','Visible on website','checkbox'],['sort_order','Display order','number'],
