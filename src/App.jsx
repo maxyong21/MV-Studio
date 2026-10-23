@@ -10,6 +10,7 @@ import SmartImage from './components/SmartImage.jsx';
 import Launcher from './chatbot/Launcher.jsx';
 import Availability,{PublicBoundary} from './components/Availability.jsx';
 import Analytics from './components/Analytics.jsx';
+import Promotion from './components/Promotion.jsx';
 import {trackEvent} from './lib/analytics.mjs';
 import {emptyPublicContent,hasPublicContent,publicFailure} from './lib/availability.mjs';
 const Admin=lazy(()=>import('./admin/Admin.jsx'));
@@ -47,12 +48,11 @@ function NotFoundPage({project=false}){
 }
 
 function Home({data,loading,error}){
-  const [menuOpen,setMenuOpen]=useState(false),[dark,setDark]=useState(false),[promo,setPromo]=useState(null),[toast,setToast]=useState('');
+  const [menuOpen,setMenuOpen]=useState(false),[dark,setDark]=useState(false),[toast,setToast]=useState('');
   const content=normalizeSiteContent(data.site_content?.content||fallbackContent.site_content.content);
   const primaryEmail=content.contact_emails[0]||'';
   const primaryPhone=content.contact_phones[0]||'';
   const services=sortRows(data.services),projects=sortRows(data.projects),team=sortRows(data.team_members);
-  const activePromo=(data.promotions||[]).find(item=>item.active&&item.enabled&&(!item.starts_at||new Date(item.starts_at)<=new Date())&&(!item.ends_at||new Date(item.ends_at)>=new Date()));
   useEffect(()=>{try{setDark(localStorage.getItem('mv-theme')==='dark');}catch{}},[]);
   useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';try{localStorage.setItem('mv-theme',dark?'dark':'light');}catch{}},[dark]);
   useEffect(()=>{
@@ -85,9 +85,6 @@ function Home({data,loading,error}){
     };
     let jsonLd=document.getElementById('mv-studio-jsonld');if(!jsonLd){jsonLd=document.createElement('script');jsonLd.id='mv-studio-jsonld';jsonLd.type='application/ld+json';document.head.appendChild(jsonLd);}jsonLd.textContent=JSON.stringify(structured);
   },[content,services,projects]);
-  useEffect(()=>{if(!activePromo)return;const key=`mv-promo-dismissed-${activePromo.id}`;const last=Number(localStorage.getItem(key)||0);if(Date.now()-last<30*60*1000)return;const timer=setTimeout(()=>setPromo(activePromo),850);return()=>clearTimeout(timer);},[activePromo]);
-  useEffect(()=>{if(!promo)return;const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';const onKey=e=>{if(e.key==='Escape')dismissPromo();};window.addEventListener('keydown',onKey);return()=>{document.body.style.overflow=oldOverflow;window.removeEventListener('keydown',onKey);};},[promo]);
-  const dismissPromo=()=>{if(promo)localStorage.setItem(`mv-promo-dismissed-${promo.id}`,String(Date.now()));setPromo(null);};
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),2200);};
   return <>
     <a className="skip-link" href="#home">Skip to main content</a>
@@ -110,7 +107,7 @@ function Home({data,loading,error}){
     </main>
     <SiteFooter projects={projects} content={content}/>
     {loading&&<div className="loading-pill"><span/>Connecting to studio</div>}
-    {promo&&<div className="modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)dismissPromo();}}><section className="promo-modal" role="dialog" aria-modal="true" aria-labelledby="promo-heading"><button className="modal-close" onClick={dismissPromo} aria-label="Close promotion"><X size={19}/></button>{promo.image_url&&<SmartImage className="promo-image" record={promo} alt="" sizes="470px" priority/>}<span className="eyebrow"><span className="eyebrow-line"/>A LITTLE SOMETHING FOR YOU</span><h2 id="promo-heading">{promo.title}</h2><p>{promo.message}</p><a className="button button-dark" href={promo.button_url||'#services'} onClick={dismissPromo}>{promo.button_label||'Explore the offer'} <ArrowUpRight size={16}/></a><small>We’ll keep this tucked away for 30 minutes.</small></section></div>}
+    <Promotion items={data.promotions} menuOpen={menuOpen}/>
     {toast&&<div className="toast-message">{toast}</div>}
   </>;
 }

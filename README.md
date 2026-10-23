@@ -52,6 +52,14 @@ Administrators can open **System status** to check the anonymous public database
 
 Healthy content is still prerendered for search engines. Builds without content render a coming-soon page with `noindex,follow` and omit sample project listings. Builds with configured Supabase credentials still stop if public reads fail rather than publishing a broken snapshot. Runtime maintenance screens in this static frontend do not change HTTP response status codes; a true HTTP 503/Retry-After response would need hosting/server support. Redeploy the `chatbot` function after updating it so the widget can distinguish an unpublished release from an admin pause.
 
+## Advertisement popup
+
+Manage posters in **Admin → Promotions**: upload an image, enter the offer text and link, and enable both **Published** and **Popup enabled**. Optional start/end dates control eligibility. Existing Supabase tables and the `site-media` bucket are reused; no SQL migration is needed.
+
+The homepage shows at most one offer per browser per local calendar day, across all promotions. The day is recorded when the popup opens, so refreshes do not repeat it. It waits at least 15 seconds, requires scrolling, and waits for four seconds without scrolling, clicking or typing. It does not interrupt a form that the visitor has started, an open mobile menu, another dialog or the analytics choice panel. A visitor who never meets these conditions may not see an advertisement that day. Clearing browser storage or changing browsers resets the limit; unavailable storage causes the advertisement to be skipped.
+
+Visitors can close with Escape, the close button, Continue browsing or the backdrop. Keyboard focus stays within the dialog and returns on close. Posters fit without cropping; long content can scroll without a visible scrollbar, while the close button remains visible. Reduced-motion preferences are respected. Publish changes and redeploy the frontend to activate this behaviour; already-open pages receive admin changes on their next content load.
+
 ## Analytics and website review
 
 GA4 measurement ID `G-D92C2BPTH3` is integrated for the production customer site with optional visitor consent. Follow [the GA4 setup guide](docs/ANALYTICS.md) to finish stream settings and verify events after deployment. The [website review](docs/WEBSITE_REVIEW.md) records the desktop/mobile findings and recommended improvements.
