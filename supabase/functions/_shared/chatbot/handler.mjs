@@ -57,7 +57,7 @@ export function createChatbotHandler({createAdmin,env,fetcher=fetch}){
       if(!input||typeof input!=='object'||Array.isArray(input))throw new ChatError('Send a valid chat request.');
       const admin=createAdmin();await limitPublic(request,admin,env);
       const state=await stateFor(admin);
-      if(!state.enabled||!state.active_release_id){if(input.action==='bootstrap')return respond({available:false});throw new ChatError('The assistant is unavailable. Please use the project enquiry form.',503);}
+      if(!state.enabled||!state.active_release_id){if(input.action==='bootstrap')return respond({available:false,status:state.enabled?'coming-soon':'maintenance'});throw new ChatError('The assistant is unavailable. Please use the project enquiry form.',503);}
       if(input.release_id&&input.release_id!==state.active_release_id)throw new ChatError('The assistant was updated. Restart the guide to use its latest version.',409);
       const release=await releaseFor(admin,state.active_release_id);
       return respond(await serveChatAction(input,admin,release,{env,fetcher}));
