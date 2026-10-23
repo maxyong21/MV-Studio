@@ -42,7 +42,15 @@ git commit -m "Add Supabase project media and video demos"
    npm.cmd run dev
    ```
 
-3. Open the local URL Vite prints (usually `http://localhost:5173`). The customer website works with preview content even before Supabase is configured.
+3. Open the local URL Vite prints (usually `http://localhost:5173`). Without Supabase configuration or published content, customers see a branded **Coming soon** page. Connect Supabase to display your live website content.
+
+### Public availability and private diagnostics
+
+The public website shows **Coming soon** when no published content is available, and **Under maintenance** when database reads fail. Empty service/project/team sections have their own coming-soon notices. The chatbot shows Coming soon before a release is published and Under maintenance when paused or unavailable. Request failures use friendly messages; normal input validation remains visible so customers can correct their details. Enquiry submission failures are never reported as successful saves.
+
+Administrators can open **System status** to check the anonymous public database read path and inspect technical diagnostics recorded in the current browser tab. These browser reports are session-local, not central logs from all visitors. Edge Function logs remain in the private Supabase dashboard; notification failures also remain in Admin → Enquiries. No public error-reporting endpoint or database migration is required.
+
+Healthy content is still prerendered for search engines. Builds without content render a coming-soon page with `noindex,follow` and omit sample project listings. Builds with configured Supabase credentials still stop if public reads fail rather than publishing a broken snapshot. Runtime maintenance screens in this static frontend do not change HTTP response status codes; a true HTTP 503/Retry-After response would need hosting/server support. Redeploy the `chatbot` function after updating it so the widget can distinguish an unpublished release from an admin pause.
 
 ## Upgrade an existing installation
 

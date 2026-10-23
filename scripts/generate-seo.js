@@ -1,6 +1,7 @@
 import {mkdir,readFile,writeFile,access} from 'node:fs/promises';
 import {loadEnv} from 'vite';
 import {fallbackContent} from '../src/content.js';
+import {emptyPublicContent,hasPublicContent} from '../src/lib/availability.mjs';
 import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
 import {renderPage} from '../.generated/ssr/entry-server.js';
 
@@ -8,7 +9,7 @@ const env=loadEnv('production',process.cwd(),'VITE_');
 const base=siteUrl(process.env.VITE_SITE_URL||env.VITE_SITE_URL);
 const supabaseUrl=process.env.VITE_SUPABASE_URL||env.VITE_SUPABASE_URL;
 const key=process.env.VITE_SUPABASE_ANON_KEY||env.VITE_SUPABASE_ANON_KEY;
-let data=fallbackContent;
+let data=emptyPublicContent();
 if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
   const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials'];
   const responses=await Promise.all(tables.map(async table=>{
@@ -17,23 +18,25 @@ if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
     if(!response.ok)throw new Error(`Cannot prerender ${table}: HTTP ${response.status}. Check Supabase public read policies and run the latest migration. No preview data will be published over live content.`);
     return [table,await response.json()];
   }));
-  data=Object.fromEntries(responses.map(([table,rows])=>[table,table==='site_content'?rows[0]||fallbackContent.site_content:rows]));
+  data=Object.fromEntries(responses.map(([table,rows])=>[table,table==='site_content'?rows[0]||null:rows]));
 }
+const published=hasPublicContent(data);
 const template=await readFile('dist/index.html','utf8');
 const content=data.site_content?.content||fallbackContent.site_content.content;
 const locations=[];
 async function page(route,project){
   const url=base?`${base}${route}`:'';
-  const title=project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
-  const description=project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
+  const title=!published?'Coming soon | MV Studio':project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
+  const description=!published?'A thoughtful digital experience is on the way. Please check back soon.':project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
   const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
   let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
   html=meta(html,'description',description,'name');
+  if(!published)html=meta(html,'robots','noindex,follow','name');
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
     const graph=project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
-    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n</head>`);
+    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
     locations.push(url);
   }
   const markup=renderPage(data,route);
@@ -47,7 +50,7 @@ for(const project of data.projects||[]){
   await page(`/projects/${project.id}`,project);
 }
 // Keep legacy demo pages discoverable when they are present in the output.
-for(const name of ['APMoodle.html','hypertextedu.html','PsychologyConsultationManagementSystem.html','SuperMathsBros.html']){
+for(const name of published?['APMoodle.html','hypertextedu.html','PsychologyConsultationManagementSystem.html','SuperMathsBros.html']:[]){
   try{await access(`dist/${name}`);if(base)locations.push(`${base}/${name}`);}catch{}
 }
 const robots=['User-agent: *','Allow: /','Disallow: /admin',...(base?[`Sitemap: ${base}/sitemap.xml`]:[]),''].join('\n');
