@@ -20,7 +20,7 @@ async function publicJSON(path,{method='GET',body,timeout=12000,target=path,serv
 }
 
 export async function loadPublicContent(){
-  const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials'];
+  const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials','faqs'];
   const pairs=await Promise.all(tables.map(async table=>{
     const filter=table==='site_content'?'id=eq.1':`active=eq.true&order=sort_order.asc${table==='testimonials'?'&permission_confirmed=eq.true':''}`;
     const rows=await publicJSON(`/rest/v1/${table}?select=*&${filter}`,{target:`Database: ${table}`});

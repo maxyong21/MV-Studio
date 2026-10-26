@@ -32,4 +32,5 @@ export const fallbackContent = {
     { id: 'seed-t2', name: 'Vincent Teo', role: 'Full-Stack Developer', bio: 'Vincent builds responsive websites and reliable web applications with care for the details people use every day.', image_url: 'vincent-teo.jpg', linkedin_url: 'https://www.linkedin.com/in/kai-qi-vincent-teo-1596ab286/', github_url: 'https://github.com/VincentTeo1116/', website_url: 'https://vincent16-portfolio.vercel.app/', active: true, sort_order: 2 },
   ],
   promotions: [],
+  faqs: [],
 };

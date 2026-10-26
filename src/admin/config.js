@@ -1,4 +1,7 @@
 export const entityConfig = {
+  faqs: { title: 'FAQs', singular: 'FAQ', fields: [
+    ['title','Question','text'],['answer','Answer','textarea'],['active','Publish on website','checkbox'],['sort_order','Display order','number'],
+  ]},
   services: { title: 'Services & pricing', singular: 'service', fields: [
     ['name','Name','text'],['category','Eyebrow / tier','text'],['price','Sale price (RM)','number'],['original_price','Original price (RM)','number'],['summary','Description','textarea'],['features','Deliverables (one per line)','lines'],['timeline','Delivery estimate','text'],['scope','Page count and scope','textarea'],['revisions','Revision policy','textarea'],['third_party_costs','Hosting, domain and other third-party charges','textarea'],['maintenance_terms','Maintenance and recurring costs','textarea'],['support_terms','After-launch support','textarea'],['payment_terms','Payment terms','textarea'],['active','Visible on website','checkbox'],['sort_order','Display order','number'],
   ]},

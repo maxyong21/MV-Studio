@@ -19,6 +19,10 @@ export function validateContentField(key,value){
 
 export function validateEntity(values,config){
   const errors={};
+  if(config===entityConfig.faqs){
+    if(String(values.title||'').trim().length<5)errors.title='Enter a question of at least 5 characters.';
+    if(String(values.answer||'').trim().length<10)errors.answer='Enter an answer of at least 10 characters.';
+  }
   const requiredKey=config.fields.find(([key])=>['name','title'].includes(key))?.[0];
   for(const [key,label,type] of config.fields){
     const value=values[key],text=String(value??'').trim();

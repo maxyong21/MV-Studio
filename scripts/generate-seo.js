@@ -11,7 +11,7 @@ const supabaseUrl=process.env.VITE_SUPABASE_URL||env.VITE_SUPABASE_URL;
 const key=process.env.VITE_SUPABASE_ANON_KEY||env.VITE_SUPABASE_ANON_KEY;
 let data=emptyPublicContent();
 if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
-  const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials'];
+  const tables=['site_content','services','projects','team_members','promotions','feature_options','testimonials','faqs'];
   const responses=await Promise.all(tables.map(async table=>{
     const filter=table==='site_content'?'id=eq.1':`active=eq.true&order=sort_order.asc${table==='testimonials'?'&permission_confirmed=eq.true':''}`;
     const response=await fetch(`${supabaseUrl.replace(/\/$/,'')}/rest/v1/${table}?select=*&${filter}`,{headers:{apikey:key,Authorization:`Bearer ${key}`},signal:AbortSignal.timeout(15000)});

@@ -1,9 +1,9 @@
-export const emptyPublicContent=()=>({site_content:null,services:[],projects:[],team_members:[],promotions:[],feature_options:[],testimonials:[]});
+export const emptyPublicContent=()=>({site_content:null,services:[],projects:[],team_members:[],promotions:[],feature_options:[],testimonials:[],faqs:[]});
 export function hasPublicContent(data){
   if(!data||typeof data!=='object')return false;
   const content=data.site_content?.content;
   if(content&&typeof content==='object'&&Object.values(content).some(value=>typeof value==='string'?value.trim():Array.isArray(value)&&value.length))return true;
-  return ['services','projects','team_members','promotions','feature_options','testimonials'].some(key=>Array.isArray(data[key])&&data[key].some(row=>row&&row.active!==false));
+  return ['services','projects','team_members','promotions','feature_options','testimonials','faqs'].some(key=>Array.isArray(data[key])&&data[key].some(row=>row&&row.active!==false));
 }
 const storageKey='mv-public-diagnostics';
 export function readDiagnostics(){try{const rows=JSON.parse(sessionStorage.getItem(storageKey)||'[]');return Array.isArray(rows)?rows.filter(row=>row&&typeof row.target==='string'&&typeof row.detail==='string'):[];}catch{return [];}}
