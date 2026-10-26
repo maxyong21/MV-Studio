@@ -58,6 +58,8 @@ The main enquiry starts with the four required contact fields and an optional me
 
 The hero and enquiry area offer WhatsApp directly. **Get guided help** opens the existing project assistant on demand and returns focus to its trigger when closed. Contact details already entered into the enquiry remain in place.
 
+Both WhatsApp buttons inside the enquiry section prepare a message using the currently entered contact details, message, selected service names, recurring billing preference and meeting request. The draft URL is generated only when clicked, keeping personal details out of page anchor URLs. Empty fields are omitted, and the form can be partially completed for WhatsApp. The customer reviews the draft and presses Send in WhatsApp. Clicking this button does not save an enquiry or trigger Resend; **Send project enquiry** remains the path that saves to the admin inbox. Hero, footer and contact links start a general conversation. Custom analytics events record the contact method only, never the draft text or full WhatsApp URL; keep GA4 Enhanced measurement disabled as documented in `docs/ANALYTICS.md`.
+
 Run [`supabase/migrations/20261026_short_enquiry_whatsapp.sql`](supabase/migrations/20261026_short_enquiry_whatsapp.sql) to save the requested WhatsApp destination, **011-5403 9173**, and update the original starter CTA. Then deploy the frontend. Manage the destination independently of ordinary call numbers in **Admin → Site content → WhatsApp number**. Local Malaysian numbers are converted to the international `wa.me` format; this number links to `https://wa.me/601154039173`. The existing enquiry tables and functions are reused; no function redeployment is required for this layout change.
 
 ## Opening headline and slogans
