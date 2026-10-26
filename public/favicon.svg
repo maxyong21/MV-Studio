@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>MV Studio</title>
+  <circle cx="32" cy="32" r="30" fill="#f17951"/>
+  <path d="M9 43V21h6l7 11 7-11h6v22h-6V31l-7 10-7-10v12Z" fill="#fffdf8"/>
+  <path d="M35 21h7l5 14 5-14h7l-9 22h-6Z" fill="#173c31"/>
+</svg>
