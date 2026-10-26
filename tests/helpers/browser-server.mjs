@@ -22,7 +22,7 @@ export async function browserServers(){
   const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
   const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async()=>{mails++;return Response.json({id:`local-email-${mails}`});}};
   const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
-  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries']);
+  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1:4188');
@@ -81,7 +81,8 @@ export async function browserServers(){
           const order=url.searchParams.get('order');if(order){const [field,direction]=order.split('.');sql+=` order by ${identifier(field)} ${direction==='desc'?'desc':'asc'}`;}
         }else{
           const chunks=[];for await(const chunk of req)chunks.push(chunk);
-          const body=JSON.parse(Buffer.concat(chunks).toString());
+          const raw=Buffer.concat(chunks).toString();
+          const body=raw?JSON.parse(raw):{};
           if(req.method==='POST')sql=`insert into public.${identifier(table)} (${Object.keys(body).map(identifier).join(',')}) values (${Object.values(body).map(param).join(',')}) returning *`;
           else if(req.method==='PATCH')sql=`update public.${identifier(table)} set ${Object.entries(body).map(([key,value])=>`${identifier(key)}=${param(value)}`).join(',')}${where()} returning *`;
           else if(req.method==='DELETE')sql=`delete from public.${identifier(table)}${where()} returning *`;

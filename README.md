@@ -52,6 +52,14 @@ Administrators can open **System status** to check the anonymous public database
 
 Healthy content is still prerendered for search engines. Builds without content render a coming-soon page with `noindex,follow` and omit sample project listings. Builds with configured Supabase credentials still stop if public reads fail rather than publishing a broken snapshot. Runtime maintenance screens in this static frontend do not change HTTP response status codes; a true HTTP 503/Retry-After response would need hosting/server support. Redeploy the `chatbot` function after updating it so the widget can distinguish an unpublished release from an admin pause.
 
+## Customer FAQs
+
+For an existing database, run [`supabase/migrations/20261026_public_faqs.sql`](supabase/migrations/20261026_public_faqs.sql) in the Supabase SQL Editor **before deploying** the FAQ frontend. Fresh installations can use the full `supabase/schema.sql`. The migration seeds six editable policy answers and preserves administrator edits when rerun.
+
+Manage questions, answers, publication and ordering at **Admin → FAQs**. Published answers appear in the homepage FAQ accordion and prerendered HTML; hidden answers remain private to administrators. The footer links to FAQs while published entries exist. Redeploy after important edits to refresh the HTML seen before JavaScript loads. No Edge Function deployment is needed for the public FAQ feature.
+
+The revision allowance is currently described as agreed in each project proposal; no fixed number of rounds is promised. Review the seeded wording against your actual packages and promotions before launch. The FAQ content does not automatically change chatbot releases. To make the assistant answer these policies, add the approved wording to its Knowledge section, then build, test and publish a candidate.
+
 ## Advertisement popup
 
 Manage posters in **Admin → Promotions**: upload an image, enter the offer text and link, and enable both **Published** and **Popup enabled**. Optional start/end dates control eligibility. Existing Supabase tables and the `site-media` bucket are reused; no SQL migration is needed.
