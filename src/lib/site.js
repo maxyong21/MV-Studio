@@ -2,6 +2,13 @@ export const sortRows = (rows=[]) => [...rows].filter(row => row.active !== fals
 export const money = (value,currency='RM') => value === null || value === '' || value === undefined ? 'Let’s talk' : `${currency} ${Number(value).toLocaleString('en-MY')}`;
 export const normalizeContactList=value=>Array.isArray(value)?value.map(item=>String(item).trim()).filter(Boolean):typeof value==='string'?value.split(/\r?\n/).map(item=>item.trim()).filter(Boolean):[];
 export const publicHref=value=>/^(?:https?:\/\/|\/|#)/i.test(value)?value:`/${value}`;
+export function whatsappHref(value){
+  const text=String(value||'').trim();
+  if(!/^[+()\d.\s-]+$/.test(text))return '';
+  let digits=text.replace(/\D/g,'');
+  if(digits.startsWith('0'))digits=`60${digits.slice(1)}`;
+  return /^[1-9]\d{6,14}$/.test(digits)?`https://wa.me/${digits}`:'';
+}
 export function localDateTime(value){
   const date=new Date(value);
   return Number.isFinite(date.getTime())?new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16):'';

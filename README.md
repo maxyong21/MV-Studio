@@ -52,6 +52,20 @@ Administrators can open **System status** to check the anonymous public database
 
 Healthy content is still prerendered for search engines. Builds without content render a coming-soon page with `noindex,follow` and omit sample project listings. Builds with configured Supabase credentials still stop if public reads fail rather than publishing a broken snapshot. Runtime maintenance screens in this static frontend do not change HTTP response status codes; a true HTTP 503/Retry-After response would need hosting/server support. Redeploy the `chatbot` function after updating it so the widget can distinguish an unpublished release from an admin pause.
 
+## Short enquiry and WhatsApp
+
+The main enquiry starts with the four required contact fields and an optional message. Customers can submit immediately, or open **Add project details** for feature selection, recurring billing and a preliminary estimate. Closing that section preserves selections; its summary shows the selected-service count. Both paths use the same validated enquiry endpoint, database records, notification and duplicate protection. Meeting requests remain optional.
+
+The hero and enquiry area offer WhatsApp directly. **Get guided help** opens the existing project assistant on demand and returns focus to its trigger when closed. Contact details already entered into the enquiry remain in place.
+
+Run [`supabase/migrations/20261026_short_enquiry_whatsapp.sql`](supabase/migrations/20261026_short_enquiry_whatsapp.sql) to save the requested WhatsApp destination, **011-5403 9173**, and update the original starter CTA. Then deploy the frontend. Manage the destination independently of ordinary call numbers in **Admin → Site content → WhatsApp number**. Local Malaysian numbers are converted to the international `wa.me` format; this number links to `https://wa.me/601154039173`. The existing enquiry tables and functions are reused; no function redeployment is required for this layout change.
+
+## Opening headline and slogans
+
+The main heading stays fixed for a clear offer and search-engine-readable HTML. Up to three supporting slogans rotate every five seconds; all are included in prerendered HTML. The layout reserves space for the longest slogan. Visitors can pause rotation, and it pauses on hover, keyboard focus, when outside the viewport, and in background tabs. Reduced-motion preferences disable automatic rotation by default.
+
+For an existing Supabase installation, run [`supabase/migrations/20261026_clear_hero_slogans.sql`](supabase/migrations/20261026_clear_hero_slogans.sql), then redeploy. It replaces only the original starter headline/description and adds missing slogan fields, preserving customised text. Edit **Admin → Site content → Main heading / Supporting slogans 1–3**. Leave both optional slogans blank to use static supporting text. Rebuild after publishing significant copy changes to refresh prerendered HTML. The full schema includes the same migration for new installs.
+
 ## Customer FAQs
 
 For an existing database, run [`supabase/migrations/20261026_public_faqs.sql`](supabase/migrations/20261026_public_faqs.sql) in the Supabase SQL Editor **before deploying** the FAQ frontend. Fresh installations can use the full `supabase/schema.sql`. The migration seeds six editable policy answers and preserves administrator edits when rerun.

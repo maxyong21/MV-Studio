@@ -36,7 +36,7 @@ try{
   assert.ok(!requests.some(url=>/\/Admin-[^/]+\.js/.test(url)),'Admin bundle must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/supabase-[^/]+\.js/.test(url)),'Admin authentication SDK must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/(ChatDialog|ChatPanel)-[^/]+\.js/.test(url)),'Chatbot bundles load only after opening the assistant');
-  assert.ok((await readFile('dist/index.html','utf8')).includes('<h1>Digital, made more human.</h1>'));
+  assert.equal(await evaluate("document.querySelector('.hero h1').textContent"),'Websites and web apps for Malaysian small businesses.');
   for(const width of [1440,768,760,520,390,320]){
     await viewport(width);
     const overflow=await evaluate('document.documentElement.scrollWidth>innerWidth');
@@ -116,9 +116,10 @@ try{
   assert.ok(await evaluate("document.querySelector('.project-detail-image img').srcset.includes('480w')"));
   await navigate('http://127.0.0.1:4188/');await wait("!!document.querySelector('#feedback')");
   assert.equal(await evaluate("document.querySelectorAll('.contact-links a[href^=\"mailto:\"]').length"),2);
-  assert.equal(await evaluate("document.querySelector('.contact-links a[href*=\"wa.me\"]').href"),'https://wa.me/12025550123');
+  assert.equal(await evaluate("document.querySelector('.contact-links a[href*=\"wa.me\"]').href"),'https://wa.me/601154039173');
   await click('.enquiry-form button[type=submit], .enquiry-form > button');await wait("!!document.querySelector('#enquiry-name-error')");
   for(const [key,value] of Object.entries({name:'Alex Tan',company_name:'Browser Test Company',phone:'+1 202-555-0123',email:'client@example.test'}))await fill(`#enquiry-${key}`,value);
+  await click('.enquiry-details > summary');
   await evaluate("[...document.querySelectorAll('.feature-option')].find(el=>el.textContent.includes('Website maintenance')).querySelector('input').click()");
   await evaluate("[...document.querySelectorAll('.billing-choice label')].find(el=>el.textContent.includes('Annual')).querySelector('input').click()");
   await wait("document.querySelector('.annual-savings')?.textContent.includes('pay 11 months')");
