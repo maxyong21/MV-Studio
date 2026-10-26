@@ -2,6 +2,7 @@ import {useRef,useState} from 'react';
 import {ArrowUpRight,MessageCircle,Plus} from 'lucide-react';
 import {isSupabaseConfigured,submitEnquiry} from '../public-api.js';
 import {money,whatsappHref} from '../lib/site.js';
+import {whatsappEnquiryHref} from '../lib/whatsapp-enquiry.mjs';
 import {publicFailure} from '../lib/availability.mjs';
 import {trackEvent} from '../lib/analytics.mjs';
 import {estimateFeatures,validateContact} from '../../supabase/functions/_shared/enquiry.mjs';
@@ -15,6 +16,12 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
   const active=options.filter(item=>item.active).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   const chosen=active.filter(item=>selected.includes(item.id)),recurring=chosen.filter(item=>item.billing_type==='monthly');
   const estimate=estimateFeatures(chosen),whatsapp=whatsappHref(whatsappNumber);
+  const openWhatsapp=()=>{
+    const draft=whatsappEnquiryHref(whatsappNumber,values,chosen);
+    if(!draft)return;
+    trackEvent('contact_click',{method:'whatsapp'});
+    window.open(draft,'_blank','noopener,noreferrer');
+  };
   const visibleError=key=>(attempted||touched[key])?errors[key]:'';
   const change=(key,value)=>{const next={...values,[key]:value};if(key==='meeting_requested'&&!value)next.preferred_meeting_at='';setValues(next);if(attempted||touched[key]||(key==='meeting_requested'&&touched.preferred_meeting_at))setErrors(validateContact(next));};
   const blur=key=>{setTouched(current=>({...current,[key]:true}));setErrors(current=>({...current,...validateContact(values)}));};
@@ -41,7 +48,7 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
   const fieldProps=key=>({id:`enquiry-${key}`,name:key,'aria-required':['name','company_name','phone','email'].includes(key),'aria-invalid':Boolean(visibleError(key)),'aria-describedby':visibleError(key)?`enquiry-${key}-error`:undefined,onBlur:()=>blur(key)});
   return <section className="enquiry-section section-pad" id="enquiry" aria-labelledby="enquiry-title">
     <div className="enquiry-intro"><div className="section-overline"><span>06</span> START A CONVERSATION</div><h2 id="enquiry-title">Tell us<br/><em>your idea.</em></h2><p>Leave your details and a few words about your idea. We’ll help you work out the next step.</p>
-      {whatsapp&&<div className="enquiry-contact-options"><a className="button button-light enquiry-whatsapp" href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={18}/> Chat on WhatsApp <ArrowUpRight size={16}/></a><small>Prefer to chat? Message us directly.</small></div>}
+      {whatsapp&&<div className="enquiry-contact-options"><button type="button" className="button button-light enquiry-whatsapp" onClick={openWhatsapp}><MessageCircle size={18}/> Chat on WhatsApp <ArrowUpRight size={16}/></button><small>Opens a draft with the details you enter below. Review it before sending in WhatsApp.</small></div>}
       <div className="enquiry-guidance"><strong>Need help choosing features?</strong><button type="button" className="button button-light" aria-haspopup="dialog" onClick={event=>{event.currentTarget.focus();window.dispatchEvent(new CustomEvent('mv:open-project-assistant',{detail:{trigger:event.currentTarget}}));}}><MessageCircle size={17}/> Get guided help</button></div>
     </div>
     <form className="enquiry-form" onSubmit={submit} noValidate>
@@ -65,6 +72,7 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
       <button type="submit" className="button button-dark" disabled={sending}>{sending?'Sending enquiry…':'Send project enquiry'} <ArrowUpRight size={15}/></button>
       <small className="privacy-note">Your details are used to respond to this enquiry and are visible only to our administrators.</small>
       {feedback&&<div className={`enquiry-feedback ${feedbackError?'public-service-notice':''}`} role="status">{feedback}{feedbackError&&<><br/><a href="#contact">Contact the team directly</a></>}</div>}
+      {whatsapp&&<div className="enquiry-whatsapp-alternative"><button type="button" className="button button-light enquiry-whatsapp" onClick={openWhatsapp}><MessageCircle size={18}/> Use WhatsApp instead <ArrowUpRight size={16}/></button><small>Review and send your entered details in WhatsApp. This does not submit the website enquiry.</small></div>}
     </form>
   </section>;
 }
