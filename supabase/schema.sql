@@ -200,9 +200,12 @@ on conflict (name) do nothing;
 
 insert into public.site_content (id, content) values (1, '{
   "hero_eyebrow":"Independent web studio · Malaysia",
-  "hero_title":"Digital, made more human.",
-  "hero_description":"We build thoughtful websites and digital tools that help ambitious small businesses move forward.",
-  "hero_cta":"Tell us what you’re building",
+  "hero_title":"Websites and web apps for Malaysian small businesses.",
+  "hero_description":"Work directly with the developers—from your first idea to launch and ongoing support.",
+  "hero_slogan_2":"Get a clear scope and a tailored quote before development begins.",
+  "hero_slogan_3":"Build a website your customers can use easily on phones, tablets and desktops.",
+  "hero_cta":"Discuss your project",
+  "whatsapp_number":"011-5403 9173",
   "about_title":"A small team for the big next step.",
   "about_text":"Starting or growing a business is already a lot. We make the digital part feel clearer, with honest advice, considered design, and the people building your site by your side.",
   "seo_title":"Web Design & Development for Small Businesses | MV Studio",
@@ -811,3 +814,29 @@ insert into public.faqs(key,title,answer,active,sort_order) values
 ('additional-features','How much do additional features cost after launch?',
  'New features requested after deployment start at RM50 per feature. The final price depends on complexity and the agreed scope. We provide a quotation for approval before starting the additional work. Any recurring third-party charges are separate.',true,60)
 on conflict(key) do nothing;
+
+
+-- Clear opening offer and editable supporting slogans.
+-- Update original starter copy only. Preserve text customised by an administrator.
+update public.site_content
+set content=jsonb_set(content,'{hero_title}',to_jsonb('Websites and web apps for Malaysian small businesses.'::text)),updated_at=now()
+where id=1 and coalesce(content->>'hero_title','') in ('','Digital, made more human.');
+update public.site_content
+set content=jsonb_set(content,'{hero_description}',to_jsonb('Work directly with the developers—from your first idea to launch and ongoing support.'::text)),updated_at=now()
+where id=1 and coalesce(content->>'hero_description','') in ('','We build thoughtful websites and digital tools that help ambitious small businesses move forward.');
+update public.site_content
+set content=content||jsonb_build_object('hero_slogan_2','Get a clear scope and a tailored quote before development begins.'),updated_at=now()
+where id=1 and not (content ? 'hero_slogan_2');
+update public.site_content
+set content=content||jsonb_build_object('hero_slogan_3','Build a website your customers can use easily on phones, tablets and desktops.'),updated_at=now()
+where id=1 and not (content ? 'hero_slogan_3');
+
+
+-- Dedicated WhatsApp contact and short enquiry entry point.
+-- Dedicated WhatsApp destination; ordinary call numbers remain unchanged.
+update public.site_content
+set content=content||jsonb_build_object('whatsapp_number','011-5403 9173'),updated_at=now()
+where id=1 and content->>'whatsapp_number' is distinct from '011-5403 9173';
+update public.site_content
+set content=jsonb_set(content,'{hero_cta}',to_jsonb('Discuss your project'::text)),updated_at=now()
+where id=1 and coalesce(content->>'hero_cta','') in ('','Tell us what you’re building');

@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {safeJson,escapeHtml,siteUrl,meta} from '../scripts/seo.mjs';
 import {localDateTime} from '../src/lib/site.js';
+import {whatsappHref} from '../src/lib/site.js';
 test('SEO output escapes public content and rejects invalid canonical origins',()=>{
   const data={text:'</script><script>alert(1)</script>&\u2028'};
   assert.ok(!safeJson(data).includes('</script>'));assert.deepEqual(JSON.parse(safeJson(data)),data);
@@ -15,4 +16,9 @@ test('editing a promotion date preserves its instant in the local timezone',()=>
   const instant='2026-10-24T10:00:00.000Z';
   assert.equal(new Date(localDateTime(instant)).toISOString(),instant);
   assert.equal(localDateTime('invalid'),'');
+});
+test('WhatsApp accepts Malaysian local and international numbers without using the call list',()=>{
+  assert.equal(whatsappHref('011-5403 9173'),'https://wa.me/601154039173');
+  assert.equal(whatsappHref('+60 11-5403 9173'),'https://wa.me/601154039173');
+  assert.equal(whatsappHref(''), '');assert.equal(whatsappHref('javascript:alert(1)'), '');
 });

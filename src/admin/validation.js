@@ -5,6 +5,8 @@ export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const phonePattern = /^[+()\d.\s-]+$/;
 export function validateContentField(key,value){
   const text=String(value??'').trim(), values=Array.isArray(value)?normalizeContactList(value):text.split('\n').map(item=>item.trim()).filter(Boolean);
+  if(['hero_description','hero_slogan_2','hero_slogan_3'].includes(key)&&text.length>240)return 'Keep each slogan within 240 characters for a readable mobile layout.';
+  if(key==='hero_title'&&text.length>120)return 'Keep the main heading within 120 characters.';
   if(key==='sitemap_paths_text')return sitemapPaths(value).errors.length?'Enter one site path per line, starting with /. External URLs, project URLs and admin paths are not allowed.':'';
   if(['hero_title','hero_description','hero_eyebrow','hero_cta','about_title','about_text','seo_title','seo_description'].includes(key)&&!text)return 'This field is required.';
   if(key==='contact_emails'&&Array.isArray(value)){if(value.length>1&&!values.length)return 'Remove extra blank email fields or enter a contact email.';if(values.length&&value.some(item=>!String(item).trim()||!emailPattern.test(String(item).trim())))return 'Enter a valid email address in each contact field.';}
