@@ -79,7 +79,8 @@ export function createChatbotAdminHandler({createAdmin,env,fetcher=fetch}){
       if(input.action==='status'){
         const names=['chatbot_settings',...editable],results=await Promise.all(names.map(name=>admin.from(name).select('*')));
         const content=Object.fromEntries(names.map((name,index)=>[name,must(results[index])]));
-        const releases=must(await admin.from('chatbot_releases').select('id,label,draft_revision,provider_hash,created_at').order('created_at',{ascending:false}).limit(20));
+        const stored=must(await admin.from('chatbot_releases').select('id,label,draft_revision,provider_hash,created_at,snapshot').order('created_at',{ascending:false}).limit(20));
+        const releases=stored.map(({snapshot,...release})=>({...release,answer_mode:snapshot?.settings?.answer_mode||null,retrieval_mode:snapshot?.settings?.retrieval_mode||null}));
         const runs=must(await admin.from('chatbot_test_runs').select('*').order('created_at',{ascending:false}).limit(20));
         const logs=must(await admin.from('chatbot_logs').select('*').order('created_at',{ascending:false}).limit(30));
         return reply({ok:true,state:await stateFor(admin),content,releases,runs,logs,providers:{...providerConfig(env),hash:await providerHash(env),gemini_configured:!!env('GEMINI_API_KEY'),groq_configured:!!env('GROQ_API_KEY')}});

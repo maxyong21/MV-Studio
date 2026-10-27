@@ -25,8 +25,8 @@ export async function evaluateRelease(admin,release,userId,deps){
         if(response.action!==test.expected_action)failures.push(`Expected ${test.expected_action}, received ${response.action}.`);
         for(const word of test.expected_terms||[])if(!text.includes(word.toLowerCase()))failures.push(`Missing expected text: ${word}`);
         for(const word of test.forbidden_terms||[])if(text.includes(word.toLowerCase()))failures.push(`Contains prohibited text: ${word}`);
-        if(response.degraded)failures.push('An AI provider failed or hit its limit. Fallback was used.');
-        results.push({id:test.id,name:test.name,passed:!failures.length,detail:failures.join('; ')||'Expected behavior and facts matched.',actual:response});
+        if(response.degraded)failures.push(`An AI provider failed or hit its limit. Fallback was used. This candidate was built with answer mode ${release.snapshot.settings.answer_mode} and search mode ${release.snapshot.settings.retrieval_mode}. To run without AI, save Approved excerpts + BM25 in draft settings, build a new candidate and select it. Otherwise check the configured provider and quota.`);
+        results.push({id:test.id,name:test.name,passed:!failures.length,detail:failures.join('; ')||'Expected behavior and facts matched.',actual:{...response,candidate_settings:{answer_mode:release.snapshot.settings.answer_mode,retrieval_mode:release.snapshot.settings.retrieval_mode}}});
       }
     }catch(error){results.push({id:test.id,name:test.name,passed:false,detail:error.message});}
   }
