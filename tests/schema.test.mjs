@@ -9,6 +9,14 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
     await db.exec(await readFile('supabase/migrations/20261024_growth_and_reliability.sql','utf8'));
     await db.exec((await readFile('supabase/schema.sql','utf8')).replace('create extension if not exists pgcrypto;',''));
     assert.equal((await db.query('select count(*)::int as n from public.services')).rows[0].n,4);
+    const publicDetails=await readFile('supabase/migrations/20261027_complete_public_details.sql','utf8');
+    assert.ok((await db.query("select challenge,solution,outcome from projects where name='APMoodle'")).rows.every(p=>p.challenge&&p.solution&&p.outcome));
+    await db.query("update projects set outcome='Admin verified project outcome' where name='APMoodle'");
+    await db.query("update services set scope='Admin approved package scope' where name='Landing Page'");
+    await db.exec(publicDetails);await db.exec(publicDetails);
+    assert.equal((await db.query("select outcome from projects where name='APMoodle'")).rows[0].outcome,'Admin verified project outcome');
+    assert.equal((await db.query("select scope from services where name='Landing Page'")).rows[0].scope,'Admin approved package scope');
+    assert.equal((await db.query('select count(*)::int as n from testimonials')).rows[0].n,0);
     const heroMigration=await readFile('supabase/migrations/20261026_clear_hero_slogans.sql','utf8');
     await db.query("update site_content set content=content||jsonb_build_object('hero_title','Digital, made more human.','hero_description','We build thoughtful websites and digital tools that help ambitious small businesses move forward.')");
     await db.exec(heroMigration);

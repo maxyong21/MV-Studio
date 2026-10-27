@@ -1,0 +1,39 @@
+/* Keep mobile browsing focused while retaining the full, crawlable content. */
+.project-card-links a{min-height:44px;display:inline-flex;align-items:center}
+@media(max-width:760px){
+ .section-pad{padding-block:44px}
+ .hero-inner{padding-top:36px;padding-bottom:28px}
+ .hero-art,.hero-bottom{display:none}
+ .hero-proof{margin-top:20px}
+ .hero-actions{margin-top:22px}
+ .section-heading,.team-heading{margin-bottom:26px}
+ .intro-layout{gap:18px}
+ .value-row{margin-top:24px;gap:14px}
+ .value-item{padding-block:8px}
+ .work-grid{gap:28px}
+ .work-footnote{margin-top:24px}
+ .service-card{padding:20px;min-height:0}
+ .service-card h3{margin-block:14px 8px}
+ .service-card>p{margin-block:8px 14px}
+ .service-price{margin-block:16px}
+ .service-card li{padding-block:5px}
+ .care-strip{margin-top:24px;padding:18px}
+ .process-grid{margin-top:22px}
+ .team-photo{aspect-ratio:1.65;min-height:0}
+ .team-card{padding:14px}
+ .team-card p{margin-block:10px}
+ .enquiry-section{gap:22px}
+ .enquiry-intro h2{margin-block:14px}
+ .enquiry-intro h2 br{display:none}
+ .enquiry-intro h2 em::before{content:' '}
+ .enquiry-guidance{margin-top:16px;padding:14px}
+ .contact-section{padding-block:36px;gap:16px}
+ .contact-card h2{font-size:38px}
+ .contact-aside{display:none}
+ .site-footer-full{padding-top:30px}
+ .site-footer-main{grid-template-columns:1fr 1fr;gap:22px 18px;padding-bottom:24px}
+ .site-footer-brand,.footer-contact-column{grid-column:1/-1}
+ .site-footer-column a{min-height:44px}
+ .site-footer-column h2{font-size:12px}
+ .site-footer-bottom{display:flex;flex-wrap:wrap;gap:12px}
+}

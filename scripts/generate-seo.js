@@ -54,5 +54,11 @@ if(!base)console.warn('Set VITE_SITE_URL to generate canonical URLs and configur
 let adminHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Studio Admin | MV Studio</title>');
 adminHtml=meta(adminHtml,'robots','noindex,nofollow','name');
 await mkdir('dist/admin',{recursive:true});await writeFile('dist/admin/index.html',adminHtml);
-await writeFile('dist/404.html',meta(template,'robots','noindex,follow','name'));
+// Prerender the actual error artwork: it remains useful without JavaScript.
+let notFound=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Page not found | MV Studio</title>'),'robots','noindex,follow','name');
+notFound=notFound.replace('<div id="root"></div>',()=>`<div id="root">${renderPage(emptyPublicContent(),'/page-not-found')}</div>`);
+await writeFile('dist/404.html',notFound);
+let maintenance=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Under maintenance | MV Studio</title>'),'robots','noindex,follow','name');
+maintenance=maintenance.replace('<div id="root"></div>',()=>`<div id="root">${renderPage({...emptyPublicContent(),__availability:'maintenance'},'/')}</div>`);
+await writeFile('dist/maintenance.html',maintenance);
 console.log(`Prerendered homepage and ${(data.projects||[]).filter(p=>p.active).length} project pages${base?` for ${base}`:''}.`);

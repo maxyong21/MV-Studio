@@ -201,3 +201,40 @@ The enquiry form stores customer data only through the `submit-enquiry` Supabase
 4. Add the production Supabase URL and publishable key to the host as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then rebuild/redeploy the site. Keep `VITE_SITE_URL` set to the canonical domain for SEO output.
 
 The function rate-limits to five attempts per IP hash per hour. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
+
+## Review improvements: deployment and content
+
+The mobile chatbot launcher is compact and hides near the enquiry form, contact
+section and footer. The analytics choice panel remains optional; its preferences
+button is in the footer instead of floating over page content. Mobile spacing is
+reduced without reducing input text or removing project and service information.
+
+For an existing Supabase project, run
+`supabase/migrations/20261027_complete_public_details.sql` in **Supabase → SQL
+Editor** before deploying. It fills only blank case-study and package-detail
+fields on the matching starter records, preserves admin edits, and creates no
+testimonials. Review the copy in **Admin → Projects / Services** and tailor it to
+the scope you actually offer. For a new database, the full `supabase/schema.sql`
+already includes this migration.
+
+Add real testimonials through **Admin → Client feedback**, confirm permission,
+then publish. The customer section stays hidden until approved feedback exists.
+Never add example feedback as if it came from a customer.
+
+Redeploy the repository to Vercel after these changes. `vercel.json` now serves
+the designed `404.html` with HTTP **404** for unknown paths, while preserving
+static assets, `/admin` and the dynamic sitemap. Direct project requests use a
+small Vercel function to check current publication in Supabase: published pages
+return **200**, missing/unpublished projects **404**, and lookup failures **503**
+with the maintenance design. No separate backend hosting is required. Keep
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` available to Vercel Functions as
+well as builds. The service role key is not needed by this function.
+
+`npm.cmd run dev` runs Vite; it does not emulate Vercel's HTTP routing. Use the
+deployed preview to verify response statuses after deployment. A newly published
+project works through the application shell; redeploy to refresh its prerendered
+HTML and search preview. The animated 404 countdown still returns to the homepage.
+
+Validation commands: `npm.cmd test`, `npm.cmd run build`, and
+`npm.cmd run test:browser`. Browser tests use a temporary database and mocked
+email delivery; they do not send real enquiries or notifications.
