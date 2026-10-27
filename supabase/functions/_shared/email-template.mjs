@@ -1,5 +1,6 @@
 // Email clients do not load the website stylesheet. Keep the core layout in
 // presentation tables and inline styles, with system fonts and a text fallback.
+import {hasPricedSelection} from './enquiry.mjs';
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
 const paragraph=value=>escape(value).replace(/\r\n?|\n/g,'<br>');
 const currency=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?`RM ${Number(value).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2})}`:'To be confirmed';
@@ -19,11 +20,11 @@ export function renderEnquiryEmail(enquiry){
     const annualNote=feature.billing_type==='monthly'&&Number.isInteger(free)&&free>0&&free<=11?`<br><span style="color:#687365;font-size:12px;">Annual plan: ${free} free month${free===1?'':'s'}</span>`:'';
     return `<tr><td style="padding:13px 0;border-bottom:1px solid #e7e8e1;color:#26352c;font-size:14px;line-height:1.6;word-break:break-word;overflow-wrap:anywhere;">${escape(feature.name)}${annualNote}<br><strong style="font-size:13px;font-weight:600;color:${custom?'#975034':'#536448'};">${escape(price)}</strong></td></tr>`;
   }).join('');
-  const totals=table([
+  const totals=hasPricedSelection(features)?table([
     ['One-time subtotal',enquiry.one_time_estimate],
     ['Recurring, paid monthly',enquiry.monthly_estimate],
     ['Recurring, paid annually',enquiry.annual_estimate],
-  ].map(([label,value])=>`<tr><td style="padding:8px 10px 8px 0;color:#304733;font-size:13px;line-height:1.5;">${escape(label)}</td><td width="115" align="right" valign="top" style="padding:8px 0;color:#203c2b;font-size:16px;line-height:1.5;font-weight:700;white-space:nowrap;">${escape(currency(value))}</td></tr>`).join(''));
+  ].map(([label,value])=>`<tr><td style="padding:8px 10px 8px 0;color:#304733;font-size:13px;line-height:1.5;">${escape(label)}</td><td width="115" align="right" valign="top" style="padding:8px 0;color:#203c2b;font-size:16px;line-height:1.5;font-weight:700;white-space:nowrap;">${escape(currency(value))}</td></tr>`).join('')):'<p style="margin:0;color:#304733;font-size:14px;line-height:1.7;"><strong>Manual quotation required.</strong> Scope and pricing are to be discussed with the customer.</p>';
   const contact=table([
     detailRow('Name',escape(enquiry.name)),
     detailRow('Company',escape(enquiry.company_name)),

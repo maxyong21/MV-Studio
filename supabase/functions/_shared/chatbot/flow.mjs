@@ -72,7 +72,7 @@ export function buildQuote(snapshot,input,catalogue){
   const totals=estimateFeatures(items);
   const lines=items.map(v=>({id:v.id,name:v.name,billing_type:v.billing_type,unit_price:v.price===null?null:Number(v.price),annual_free_months:Number(v.annual_free_months||0),annual_price:v.billing_type==='monthly'&&v.price!==null?Math.round(Number(v.price)*100)*(12-Number(v.annual_free_months||0))/100:null}));
   const billing=questionsFor(snapshot).find(q=>q.kind==='billing');
-  return {answers,selected_feature_ids:ids,billing_period:billing&&answers[billing.key]==='yearly'?'yearly':'monthly',lines,...totals,summary:scopeSummary(snapshot,answers,catalogue),manual_review:true,notice:'Preliminary estimate only. Our team confirms the complete scope, third-party charges, delivery and final quotation.'};
+  return {answers,selected_feature_ids:ids,billing_period:billing&&answers[billing.key]==='yearly'?'yearly':'monthly',lines,...totals,summary:scopeSummary(snapshot,answers,catalogue),manual_review:true,notice:'Preliminary estimate only. Subtotals cover selected priced catalogue items. Custom workflows and anything not listed as a priced line need manual quotation. Our team confirms the complete scope, third-party charges, delivery and final quotation.'};
 }
 
 export function validateSnapshot(snapshot){

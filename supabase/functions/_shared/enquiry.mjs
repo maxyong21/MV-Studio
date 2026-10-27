@@ -1,4 +1,5 @@
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export const hasPricedSelection=(features=[])=>features.some(item=>item.billing_type!=='quote'&&item.unit_price!==null&&item.unit_price!==undefined);
 const phonePattern = /^[+()\d.\s-]+$/;
 export const validateContact = values => {
   const errors = {};

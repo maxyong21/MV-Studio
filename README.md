@@ -204,6 +204,13 @@ The function rate-limits to five attempts per IP hash per hour. Meeting requests
 
 ## Review improvements: deployment and content
 
+For the expanded education, bakery, retail, spare-parts and other-business
+assistant, read [Chatbot industry knowledge and setup](docs/CHATBOT_INDUSTRIES.md).
+It includes customer questions, draft answers, confirmed policies, branching and
+the steps to build, test and publish the editable database content. Existing
+installations apply `supabase/migrations/20261027_chatbot_industries.sql`; no
+published release is replaced automatically.
+
 The mobile chatbot launcher is compact and hides near the enquiry form, contact
 section and footer. The analytics choice panel remains optional; its preferences
 button is in the footer instead of floating over page content. Mobile spacing is

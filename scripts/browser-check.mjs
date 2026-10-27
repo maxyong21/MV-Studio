@@ -150,11 +150,11 @@ try{
   await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
   await click('.chat-launcher');await wait("!!document.querySelector('.chat-prompt')");
   for(const width of [390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);assert.equal(await evaluate("getComputedStyle(document.querySelector('.chat-scroll')).scrollbarWidth"),'none');}
-  await viewport(390);await click('.chat-wide');await choose('Manage internal operations');await nextCard('features do you need');await choose('Landing page');
+  await viewport(390);await click('.chat-wide');await choose('Manage internal operations');await nextCard('internal workflows');await click('.chat-unsure');await nextCard('features do you need');await choose('Landing page');
   await nextCard('budget');await click('.chat-unsure');await nextCard('launch date');await click('.chat-unsure');await nextCard('additional services');await choose('Website maintenance');
   await nextCard('pay for recurring');await choose('Annual');await nextCard('Does this sound right');
   await evaluate("[...document.querySelectorAll('.chat-scope button')].find(el=>el.getAttribute('aria-label').includes('main goals')||el.getAttribute('aria-label').includes('system help')).click()");
-  await nextCard('features do you need');await nextCard('budget');await nextCard('launch date');await nextCard('additional services');await nextCard('pay for recurring');await nextCard('Does this sound right');
+  await nextCard('internal workflows');await nextCard('features do you need');await nextCard('budget');await nextCard('launch date');await nextCard('additional services');await nextCard('pay for recurring');await nextCard('Does this sound right');
   await click('.chat-wide');await wait("!!document.querySelector('.chat-quote-total')");await click('.chat-actions .button-dark');await wait("!!document.querySelector('#chat-name')");
   await click('.chat-contact .button-dark');await wait("!!document.querySelector('#chat-name-error')");assert.equal((await servers.db.query('select count(*)::int n from enquiries')).rows[0].n,1);
   for(const [key,value] of Object.entries({name:'Jia Tan',company_name:'Mobile Bakery',phone:'+60 12-345 6789',email:'bakery@example.test'}))await fill(`#chat-${key}`,value);
@@ -162,6 +162,28 @@ try{
   await click('.chat-contact .button-dark');await wait("!!document.querySelector('.chat-success')");assert.equal(servers.mails,2);
   const chatEnquiry=(await servers.db.query("select * from enquiries where company_name='Mobile Bakery'")).rows[0];assert.ok(chatEnquiry.chatbot_estimate_id);assert.equal(+chatEnquiry.one_time_estimate,449);assert.equal(+chatEnquiry.annual_estimate,1320);assert.ok(chatEnquiry.chatbot_answers.summary.length);
   await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");assert.equal(await evaluate("document.activeElement.className"),'chat-launcher');
+  // An education client gets learning discovery and a manual quote, not retail checkout.
+  await click('.chat-launcher');await wait("!!document.querySelector('.chat-prompt')");await click('.chat-wide');
+  await choose('Education or learning system');await nextCard('education website');await choose('Learning materials');await choose('Quizzes');
+  await nextCard('education organization');await choose('Tuition centre');await nextCard('how many learners');await fill('.chat-field input[type=number]','200');
+  await nextCard('Who needs access');await choose('Students or learners');await choose('Teachers or trainers');
+  await nextCard('existing education platform');await click('.chat-unsure');await nextCard('features do you need');await choose('Learning management system');
+  await nextCard('budget');await click('.chat-unsure');await nextCard('launch date');await click('.chat-unsure');await nextCard('additional services');
+  await nextCard('Does this sound right');
+  assert.doesNotMatch(await evaluate("document.querySelector('.chat-scope').innerText"),/How should customers place orders|How will customers receive/);
+  await click('.chat-wide');await wait("!!document.querySelector('.chat-manual-quote')");
+  assert.equal(await evaluate("!!document.querySelector('.chat-quote-total')"),false,'Unpriced custom work must not look like a free project');await screenshot('education-chatbot-mobile.png');
+  await click('.chat-actions .button-dark');await wait("!!document.querySelector('#chat-name')");
+  for(const [key,value] of Object.entries({name:'Lee Tan',company_name:'Learning Centre',phone:'+60 12-345 6789',email:'learning@example.test'}))await fill(`#chat-${key}`,value);
+  await evaluate("[...document.querySelectorAll('.chat-contact .chat-check input')].at(-1).click()");await click('.chat-contact .button-dark');await wait("!!document.querySelector('.chat-success')");
+  const educationEnquiry=(await servers.db.query("select * from enquiries where company_name='Learning Centre'")).rows[0];assert.equal(+educationEnquiry.one_time_estimate,0);assert.equal(servers.mails,3);
+  assert.ok(educationEnquiry.chatbot_answers.summary.some(row=>row.key==='education_users'&&row.value==='200'));
+  assert.match(servers.mailPayloads.at(-1).html,/Manual quotation required/);assert.doesNotMatch(servers.mailPayloads.at(-1).html,/RM 0\.00/);assert.doesNotMatch(servers.mailPayloads.at(-1).text,/One-time estimate: RM 0/);
+  await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");
+  await navigate('http://127.0.0.1:4188/admin','.admin-header');
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Enquiries').click()");
+  await wait("[...document.querySelectorAll('.enquiry-admin-row')].some(row=>row.textContent.includes('Learning Centre')&&row.textContent.includes('Scope and pricing to be discussed'))");
+  await navigate('http://127.0.0.1:4188/','.site-footer-full');
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await screenshot('footer-mobile.png');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
