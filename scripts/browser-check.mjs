@@ -104,8 +104,16 @@ try{
   await wait("!!document.querySelector('.bot-overview')");
   await click('.bot-section-head .button-dark');await fill('#bot-title','Browser knowledge article');await fill('#bot-body','Our browser test policy is approved for published retrieval only.');
   await click('.bot-editor .button-dark');await wait("!document.querySelector('.bot-editor')");
+  await evaluate("document.querySelector('.bot-section > summary').click()");
+  await fill('input[aria-label="Candidate label"]','Browser reviewed release');
+  await evaluate("(()=>{const select=document.querySelector('.bot-form select');select.value='groq';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await wait("document.querySelector('.bot-build button').disabled&&[...document.querySelectorAll('.bot-alert[role=status]')].some(node=>node.textContent.includes('unsaved'))");
+  await fill('.bot-form textarea','Browser assistant');
+  await evaluate("(()=>{const select=document.querySelector('.bot-form select');select.value='extractive';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await click('.bot-form > .button-dark');await wait("!document.querySelector('.bot-build button').disabled");
   await fill('input[aria-label="Candidate label"]','Browser reviewed release');await click('.bot-build .button-dark');
   await wait("document.querySelector('select[aria-label=\"Review release\"]')?.value");
+  assert.match(await evaluate("document.querySelector('.bot-candidate-settings').textContent"),/Saved answer selection: Approved excerpts.*Saved search: BM25/);
   await evaluate("[...document.querySelectorAll('.bot-action-bar button')].find(el=>el.textContent==='Open private preview').click()");
   await wait("!!document.querySelector('.chat-prompt textarea')");
   await fill('.chat-prompt textarea','I want an online system for my bakery shop');await click('.chat-prompt button');

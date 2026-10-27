@@ -1,15 +1,38 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {database} from './helpers/database.mjs';
+import {database,client} from './helpers/database.mjs';
 import {defaultDocuments,defaultQuestions,defaultOptions,defaultRules} from '../supabase/functions/_shared/chatbot/defaults.mjs';
 import {industryTests,industryCatalogue} from '../supabase/functions/_shared/chatbot/industry-content.mjs';
 import {visibleQuestions,pruneAnswers,validateSnapshot,buildQuote,UNSURE} from '../supabase/functions/_shared/chatbot/flow.mjs';
 import {chunkDocuments} from '../supabase/functions/_shared/chatbot/retrieval.mjs';
 import {answerQuestion} from '../supabase/functions/_shared/chatbot/answer.mjs';
 import {renderEnquiryEmail} from '../supabase/functions/_shared/email-template.mjs';
+import {createChatbotAdminHandler} from '../supabase/functions/_shared/chatbot/handler.mjs';
 const snapshot={questions:defaultQuestions,options:defaultOptions,rules:defaultRules,documents:defaultDocuments,settings:{name:'Assistant',greeting:'Tell us about your project',handoff_message:'Our team can review this request.',answer_mode:'extractive',retrieval_mode:'keyword'}};
 const release={snapshot};
+test('offline candidates make no AI calls even with provider keys; old candidates keep their modes',async()=>{
+ const db=await database();let calls=0;
+ try{
+  const id=crypto.randomUUID();await db.query('insert into auth.users(id) values($1)',[id]);await db.query('insert into admin_users(user_id) values($1)',[id]);
+  const env=key=>({ALLOWED_ORIGIN:'https://local.test',SUPABASE_SERVICE_ROLE_KEY:'fixture',GROQ_API_KEY:'configured-test-key',GROQ_CHAT_MODEL:'test-model'})[key];
+  const manage=createChatbotAdminHandler({createAdmin:()=>client(db,id),env,fetcher:async()=>{calls++;throw Error('Provider deliberately unavailable');}});
+  const call=async body=>(await manage(new Request('https://local.test/functions/v1/chatbot-admin',{method:'POST',headers:{Origin:'https://local.test',authorization:'Bearer admin-token','Content-Type':'application/json'},body:JSON.stringify(body)}))).json();
+  const settings=(await call({action:'status'})).content.chatbot_settings[0];
+  await call({action:'settings',values:{...settings,answer_mode:'groq',retrieval_mode:'keyword'}});
+  const old=await call({action:'build',label:'Old AI candidate'});
+  await call({action:'settings',values:{...settings,answer_mode:'extractive',retrieval_mode:'keyword'}});
+  const current=await call({action:'build',label:'Offline candidate'});
+  const status=await call({action:'status'});
+  assert.equal(status.releases.find(r=>r.id===old.id).answer_mode,'groq');
+  assert.equal(status.releases.find(r=>r.id===current.id).answer_mode,'extractive');
+  assert.equal(status.releases.find(r=>r.id===current.id).retrieval_mode,'keyword');
+  assert.equal(status.releases.find(r=>r.id===old.id).snapshot,undefined);
+  const failed=await call({action:'test',release_id:old.id});assert.equal(failed.run.passed,false);assert.ok(calls>0);
+  assert.ok(failed.run.results.some(r=>r.detail.includes('This candidate was built with answer mode groq')));
+  calls=0;const checked=await call({action:'test',release_id:current.id});assert.equal(checked.run.passed,true,JSON.stringify(checked.run.results));assert.equal(calls,0);
+ }finally{await db.close();}
+});
 test('an unpriced custom enquiry is a manual quote in its email, not a free project',()=>{
  const html=renderEnquiryEmail({name:'Client',company_name:'Education Centre',email:'client@example.test',selected_features:[{name:'Learning management system',billing_type:'quote',unit_price:null}],one_time_estimate:0,monthly_estimate:0,annual_estimate:0});
  assert.match(html,/Manual quotation required/);assert.doesNotMatch(html,/RM 0\.00/);

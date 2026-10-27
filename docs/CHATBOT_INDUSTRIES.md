@@ -241,6 +241,35 @@ Also manually test a bakery custom cake brief, a parts catalogue without checkou
 
 ## Maintaining this pack
 
+### If offline settings still report an AI fallback
+
+Draft settings and candidates are separate. Selecting Approved excerpts and BM25
+does not change an already built candidate. Click **Save draft settings**, build
+a new candidate, select it, and check its **Saved answer selection** and **Saved
+search** before running checks. Merely configuring Groq or Gemini secrets does
+not enable AI for an offline candidate.
+
+The admin UI blocks builds and checks while settings edits are unsaved. A failed
+run is distinct from an outdated run. Provider failures list the modes saved in
+that candidate; review those rather than changing unrelated API keys.
+
+Deploy the updated `chatbot-admin` function and frontend to receive these
+diagnostics. If needed, the following read-only SQL shows saved candidate modes
+without exposing keys or knowledge bodies:
+
+```sql
+select id, label, created_at,
+       snapshot->'settings'->>'answer_mode' as answer_mode,
+       snapshot->'settings'->>'retrieval_mode' as retrieval_mode
+from public.chatbot_releases
+order by created_at desc
+limit 10;
+```
+
+The offline values are `extractive` and `keyword`. Check the row for the
+candidate selected under **Review release**. A candidate with `groq` or `hybrid`
+still uses AI even if the saved draft has since changed.
+
 The reviewed seed source is supabase/functions/_shared/chatbot/industry-content.mjs. Run node scripts/generate-chatbot-content.mjs to regenerate the migration and its matching full-schema block after a reviewed source change. Inserts preserve existing matching rows; they do not overwrite admin changes or update live rows just because a seed file changed. Use admin drafts for ongoing edits, then build/test/publish. Do not rerun an old destructive reset to refresh chatbot content.
 
 There are 23 new articles, 12 conditional questions, 50 options, 5 manually quoted items and 18 answer tests, in addition to existing content. Approval of one scenario is not proof that every answer is correct; keep reviewing real, redacted enquiries and adding representative tests.
