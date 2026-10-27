@@ -8,7 +8,7 @@
     "prebuild": "node scripts/optimize-images.mjs",
     "build": "vite build",
     "postbuild": "vite build --ssr src/entry-server.jsx --outDir .generated/ssr && node scripts/generate-seo.js",
-    "test": "node --test tests/enquiries.test.mjs tests/schema.test.mjs tests/seo.test.mjs tests/chatbot.test.mjs tests/analytics.test.mjs tests/promotions.test.mjs tests/sitemap.test.mjs tests/faqs.test.mjs tests/page-routing.test.mjs tests/chatbot-industries.test.mjs",
+    "test": "node --test tests/enquiries.test.mjs tests/schema.test.mjs tests/seo.test.mjs tests/chatbot.test.mjs tests/analytics.test.mjs tests/promotions.test.mjs tests/sitemap.test.mjs tests/faqs.test.mjs tests/page-routing.test.mjs tests/chatbot-industries.test.mjs tests/assistant-intro.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "test:promotion-preview": "node scripts/promotion-preview-check.mjs",
     "preview": "vite preview --host 0.0.0.0"

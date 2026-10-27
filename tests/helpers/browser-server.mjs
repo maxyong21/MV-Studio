@@ -20,7 +20,7 @@ export async function browserServers({prerender=false}={}){
   const user={id:adminId,email:'admin@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()};
   const b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   const token=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.fixture`;
-  const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
+  const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188,http://127.0.0.1:4187',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
   const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async(url,options)=>{mails++;mailPayloads.push(JSON.parse(options.body));return Response.json({id:`local-email-${mails}`});}};
   const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);

@@ -62,7 +62,7 @@ export default function Promotion({items,menuOpen=false,openRequest=0,onDismiss}
     document.addEventListener('focusin',focus);
     const timer=setInterval(()=>{
       if(working||!engaged||document.visibilityState!=='visible'||Date.now()-started<15000||Date.now()-lastActivity<4000)return;
-      if(document.querySelector('[role="dialog"],#mv-analytics-choice:not([hidden])'))return;
+      if(document.querySelector('[role="dialog"],#mv-analytics-choice:not([hidden]),.assistant-intro')){lastActivity=Date.now();return;}
       if(document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))return;
       const next=eligiblePromotion(items);
       if(!next||!claimPromotion(storage))return;
