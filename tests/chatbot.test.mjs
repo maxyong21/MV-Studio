@@ -61,7 +61,7 @@ test('PostgreSQL chatbot lifecycle, publication isolation, estimates and confirm
   try{
     await t.test('migration is repeatable and public roles cannot read drafts or publish',async()=>{
       await db.exec(await readFile('supabase/migrations/20261025_chatbot.sql','utf8'));
-      assert.equal((await db.query('select count(*)::int n from chatbot_questions')).rows[0].n,10);
+      assert.equal((await db.query('select count(*)::int n from chatbot_questions')).rows[0].n,defaultQuestions.length);
       await db.exec('set role anon');await assert.rejects(db.query('select * from chatbot_documents'),e=>e.code==='42501');await assert.rejects(db.query('select * from chatbot_chunks'),e=>e.code==='42501');await assert.rejects(db.query('select consume_chatbot_budget(10)'),e=>e.code==='42501');
       await db.exec('reset role; set role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[adminId]);
       assert.ok((await db.query('select * from chatbot_documents')).rows.length);await assert.rejects(db.query("update chatbot_settings set name='Bypassed'"),e=>e.code==='42501');await db.exec('reset role');

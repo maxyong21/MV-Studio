@@ -15,13 +15,13 @@ export async function staticFile(req,res,folder){
   res.writeHead(200,{'Content-Type':mime[extname(path)]||'application/octet-stream'});res.end(data);
 }
 export async function browserServers({prerender=false}={}){
-  const db=await database(),adminId=crypto.randomUUID(),images=new Map();let mails=0;
+  const db=await database(),adminId=crypto.randomUUID(),images=new Map(),mailPayloads=[];let mails=0;
   await db.query('insert into auth.users(id) values($1)',[adminId]);await db.query('insert into admin_users(user_id) values($1)',[adminId]);
   const user={id:adminId,email:'admin@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()};
   const b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   const token=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.fixture`;
   const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
-  const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async()=>{mails++;return Response.json({id:`local-email-${mails}`});}};
+  const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async(url,options)=>{mails++;mailPayloads.push(JSON.parse(options.body));return Response.json({id:`local-email-${mails}`});}};
   const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
@@ -122,5 +122,5 @@ export async function browserServers({prerender=false}={}){
     await staticFile(req,res,'.generated/browser-site');
   });
   await Promise.all([new Promise(resolve=>fixture.listen(4188,'127.0.0.1',resolve)),new Promise(resolve=>production.listen(4187,'127.0.0.1',resolve))]);
-  return {db,images,get mails(){return mails;},async close(){fixture.closeAllConnections();production.closeAllConnections();await Promise.all([new Promise(resolve=>fixture.close(resolve)),new Promise(resolve=>production.close(resolve))]);await db.close();}};
+  return {db,images,mailPayloads,get mails(){return mails;},async close(){fixture.closeAllConnections();production.closeAllConnections();await Promise.all([new Promise(resolve=>fixture.close(resolve)),new Promise(resolve=>production.close(resolve))]);await db.close();}};
 }
