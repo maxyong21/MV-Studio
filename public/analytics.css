@@ -1,11 +1,13 @@
 #mv-analytics-choice,#mv-analytics-preferences{box-sizing:border-box;font-family:inherit;color:#173c31;background:#fffdf8;border:1px solid #b9c8bb;box-shadow:0 6px 28px #173c3120;position:fixed;z-index:45;left:16px;bottom:16px}
-#mv-analytics-choice{width:min(440px,calc(100vw - 32px));padding:20px;border-radius:14px;font-size:15px;line-height:1.6}
+#mv-analytics-choice{width:min(380px,calc(100vw - 32px));padding:16px;border-radius:14px;font-size:14px;line-height:1.5;max-height:calc(100dvh - 32px);overflow:auto}
 #mv-analytics-choice strong{font-size:17px}
-#mv-analytics-choice p{margin:8px 0 16px;color:#46564b}
+#mv-analytics-choice p{margin:6px 0 12px;color:#46564b}
 #mv-analytics-choice>div{display:flex;flex-wrap:wrap;gap:10px}
 #mv-analytics-choice button,#mv-analytics-preferences{font:inherit;font-size:14px;cursor:pointer;min-height:44px;border-radius:8px;padding:10px 15px}
 #mv-analytics-choice button{flex:1;background:#eef3ed;color:#173c31;border:1px solid #91a694;white-space:nowrap}
 #mv-analytics-choice button:hover,#mv-analytics-preferences:hover{background:#dce9dc}
 #mv-analytics-choice button:focus-visible,#mv-analytics-preferences:focus-visible{outline:3px solid #a7472a;outline-offset:3px}
 #mv-analytics-choice[hidden],#mv-analytics-preferences[hidden]{display:none!important}
-@media(max-width:600px){#mv-analytics-choice{bottom:84px}#mv-analytics-preferences{font-size:12px;max-width:145px;padding:8px 10px}}
+#mv-analytics-preferences{position:static;display:inline-flex;align-items:center;justify-content:center;box-shadow:none;margin:8px 16px}
+.site-footer-bottom #mv-analytics-preferences{margin:0;background:transparent;color:inherit;border-color:currentColor}
+@media(max-width:600px){#mv-analytics-choice{left:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:calc(100vw - 24px);padding:12px;font-size:13px}#mv-analytics-choice strong{font-size:15px}#mv-analytics-choice p{margin:4px 0 10px}#mv-analytics-choice button{font-size:13px;padding:8px;min-height:44px}#mv-analytics-preferences{font-size:12px;padding:8px 10px}}

@@ -5,6 +5,7 @@ import {database,client} from './database.mjs';
 import {createSubmitHandler} from '../../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../../supabase/functions/_shared/retry-handler.mjs';
 import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
+import {safeJson} from '../../scripts/seo.mjs';
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.xml':'application/xml','.txt':'text/plain'};
 export async function staticFile(req,res,folder){
   const root=resolve(folder),url=new URL(req.url,'http://localhost');
@@ -13,7 +14,7 @@ export async function staticFile(req,res,folder){
   try{data=await readFile(path);}catch{try{path=join(path,'index.html');data=await readFile(path);}catch{path=join(root,'index.html');data=await readFile(path);}}
   res.writeHead(200,{'Content-Type':mime[extname(path)]||'application/octet-stream'});res.end(data);
 }
-export async function browserServers(){
+export async function browserServers({prerender=false}={}){
   const db=await database(),adminId=crypto.randomUUID(),images=new Map();let mails=0;
   await db.query('insert into auth.users(id) values($1)',[adminId]);await db.query('insert into admin_users(user_id) values($1)',[adminId]);
   const user={id:adminId,email:'admin@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()};
@@ -25,6 +26,12 @@ export async function browserServers(){
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
+    if(['http://127.0.0.1:4187','http://127.0.0.1:4188'].includes(req.headers.origin)){
+      res.setHeader('Access-Control-Allow-Origin',req.headers.origin);
+      res.setHeader('Access-Control-Allow-Headers','authorization, apikey, content-type, x-client-info');
+      res.setHeader('Access-Control-Allow-Methods','GET, POST, PATCH, DELETE, OPTIONS');
+    }
+    if(req.method==='OPTIONS'&&!req.url.startsWith('/functions/')){res.writeHead(204).end();return;}
     const url=new URL(req.url,'http://127.0.0.1:4188');
     const send=(body,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(body));};
     try{
@@ -94,7 +101,26 @@ export async function browserServers(){
       await staticFile(req,res,'.generated/browser-site');
     }catch(error){send({message:error.message,code:error.code},500);}
   });
-  const production=createServer((req,res)=>staticFile(req,res,'dist'));
+  // Prerender from this isolated database, never from a developer's dist/env.
+  const renderPage=prerender?(await import('../../.generated/browser-ssr/entry-server.js')).renderPage:null;
+  const production=createServer(async(req,res)=>{
+    if(!prerender){await staticFile(req,res,'dist');return;}
+    const path=new URL(req.url,'http://127.0.0.1:4187').pathname;
+    if(path==='/'||/^\/projects\/(?:seed-p\d+|[0-9a-f-]{36})$/i.test(path)){
+      try{
+        const data={};
+        for(const table of ['site_content','services','projects','team_members','promotions','feature_options','testimonials','faqs']){
+          const {rows}=await db.query(`select * from public.${identifier(table)}${table==='site_content'?'':' where active=true'+(table==='testimonials'?' and permission_confirmed=true':'')}`);
+          data[table]=table==='site_content'?rows[0]:rows;
+        }
+        let html=await readFile('.generated/browser-site/index.html','utf8');
+        html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${path}">${renderPage(data,path)}</div><script id="mv-initial-data" type="application/json">${safeJson(data)}</script>`);
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(html);
+      }catch(error){res.writeHead(500).end(error.message);}
+      return;
+    }
+    await staticFile(req,res,'.generated/browser-site');
+  });
   await Promise.all([new Promise(resolve=>fixture.listen(4188,'127.0.0.1',resolve)),new Promise(resolve=>production.listen(4187,'127.0.0.1',resolve))]);
   return {db,images,get mails(){return mails;},async close(){fixture.closeAllConnections();production.closeAllConnections();await Promise.all([new Promise(resolve=>fixture.close(resolve)),new Promise(resolve=>production.close(resolve))]);await db.close();}};
 }

@@ -11,6 +11,7 @@
   let context = null, lastPath = null, previousLocation = '', configured = false, panel, choices;
   const allowedPath = path => path === '/' || /^\/projects\/(?:[0-9a-f-]{36}|seed-p\d+)$/i.test(path) || demos.has(path);
   const active = () => context && context.path === location.pathname && allowedPath(location.pathname);
+  const syncPanel = () => { if(document.documentElement)document.documentElement.dataset.analyticsPanel=panel&&!panel.hidden?'open':'closed'; };
   const safeReferrer = () => {
     try { const url = new URL(document.referrer); return /^https?:$/.test(url.protocol) ? url.origin : ''; } catch { return ''; }
   };
@@ -47,6 +48,7 @@
     if (configured) window.gtag('consent', 'update', {analytics_storage: value === 'granted' ? 'granted' : 'denied'});
     panel.hidden = true;
     choices.hidden = false;
+    syncPanel();
     if (value === 'granted') pageView();
     else lastPath = null;
     choices.focus();
@@ -57,19 +59,22 @@
       const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/analytics.css'; document.head.appendChild(css);
       panel = document.createElement('section');
       panel.id = 'mv-analytics-choice'; panel.setAttribute('aria-label', 'Analytics preferences');
-      panel.innerHTML = '<strong>Help us improve your experience</strong><p>Allow Google Analytics to measure visits and enquiries? This is optional. Our analytics events exclude your form answers and chat messages.</p><div><button type="button" data-choice="granted">Allow analytics</button><button type="button" data-choice="denied">No thanks</button></div>';
+      panel.innerHTML = '<strong>Optional analytics</strong><p>Help us measure visits and enquiries. Form answers and chat messages are excluded.</p><div><button type="button" data-choice="granted">Allow analytics</button><button type="button" data-choice="denied">No thanks</button></div>';
       panel.querySelectorAll('button').forEach(button => button.addEventListener('click', () => choose(button.dataset.choice)));
       choices = document.createElement('button'); choices.type = 'button'; choices.id = 'mv-analytics-preferences'; choices.textContent = 'Analytics choices';
-      choices.addEventListener('click', () => { panel.hidden = false; choices.hidden = true; panel.querySelector('button').focus(); });
+      choices.addEventListener('click', () => { panel.hidden = false; choices.hidden = true; syncPanel();panel.querySelector('button').focus(); });
       document.body.append(panel, choices);
     }
     panel.hidden = consent === 'granted' || consent === 'denied';
     choices.hidden = !panel.hidden;
+    const footer=document.querySelector?.('.site-footer-bottom');if(footer)footer.appendChild(choices);
+    syncPanel();
   }
   function updatePage(page) {
     if (!page || page.path !== location.pathname || !allowedPath(page.path)) {
       context = null; lastPath = null; window['ga-disable-' + id] = true;
       if (panel) { panel.hidden = true; choices.hidden = true; }
+      syncPanel();
       return;
     }
     context = {path: page.path, title: String(page.title || 'MV Studio').slice(0, 160)};

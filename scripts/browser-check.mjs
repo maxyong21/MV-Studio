@@ -12,7 +12,8 @@ const executable=process.env.BROWSER_PATH||['C:/Program Files/Google/Chrome/Appl
 if(!executable)throw new Error('Set BROWSER_PATH to a Chrome or Edge executable.');
 process.env.VITE_SUPABASE_URL='http://127.0.0.1:4188';process.env.VITE_SUPABASE_ANON_KEY='local-browser-fixture';process.env.VITE_SITE_URL='http://127.0.0.1:4188';
 await build({mode:'test',build:{outDir:'.generated/browser-site'},logLevel:'warn'});
-const servers=await browserServers(),folder=await mkdtemp(join(tmpdir(),'mv-studio-browser-'));
+await build({mode:'test',build:{ssr:'src/entry-server.jsx',outDir:'.generated/browser-ssr'},logLevel:'warn'});
+const servers=await browserServers({prerender:true}),folder=await mkdtemp(join(tmpdir(),'mv-studio-browser-'));
 const browser=spawn(executable,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--remote-debugging-port=9228',`--user-data-dir=${folder}/profile`,'about:blank'],{windowsHide:true,stdio:'ignore'});
 let socket,send;const errors=[],requests=[];
 try{
@@ -24,8 +25,8 @@ try{
   socket.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.id){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);clearTimeout(p.timer);msg.error?p.reject(new Error(JSON.stringify(msg.error))):p.resolve(msg.result);}else if(msg.method==='Runtime.exceptionThrown')errors.push(msg.params.exceptionDetails.exception?.description||msg.params.exceptionDetails.text);else if(msg.method==='Runtime.consoleAPICalled'&&msg.params.type==='error')errors.push(msg.params.args.map(v=>v.value||v.description).join(' '));else if(msg.method==='Network.requestWillBeSent')requests.push(msg.params.request.url);};
   send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error(`CDP timed out: ${method}`));},15000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
   const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value;};
-  const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,100));}throw new Error(`UI timeout: ${expression}`);};
-  const navigate=async(url,selector='h1')=>{await send('Page.navigate',{url});await wait(`document.readyState==='complete'&&!!document.querySelector(${JSON.stringify(selector)})`);};
+  const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,100));}console.log(await evaluate("JSON.stringify({url:location.href,text:document.body.innerText.slice(0,1500)})"),errors);throw new Error(`UI timeout: ${expression}`);};
+  const navigate=async(url,selector='h1')=>{await send('Page.navigate',{url});await wait(`location.href===${JSON.stringify(url)}&&document.readyState==='complete'&&!!document.querySelector(${JSON.stringify(selector)})`);};
   const fill=async(selector,value)=>evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw new Error('Missing input: '+${JSON.stringify(selector)});const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   const click=async selector=>evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
   const viewport=async width=>{await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<769});await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');};
@@ -37,6 +38,23 @@ try{
   assert.ok(!requests.some(url=>/\/supabase-[^/]+\.js/.test(url)),'Admin authentication SDK must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/(ChatDialog|ChatPanel)-[^/]+\.js/.test(url)),'Chatbot bundles load only after opening the assistant');
   assert.equal(await evaluate("document.querySelector('.hero h1').textContent"),'Websites and web apps for Malaysian small businesses.');
+  // A first-time visitor can decline analytics without overlapping controls.
+  const analytics=(await readFile('public/analytics.js','utf8')).replace("const productionOrigin = 'https://mv-aistudio.vercel.app';","const productionOrigin = location.origin;");
+  await evaluate(`window.mvAnalyticsPage={path:'/',title:document.title};${analytics}`);
+  await viewport(390);
+  await wait("document.documentElement.dataset.analyticsPanel==='open'");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.chat-launcher')).visibility"),'hidden');
+  assert.ok(await evaluate("document.querySelector('#mv-analytics-choice').getBoundingClientRect().height<210"),'Mobile consent stays compact');
+  await click('[data-choice=denied]');
+  await wait("document.documentElement.dataset.analyticsPanel==='closed'");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('#mv-analytics-preferences')).position"),'static');
+  assert.equal(await evaluate("document.querySelector('.chat-launcher').getBoundingClientRect().width"),48);
+  await evaluate("document.querySelector('#enquiry').scrollIntoView({behavior:'instant'})");
+  await wait("getComputedStyle(document.querySelector('.chat-launcher')).display==='none'");
+  await evaluate("window.scrollTo({top:0,behavior:'instant'})");
+  await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
+  await screenshot('customer-mobile.png');
+  console.log('Mobile layout',await evaluate("JSON.stringify({width:innerWidth,height:document.body.scrollHeight,consentHeight:document.querySelector('#mv-analytics-choice').getBoundingClientRect().height})"));
   for(const width of [1440,768,760,520,390,320]){
     await viewport(width);
     const overflow=await evaluate('document.documentElement.scrollWidth>innerWidth');
@@ -48,7 +66,8 @@ try{
   await click('.mobile-menu');await click('.theme-button');await wait("document.documentElement.dataset.theme==='dark'");
   await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.float-code')).animationName"),'none');
-  await navigate('http://127.0.0.1:4187/projects/seed-p1');assert.match(await evaluate("document.querySelector('h1').textContent"),/APMoodle/);
+  const sampleProjectId=(await servers.db.query("select id from projects where name='APMoodle'")).rows[0].id;
+  await navigate(`http://127.0.0.1:4187/projects/${sampleProjectId}`);assert.match(await evaluate("document.querySelector('h1').textContent"),/APMoodle/);
   assert.ok(await evaluate("document.querySelector('.project-detail-actions a').getAttribute('href').startsWith('/')"));
   await navigate('http://127.0.0.1:4188/admin','.login-card');
   await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
@@ -127,6 +146,8 @@ try{
   await wait("document.querySelector('.enquiry-feedback')?.textContent.includes('has been saved')");
   assert.equal(servers.mails,1);const saved=(await servers.db.query('select * from enquiries')).rows;assert.equal(saved.length,1);assert.equal(saved[0].meeting_requested,true);assert.equal(+saved[0].annual_estimate,1320);
   // Public assistant at mobile sizes, client validation and real DB-backed submission.
+  await evaluate("document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})");
+  await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
   await click('.chat-launcher');await wait("!!document.querySelector('.chat-prompt')");
   for(const width of [390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);assert.equal(await evaluate("getComputedStyle(document.querySelector('.chat-scroll')).scrollbarWidth"),'none');}
   await viewport(390);await click('.chat-wide');await choose('Manage internal operations');await nextCard('features do you need');await choose('Landing page');
