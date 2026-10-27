@@ -204,6 +204,15 @@ The function rate-limits to five attempts per IP hash per hour. Meeting requests
 
 ## Review improvements: deployment and content
 
+First-time homepage visitors get a small project-assistant introduction beside
+the launcher after eight uninterrupted seconds. It explains guided requirements
+and preliminary pricing, with a **Plan my project** action and close control.
+It appears once per browser, closes after twenty seconds unless hovered or
+focused, and waits behind analytics consent, navigation menus, dialogs and form
+interaction. Automatic promotions wait until the introduction has cleared.
+Blocked browser storage skips the automatic introduction. This frontend-only
+feature needs no SQL migration, AI key or Edge Function deployment.
+
 For the expanded education, bakery, retail, spare-parts and other-business
 assistant, read [Chatbot industry knowledge and setup](docs/CHATBOT_INDUSTRIES.md).
 It includes customer questions, draft answers, confirmed policies, branching and

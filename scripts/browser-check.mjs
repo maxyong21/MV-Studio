@@ -54,6 +54,19 @@ try{
   await evaluate("window.scrollTo({top:0,behavior:'instant'})");
   await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
   await screenshot('customer-mobile.png');
+  await wait("!!document.querySelector('.assistant-intro')");
+  assert.match(await evaluate("document.querySelector('.assistant-intro').textContent"),/outline your website or system.*preliminary estimate/);
+  for(const width of [1440,768,390,320]){
+    await viewport(width);
+    assert.ok(await evaluate("(()=>{const card=document.querySelector('.assistant-intro').getBoundingClientRect(),button=document.querySelector('.chat-launcher').getBoundingClientRect();return card.left>=0&&card.right<=innerWidth&&card.top>=0&&card.bottom<=button.top-8})()"),`Introduction fits above launcher at ${width}px`);
+  }
+  await viewport(390);await screenshot('assistant-intro-mobile.png');
+  await evaluate("document.querySelector('.assistant-intro-start').focus()");await click('.assistant-intro-start');
+  await wait("!!document.querySelector('.chat-dialog')&&!document.querySelector('.assistant-intro')");
+  assert.equal(await evaluate("localStorage.getItem('mv-project-assistant-intro-v1')"),'seen');
+  await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");
+  assert.equal(await evaluate("document.activeElement.classList.contains('chat-launcher')"),true);
+  assert.equal(await evaluate("!!document.querySelector('.assistant-intro')"),false);
   console.log('Mobile layout',await evaluate("JSON.stringify({width:innerWidth,height:document.body.scrollHeight,consentHeight:document.querySelector('#mv-analytics-choice').getBoundingClientRect().height})"));
   for(const width of [1440,768,760,520,390,320]){
     await viewport(width);

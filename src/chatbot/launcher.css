@@ -8,3 +8,16 @@ body:has([role=dialog]) .chat-launcher{visibility:hidden;pointer-events:none}
  .chat-launcher span{display:none}
  .chat-launcher.is-quiet{display:none}
 }
+.assistant-intro{position:fixed;z-index:36;right:24px;bottom:calc(86px + env(safe-area-inset-bottom));width:min(330px,calc(100vw - 32px));max-height:calc(100dvh - 110px - env(safe-area-inset-bottom));overflow:auto;scrollbar-width:none;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--paper);color:var(--ink);box-shadow:0 12px 40px #162a2026;animation:assistant-intro-arrive .2s ease-out}
+.assistant-intro::-webkit-scrollbar{display:none}
+.assistant-intro h2{font:700 17px/1.4 'DM Sans',sans-serif;letter-spacing:-.02em;margin:0 32px 8px 0}
+.assistant-intro p{font-size:14px;line-height:1.65;margin:0 0 16px;color:var(--ink)}
+.assistant-intro-close{position:absolute;right:8px;top:7px;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+.assistant-intro-close:hover{background:#73876d18}
+.assistant-intro .assistant-intro-start{min-height:44px;font-size:14px;padding:12px 16px;gap:8px;white-space:normal}
+.assistant-intro :is(button,a):focus-visible{outline:3px solid var(--accent,#a7472a);outline-offset:3px}
+:root[data-analytics-panel=open] .assistant-intro,body:has([role=dialog]) .assistant-intro,body:has(.mobile-menu[aria-expanded=true]) .assistant-intro{visibility:hidden;pointer-events:none}
+@media(max-width:760px){.assistant-intro{right:12px;bottom:calc(72px + env(safe-area-inset-bottom));width:min(320px,calc(100vw - 24px));padding:16px}}
+@media(max-height:420px){.assistant-intro{padding:12px 16px}.assistant-intro p{font-size:13px;line-height:1.5;margin-bottom:10px}.assistant-intro h2{font-size:16px}}
+@keyframes assistant-intro-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.assistant-intro{animation:none}}
