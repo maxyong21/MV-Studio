@@ -14,6 +14,7 @@ process.env.VITE_SUPABASE_URL='http://127.0.0.1:4188';process.env.VITE_SUPABASE_
 await build({mode:'test',build:{outDir:'.generated/browser-site'},logLevel:'warn'});
 await build({mode:'test',build:{ssr:'src/entry-server.jsx',outDir:'.generated/browser-ssr'},logLevel:'warn'});
 const servers=await browserServers({prerender:true}),folder=await mkdtemp(join(tmpdir(),'mv-studio-browser-'));
+await servers.db.query("update projects set show_in_footer=true where name='APMoodle'");
 const browser=spawn(executable,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--remote-debugging-port=9228',`--user-data-dir=${folder}/profile`,'about:blank'],{windowsHide:true,stdio:'ignore'});
 let socket,send;const errors=[],requests=[];
 try{
@@ -65,6 +66,7 @@ try{
   await wait("!!document.querySelector('.chat-dialog')&&!document.querySelector('.assistant-intro')");
   assert.equal(await evaluate("localStorage.getItem('mv-project-assistant-intro-v1')"),'seen');
   await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");
+  await wait("document.activeElement.classList.contains('chat-launcher')");
   assert.equal(await evaluate("document.activeElement.classList.contains('chat-launcher')"),true);
   assert.equal(await evaluate("!!document.querySelector('.assistant-intro')"),false);
   console.log('Mobile layout',await evaluate("JSON.stringify({width:innerWidth,height:document.body.scrollHeight,consentHeight:document.querySelector('#mv-analytics-choice').getBoundingClientRect().height})"));
@@ -80,12 +82,30 @@ try{
   await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.float-code')).animationName"),'none');
   const sampleProjectId=(await servers.db.query("select id from projects where name='APMoodle'")).rows[0].id;
-  await navigate(`http://127.0.0.1:4187/projects/${sampleProjectId}`);assert.match(await evaluate("document.querySelector('h1').textContent"),/APMoodle/);
+  await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");
+  await wait('window.scrollY>500');await click(`.site-footer-full a[href="/projects/${sampleProjectId}"]`);
+  await wait(`location.pathname==='/projects/${sampleProjectId}'&&!!document.querySelector('.project-detail-head')&&window.scrollY<2`);
+  assert.match(await evaluate("document.querySelector('h1').textContent"),/APMoodle/);
+  await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await wait('window.scrollY>100');
+  await click(`.site-footer-full a[href="/projects/${sampleProjectId}"]`);await wait('window.scrollY<2');
+  await click('.site-footer-full a[href="/#services"]');
+  await wait("location.pathname==='/'&&location.hash==='#services'&&!!document.querySelector('#services')&&document.querySelector('#services').getBoundingClientRect().top<150&&window.scrollY>500");
+  await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await click(`.site-footer-full a[href="/projects/${sampleProjectId}"]`);
+  await wait(`location.pathname==='/projects/${sampleProjectId}'&&!!document.querySelector('.project-detail-head')&&window.scrollY<2`);
   assert.ok(await evaluate("document.querySelector('.project-detail-actions a').getAttribute('href').startsWith('/')"));
   await navigate('http://127.0.0.1:4188/admin','.login-card');
   await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
   await wait("!!document.querySelector('.entity-row')");
   assert.equal(await evaluate("document.querySelector('meta[name=robots]').content"),'noindex,nofollow');
+  await send('Emulation.setDeviceMetricsOverride',{width:1440,height:540,deviceScaleFactor:1,mobile:false});
+  await wait("document.querySelector('.admin-nav-list').scrollHeight>document.querySelector('.admin-nav-list').clientHeight");
+  const rail=await evaluate("(()=>{const r=document.querySelector('.admin-nav-list').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()");
+  await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:rail.x,y:rail.y,deltaX:0,deltaY:600});
+  await wait("document.querySelector('.admin-nav-list').scrollTop>50");
+  assert.ok(await evaluate("(()=>{const r=document.querySelector('.rail-bottom').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()"),'Account actions stay visible while the sidebar scrolls');
+  await screenshot('admin-sidebar-short.png');
+  await viewport(390);await evaluate("document.querySelector('.admin-nav-list').scrollTo({left:10000,behavior:'instant'})");
+  assert.ok(await evaluate("document.querySelector('.admin-nav-list').scrollLeft>0"),'Phone navigation can scroll horizontally');
   for(const width of [1440,768,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Admin overflow at ${width}px`);}
   await viewport(1440);await screenshot('admin-desktop.png');
   await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await click('.admin-theme-toggle');
