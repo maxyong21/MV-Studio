@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Code2, Database, Github, Globe2, HeartHandshake, Home as HomeIcon, Layers3, Linkedin, Mail, Menu, Moon, Pencil, Plus, Search, ShieldCheck, Sparkles, Sun, Trash2, X, Zap } from 'lucide-react';
 import { fallbackContent } from './content.js';
@@ -36,8 +36,14 @@ function useSiteData(initialData,enabled=true) {
   return {data,loading,error,reload,availability};
 }
 function App({initialData}){
-  const {pathname,hash}=useLocation(),site=useSiteData(initialData,pathname!=='/admin');
-  useEffect(()=>{if(!hash||site.availability!=='ready')return;requestAnimationFrame(()=>document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView());},[pathname,hash,site.availability]);
+  const {pathname,hash,key:navigationKey}=useLocation(),site=useSiteData(initialData,pathname!=='/admin');
+  useLayoutEffect(()=>{if(!hash)window.scrollTo({top:0,left:0,behavior:'instant'});},[pathname,hash,navigationKey]);
+  useEffect(()=>{
+    if(!hash||site.availability!=='ready')return;
+    let id;try{id=decodeURIComponent(hash.slice(1));}catch{return;}
+    const frame=requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView());
+    return()=>cancelAnimationFrame(frame);
+  },[pathname,hash,navigationKey,site.availability]);
   const publicPage=children=><PublicBoundary key={pathname}>{site.availability==='ready'?children:<Availability kind={site.availability} onRetry={site.availability==='maintenance'?site.reload:undefined} busy={site.loading}/>}</PublicBoundary>;
   return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher/>}</>;
 }
