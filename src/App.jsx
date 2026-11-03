@@ -14,6 +14,8 @@ import Faq from './components/Faq.jsx';
 import HeroSlogans from './components/HeroSlogans.jsx';
 import {eligiblePromotion} from './lib/promotions.mjs';
 import {emptyPublicContent,hasPublicContent} from './lib/availability.mjs';
+import LegalPage from './legal/LegalPage.jsx';
+import {legalPaths} from './legal/content.mjs';
 const Admin=lazy(()=>import('./admin/Admin.jsx'));
 
 function youtubeEmbed(url){try{const parsed=new URL(url);const host=parsed.hostname.replace(/^www\./,'');const isYoutube=host==='youtube.com'||host.endsWith('.youtube.com');const id=host==='youtu.be'?parsed.pathname.slice(1):isYoutube?(parsed.searchParams.get('v')||parsed.pathname.match(/\/(?:embed|shorts)\/([^/]+)/)?.[1]):null;return id?`https://www.youtube-nocookie.com/embed/${id}`:null;}catch{return null;}}
@@ -36,7 +38,7 @@ function useSiteData(initialData,enabled=true) {
   return {data,loading,error,reload,availability};
 }
 function App({initialData}){
-  const {pathname,hash,key:navigationKey}=useLocation(),site=useSiteData(initialData,pathname!=='/admin');
+  const {pathname,hash,key:navigationKey}=useLocation(),site=useSiteData(initialData,pathname!=='/admin'&&!legalPaths.includes(pathname.replace(/\/$/,'')));
   useLayoutEffect(()=>{if(!hash)window.scrollTo({top:0,left:0,behavior:'instant'});},[pathname,hash,navigationKey]);
   useEffect(()=>{
     if(!hash||site.availability!=='ready')return;
@@ -45,7 +47,7 @@ function App({initialData}){
     return()=>cancelAnimationFrame(frame);
   },[pathname,hash,navigationKey,site.availability]);
   const publicPage=children=><PublicBoundary key={pathname}>{site.availability==='ready'?children:<Availability kind={site.availability} onRetry={site.availability==='maintenance'?site.reload:undefined} busy={site.loading}/>}</PublicBoundary>;
-  return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} /><Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher whatsappNumber={site.data.site_content?.content?.whatsapp_number??fallbackContent.site_content.content.whatsapp_number}/>}</>;
+  return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} />{legalPaths.map(path=><Route key={path} path={path} element={<LegalPage key={path} path={path} data={site.data}/>}/>)}<Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher whatsappNumber={site.data.site_content?.content?.whatsapp_number??fallbackContent.site_content.content.whatsapp_number}/>}</>;
 }
 
 function NotFoundPage({project=false}){
@@ -141,7 +143,7 @@ function SiteFooter({projects,content,faqs=[]}){
       <div className="site-footer-column"><h2>Popular projects</h2>{footerProjects.length?footerProjects.map(project=><Link key={project.id} to={`/projects/${project.id}`}>{project.name}<ArrowUpRight size={13}/></Link>):<a href={sectionLink('work')}>Explore our work <ArrowUpRight size={13}/></a>}</div>
       <div className="site-footer-column footer-contact-column"><h2>Contact us</h2>{emails.map((email,index)=><a key={`${email}-${index}`} href={`mailto:${email}`}><Mail size={14}/>{email}</a>)}{phones.map((phone,index)=><a key={`${phone}-${index}`} href={`tel:${phone.replace(/[^+\d]/g,'')}`}><Globe2 size={14}/>{phone}</a>)}{whatsapp&&<a href={whatsapp} target="_blank" rel="noreferrer">Chat on WhatsApp <ArrowUpRight size={14}/></a>}<a href={sectionLink('enquiry')}>Send an enquiry <ArrowRight size={14}/></a></div>
     </div>
-    <div className="site-footer-bottom"><span>© {new Date().getFullYear()} MV Studio</span><a href={sectionLink('home')}>Back to top ↑</a><span>Made with care in Malaysia.</span></div>
+    <div className="site-footer-bottom"><span>© {new Date().getFullYear()} MV Studio</span><a href={sectionLink('home')}>Back to top ↑</a><nav className="footer-legal-links" aria-label="Legal information"><Link to="/privacy">Privacy policy</Link><Link to="/terms">Terms &amp; conditions</Link><Link to="/data-deletion">Data deletion</Link></nav><span>Made with care in Malaysia.</span></div>
   </footer>;
 }
 

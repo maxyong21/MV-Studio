@@ -8,7 +8,7 @@
   if (location.origin !== productionOrigin || window.mvAnalytics) return;
   let consent = '';
   try { consent = localStorage.getItem(consentKey) || ''; } catch {}
-  let context = null, lastPath = null, previousLocation = '', configured = false, panel, choices;
+  let context = null, lastPath = null, previousLocation = '', configured = false, panel, choices, preferenceReturn;
   const allowedPath = path => path === '/' || /^\/projects\/(?:[0-9a-f-]{36}|seed-p\d+)$/i.test(path) || demos.has(path);
   const active = () => context && context.path === location.pathname && allowedPath(location.pathname);
   const syncPanel = () => { if(document.documentElement)document.documentElement.dataset.analyticsPanel=panel&&!panel.hidden?'open':'closed'; };
@@ -51,10 +51,12 @@
     syncPanel();
     if (value === 'granted') pageView();
     else lastPath = null;
-    choices.focus();
+    if (preferenceReturn?.isConnected) preferenceReturn.focus({preventScroll: true});
+    else choices.focus();
+    preferenceReturn = null;
   }
-  function showChoices() {
-    if (!active()) return;
+  function showChoices(manual = false) {
+    if (!active() && !manual) return;
     if (!panel) {
       const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/analytics.css'; document.head.appendChild(css);
       panel = document.createElement('section');
@@ -91,7 +93,13 @@
     pageView();
     window.gtag('event', name, {...parameters, send_to: id, page_location: productionOrigin + context.path, page_title: context.title});
   }
-  window.mvAnalytics = {event, updatePage};
+  function openPreferences() {
+    if (!active() && !['/privacy', '/terms', '/data-deletion'].includes(location.pathname.replace(/\/$/, ''))) return;
+    preferenceReturn = document.activeElement;
+    showChoices(true); panel.hidden = false; choices.hidden = true; syncPanel();
+    panel.querySelector('button').focus();
+  }
+  window.mvAnalytics = {event, updatePage, openPreferences};
   window.addEventListener('mv:analytics-page', () => updatePage(window.mvAnalyticsPage));
   document.addEventListener('click', e => {
     const link = e.target.closest?.('a[href]'); if (!link) return;

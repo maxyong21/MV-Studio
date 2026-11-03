@@ -218,7 +218,7 @@ try{
   await click('.chat-contact .button-dark');await wait("!!document.querySelector('.chat-success')");assert.equal(servers.mails,2);
   await evaluate("window.__originalOpen=window.open;window.open=url=>{window.__whatsappDraft=url;return null;}");await click('.chat-success .button');assert.match(await evaluate("new URL(window.__whatsappDraft).searchParams.get('text')"),/MV-WA:/);await evaluate('window.open=window.__originalOpen');
   const chatEnquiry=(await servers.db.query("select * from enquiries where company_name='Mobile Bakery'")).rows[0];assert.ok(chatEnquiry.chatbot_estimate_id);assert.equal(+chatEnquiry.one_time_estimate,449);assert.equal(+chatEnquiry.annual_estimate,1320);assert.ok(chatEnquiry.chatbot_answers.summary.length);
-  await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");assert.equal(await evaluate("document.activeElement.className"),'chat-launcher');
+  await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");await wait("document.activeElement===document.querySelector('.chat-launcher')");
   // An education client gets learning discovery and a manual quote, not retail checkout.
   await click('.chat-launcher');await wait("!!document.querySelector('.chat-prompt')");await click('.chat-wide');
   await choose('Education or learning system');await nextCard('education website');await choose('Learning materials');await choose('Quizzes');
@@ -242,6 +242,21 @@ try{
   await wait("[...document.querySelectorAll('.enquiry-admin-row')].some(row=>row.textContent.includes('Learning Centre')&&row.textContent.includes('Scope and pricing to be discussed'))");
   await navigate('http://127.0.0.1:4188/','.site-footer-full');
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await screenshot('footer-mobile.png');
+  // Public legal pages are readable without API requests or working database content.
+  assert.ok(await evaluate("!!document.querySelector('.footer-legal-links a[href=\"/privacy\"]')"));
+  const legalHtml=await(await fetch('http://127.0.0.1:4187/privacy')).text();assert.match(legalHtml,/Please keep sensitive information out/);
+  const legalRequestStart=requests.length;await navigate('http://127.0.0.1:4187/privacy','.legal-article');
+  await wait("document.title==='Privacy policy | MV Studio'");
+  await evaluate(analytics);await evaluate("document.querySelector('.legal-preferences').focus({preventScroll:true})");await click('.legal-preferences');await wait("document.querySelector('#mv-analytics-choice')?.hidden===false");
+  assert.equal(await evaluate("!!document.querySelector('#mv-google-analytics')"),false);await click('#mv-analytics-choice button[data-choice=denied]');
+  for(const width of [1440,768,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Legal-page overflow at ${width}px`);}
+  await viewport(390);await evaluate("window.scrollTo({top:0,behavior:'instant'})");await screenshot('privacy-mobile.png');await viewport(1440);await screenshot('privacy-desktop.png');
+  await evaluate("document.querySelector('.legal-language button[lang=ms]').click()");await wait("document.querySelector('.legal-hero h1').textContent==='Dasar privasi'");assert.equal(await evaluate("document.querySelector('.legal-main').lang"),'ms');
+  await click('.legal-documents a[href="/terms"]');await wait("document.querySelector('.legal-hero h1').textContent==='Terms & conditions'");assert.equal(await evaluate("document.querySelector('.legal-main').lang"),'en');
+  await click('.legal-documents a[href="/data-deletion"]');await wait("document.querySelector('.legal-hero h1').textContent==='Data deletion requests'");
+  assert.ok(!requests.slice(legalRequestStart).some(url=>/\/rest\/v1\/|\/functions\/v1\//.test(url)),'Legal pages must not depend on database or functions');
+  const {renderPage}=await import('../.generated/browser-ssr/entry-server.js');const {emptyPublicContent}=await import('../src/lib/availability.mjs');
+  for(const route of ['/privacy','/terms','/data-deletion']){const html=renderPage({...emptyPublicContent(),__availability:'maintenance'},route);assert.match(html,/legal-article/);assert.doesNotMatch(html,/availability-page/);}
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
   console.log(JSON.stringify({passed:true,checks:['prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unknown route and automatic redirect'],screenshots:folder},null,2));

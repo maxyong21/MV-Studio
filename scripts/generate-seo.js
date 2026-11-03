@@ -3,6 +3,7 @@ import {loadEnv} from 'vite';
 import {fallbackContent} from '../src/content.js';
 import {emptyPublicContent,hasPublicContent} from '../src/lib/availability.mjs';
 import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
+import {legalDocuments,legalPaths} from '../src/legal/content.mjs';
 import {renderPage} from '../.generated/ssr/entry-server.js';
 
 const env=loadEnv('production',process.cwd(),'VITE_');
@@ -24,25 +25,29 @@ const published=hasPublicContent(data);
 const template=await readFile('dist/index.html','utf8');
 const content=data.site_content?.content||fallbackContent.site_content.content;
 async function page(route,project){
+  const legal=legalDocuments[route];
+  const renderData=legal?{...emptyPublicContent(),site_content:data.site_content}:data;
   const url=base?`${base}${route}`:'';
-  const title=!published?'Coming soon | MV Studio':project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
-  const description=!published?'A thoughtful digital experience is on the way. Please check back soon.':project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
+  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
+  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
   const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
   let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
   html=meta(html,'description',description,'name');
-  if(!published)html=meta(html,'robots','noindex,follow','name');
+  if(legal)html=meta(html,'robots','index,follow','name');
+  else if(!published)html=meta(html,'robots','noindex,follow','name');
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
-    const graph=project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
-    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
+    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
+    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
   }
-  const markup=renderPage(data,route);
-  html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${escapeHtml(route)}">${markup}</div>\n<script id="mv-initial-data" type="application/json">${safeJson(data)}</script>\n<noscript>For the interactive enquiry form, enable JavaScript or use the contact details on this page.</noscript>`);
+  const markup=renderPage(renderData,route);
+  html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${escapeHtml(route)}">${markup}</div>\n<script id="mv-initial-data" type="application/json">${safeJson(renderData)}</script>\n<noscript>For the interactive enquiry form, enable JavaScript or use the contact details on this page.</noscript>`);
   const directory=route==='/'?'dist':`dist${route}`;
   await mkdir(directory,{recursive:true});await writeFile(`${directory}/index.html`,html);
 }
 await page('/');
+for(const path of legalPaths)await page(path);
 for(const project of data.projects||[]){
   if(!project.active||!/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i.test(project.id))continue;
   await page(`/projects/${project.id}`,project);
