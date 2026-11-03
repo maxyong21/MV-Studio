@@ -40,7 +40,7 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
     await t.test('prices are calculated from active DB features, with annual discounts',async()=>{
       const features=(await db.query("select * from feature_options where name in ('Landing page','Hosting','Website maintenance','Payment page')")).rows;
       const response=await submit(request({...payload(),selected_feature_ids:features.map(v=>v.id),one_time_estimate:.01}));
-      const result=await response.json();assert.equal(response.status,200);assert.ok(result.ok);
+      const result=await response.json();assert.equal(response.status,200);assert.ok(result.ok);assert.equal(result.whatsapp_reference,undefined);
       const saved=(await db.query('select * from enquiries where id=$1',[result.id])).rows[0];
       assert.equal(+saved.one_time_estimate,449);assert.equal(+saved.monthly_estimate,150);assert.equal(+saved.annual_estimate,1680);
       assert.equal(saved.notification_status,'sent');assert.equal(saved.meeting_requested,true);assert.ok(saved.preferred_meeting_at);

@@ -17,7 +17,6 @@ export function whatsappEnquiryMessage(values={},features=[]){
     const preferred=singleLine(values.preferred_meeting_at,40);
     if(preferred){const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;lines.push(`Preferred meeting: ${preferred.replace('T',' ')} (${zone})`);}
   }
-  if(typeof values.whatsapp_reference==='string'&&/^[A-Za-z0-9_.-]{20,400}$/.test(values.whatsapp_reference))lines.push('','MV-WA:'+values.whatsapp_reference);
   return lines.join('\n');
 }
 

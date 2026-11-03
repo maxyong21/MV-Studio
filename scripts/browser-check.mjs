@@ -96,6 +96,7 @@ try{
   await navigate('http://127.0.0.1:4188/admin','.login-card');
   await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
   await wait("!!document.querySelector('.entity-row')");
+  assert.equal(await evaluate("[...document.querySelectorAll('.rail-item')].some(el=>el.textContent==='WhatsApp inbox')"),false);
   assert.equal(await evaluate("document.querySelector('meta[name=robots]').content"),'noindex,nofollow');
   await send('Emulation.setDeviceMetricsOverride',{width:1440,height:540,deviceScaleFactor:1,mobile:false});
   await wait("document.querySelector('.admin-nav-list').scrollHeight>document.querySelector('.admin-nav-list').clientHeight");
@@ -132,18 +133,6 @@ try{
   await fill('#content-contact_phones-0','+1 202-555-0123');await evaluate("document.querySelector('#content-contact_phones-0').closest('.contact-list-editor').querySelector('.contact-add-button').click()");await fill('#content-contact_phones-1','+1 202-555-0124');
   await click('.content-editor-head .button');await wait("document.querySelector('.admin-toast')?.textContent==='Website content saved'");
   const contacts=(await servers.db.query('select content from site_content')).rows[0].content;assert.equal(contacts.contact_emails.length,2);assert.equal(contacts.contact_phones.length,2);
-  // The WhatsApp inbox uses real private PostgreSQL state and a mocked Meta transport.
-  const waId=crypto.randomUUID();
-  await servers.db.query('insert into whatsapp_conversations(id,phone,state,last_customer_at) values($1,$2,$3,now())',[waId,'601154039173',{mode:'queued',answers:{},completed:[],contact:{name:'WhatsApp Browser Client'}}]);
-  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='WhatsApp inbox').click()");
-  await wait("!!document.querySelector('.wa-thread')");await click('.wa-thread');await wait("!!document.querySelector('.wa-conversation h2')");
-  await evaluate("[...document.querySelectorAll('.wa-actions button')].find(el=>el.textContent==='Claim conversation').click()");
-  await wait("document.querySelector('.wa-conversation header strong')?.textContent==='human'");
-  await fill('.wa-composer textarea','Hello, our team can help with your bakery project.');await click('.wa-composer .button');
-  await wait("[...document.querySelectorAll('.wa-bubble')].some(el=>el.textContent.includes('bakery project')&&el.textContent.includes('sent'))");
-  assert.equal((await servers.db.query('select status from whatsapp_outbox where conversation_id=$1',[waId])).rows[0].status,'sent');
-  for(const width of [1440,768,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`WhatsApp inbox overflow at ${width}px`);}
-  await screenshot('whatsapp-inbox-mobile.png');await viewport(1440);await screenshot('whatsapp-inbox-desktop.png');
   // Build, preview, test and publish the actual assistant using its admin UI.
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Project assistant').click()");
   await wait("!!document.querySelector('.bot-overview')");
@@ -200,7 +189,7 @@ try{
   assert.equal(servers.mails,1);const saved=(await servers.db.query('select * from enquiries')).rows;assert.equal(saved.length,1);assert.equal(saved[0].meeting_requested,true);assert.equal(+saved[0].annual_estimate,1320);
   await evaluate("window.__originalOpen=window.open;window.open=url=>{window.__whatsappDraft=url;return null;}");
   await click('.enquiry-whatsapp-alternative .button');
-  const websiteDraft=await evaluate("new URL(window.__whatsappDraft).searchParams.get('text')");assert.match(websiteDraft,/Alex Tan/);assert.match(websiteDraft,/Website maintenance/);assert.match(websiteDraft,/MV-WA:/);await evaluate('window.open=window.__originalOpen');
+  const websiteDraft=await evaluate("new URL(window.__whatsappDraft).searchParams.get('text')");assert.match(websiteDraft,/Alex Tan/);assert.match(websiteDraft,/Website maintenance/);assert.doesNotMatch(websiteDraft,/MV-WA:|whatsapp_reference|estimate_token/);await evaluate('window.open=window.__originalOpen');
   // Public assistant at mobile sizes, client validation and real DB-backed submission.
   await evaluate("document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})");
   await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
@@ -216,7 +205,7 @@ try{
   for(const [key,value] of Object.entries({name:'Jia Tan',company_name:'Mobile Bakery',phone:'+60 12-345 6789',email:'bakery@example.test'}))await fill(`#chat-${key}`,value);
   await evaluate("[...document.querySelectorAll('.chat-contact .chat-check input')].at(-1).click()");await screenshot('chatbot-contact-mobile.png');
   await click('.chat-contact .button-dark');await wait("!!document.querySelector('.chat-success')");assert.equal(servers.mails,2);
-  await evaluate("window.__originalOpen=window.open;window.open=url=>{window.__whatsappDraft=url;return null;}");await click('.chat-success .button');assert.match(await evaluate("new URL(window.__whatsappDraft).searchParams.get('text')"),/MV-WA:/);await evaluate('window.open=window.__originalOpen');
+  await evaluate("window.__originalOpen=window.open;window.open=url=>{window.__whatsappDraft=url;return null;}");await click('.chat-success .button');const assistantDraft=await evaluate("new URL(window.__whatsappDraft).searchParams.get('text')");assert.match(assistantDraft,/Jia Tan/);assert.match(assistantDraft,/Landing page/);assert.doesNotMatch(assistantDraft,/MV-WA:|whatsapp_reference|estimate_token/);await evaluate('window.open=window.__originalOpen');
   const chatEnquiry=(await servers.db.query("select * from enquiries where company_name='Mobile Bakery'")).rows[0];assert.ok(chatEnquiry.chatbot_estimate_id);assert.equal(+chatEnquiry.one_time_estimate,449);assert.equal(+chatEnquiry.annual_estimate,1320);assert.ok(chatEnquiry.chatbot_answers.summary.length);
   await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");await wait("document.activeElement===document.querySelector('.chat-launcher')");
   // An education client gets learning discovery and a manual quote, not retail checkout.
