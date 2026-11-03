@@ -24,14 +24,14 @@ test('WhatsApp accepts Malaysian local and international numbers without using t
   assert.equal(whatsappHref(''), '');assert.equal(whatsappHref('javascript:alert(1)'), '');
 });
 test('WhatsApp draft includes entered scope and contact details without internal IDs or quotation prices',()=>{
-  const values={name:'Alex Tan',company_name:'Bread & Butter',phone:'01154039173',email:'alex+bakery@example.test',message:'We need a bakery website.\n可以网上订购吗？',billing_period:'yearly',meeting_requested:true,preferred_meeting_at:'2099-01-01T10:00',request_id:'do-not-share',website:'hidden-field',chatbot_estimate_token:'private-token'};
+  const values={name:'Alex Tan',company_name:'Bread & Butter',phone:'01154039173',email:'alex+bakery@example.test',message:'We need a bakery website.\n可以网上订购吗？',billing_period:'yearly',meeting_requested:true,preferred_meeting_at:'2099-01-01T10:00',request_id:'do-not-share',website:'hidden-field',chatbot_estimate_token:'private-token',whatsapp_reference:'retired-bot-reference-do-not-share'};
   const features=[{name:'Landing page',price:9999},{name:'Maintenance',billing_type:'monthly'}];
   const url=new URL(whatsappEnquiryHref('01154039173',values,features));
   assert.equal(url.origin+url.pathname,'https://wa.me/601154039173');
   const message=url.searchParams.get('text');
   assert.match(message,/Name: Alex Tan/);assert.match(message,/Company: Bread & Butter/);assert.match(message,/alex\+bakery@example.test/);
   assert.ok(message.includes(values.message));assert.match(message,/- Landing page/);assert.match(message,/Annual/);assert.match(message,/2099-01-01 10:00/);
-  assert.doesNotMatch(message,/do-not-share|hidden-field|private-token|9999|undefined|null/);
+  assert.doesNotMatch(message,/do-not-share|hidden-field|private-token|retired-bot|MV-WA:|9999|undefined|null/);
 });
 test('partial and empty WhatsApp drafts stay usable without requiring a website submission',()=>{
   const text=whatsappEnquiryMessage({message:'Just looking for advice.'});

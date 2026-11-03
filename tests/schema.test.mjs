@@ -54,5 +54,23 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
     await db.query("select set_config('request.jwt.claim.sub',$1,false)",[adminId]);
     await db.query("insert into testimonials(name,quote) values ('Approved admin','Admin-created draft quote.')");
     assert.equal((await db.query('select count(*)::int as n from testimonials')).rows[0].n,3);
+    await db.exec('reset role');
+    assert.equal((await db.query("select to_regclass('public.whatsapp_settings') as relation")).rows[0].relation,null,'Fresh installations do not create retired bot tables');
+    const shutdown=await readFile('supabase/disable-whatsapp-bot.sql','utf8');await db.exec(shutdown);
+    await db.exec(`
+      create table public.whatsapp_settings(id integer primary key,enabled boolean,updated_at timestamptz);
+      insert into public.whatsapp_settings values(1,true,now());
+      create table public.legacy_channel_archive(id integer primary key,message text);
+      insert into public.legacy_channel_archive values(1,'Retained customer history');
+      create schema cron;
+      create table cron.job(jobid bigint primary key,jobname text);
+      insert into cron.job values(1,'mv-whatsapp-recovery'),(2,'unrelated-maintenance');
+      create function cron.unschedule(bigint) returns boolean language plpgsql as $$
+      begin delete from cron.job where jobid=$1; return found; end; $$;
+    `);
+    await db.exec(shutdown);await db.exec(shutdown);
+    assert.equal((await db.query('select enabled from public.whatsapp_settings where id=1')).rows[0].enabled,false);
+    assert.deepEqual((await db.query('select jobname from cron.job')).rows.map(row=>row.jobname),['unrelated-maintenance']);
+    assert.equal((await db.query('select message from public.legacy_channel_archive')).rows[0].message,'Retained customer history');
   }finally{await db.close();}
 });

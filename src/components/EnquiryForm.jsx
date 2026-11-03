@@ -39,7 +39,7 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
       if(submissionRef.current?.signature!==signature)submissionRef.current={signature,id:crypto.randomUUID()};
       const result=await submitEnquiry({...body,request_id:submissionRef.current.id});
       if(!result?.ok)throw new Error('Enquiry confirmation was unavailable.');
-      setSavedWhatsapp({values:{...values,whatsapp_reference:result.whatsapp_reference},features:chosen});
+      setSavedWhatsapp({values:{...values},features:chosen});
       trackEvent('generate_lead',{method:'enquiry_form'});
       setFeedback('Thanks — your enquiry has been saved. We will contact you to discuss your idea and confirm the next steps.'+(result.id?' Reference: '+result.id:''));
       submissionRef.current=null;setValues(emptyValues);setSelected([]);setErrors({});setTouched({});setAttempted(false);setDetailsOpen(false);

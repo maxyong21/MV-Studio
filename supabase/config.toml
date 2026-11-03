@@ -11,15 +11,3 @@ verify_jwt = false
 [functions.chatbot-admin]
 # JWT + admin membership are verified inside the handler.
 verify_jwt = false
-
-[functions.whatsapp-webhook]
-# Meta HMAC signature is verified by the handler.
-verify_jwt = false
-
-[functions.whatsapp-worker]
-# Private scheduler bearer secret is verified by the handler.
-verify_jwt = false
-
-[functions.whatsapp-admin]
-# Supabase JWT and admin membership are verified by the handler.
-verify_jwt = false
