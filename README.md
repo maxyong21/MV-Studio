@@ -18,6 +18,14 @@ The optional official WhatsApp integration reuses published assistant questions 
 
 Follow [the complete WhatsApp setup guide](docs/WHATSAPP_SETUP.md): apply `20261103_whatsapp.sql`, configure Meta and server-only secrets, deploy the three WhatsApp functions plus updated `submit-enquiry`, schedule the recovery worker and deploy the frontend. Real-number activation requires your Meta account setup and live acceptance testing. The feature stays optional; no additional backend host is required.
 
+## Privacy, terms and data-deletion instructions
+
+Public `/privacy`, `/terms` and `/data-deletion` pages are linked from the footer; privacy is also linked where enquiry/assistant information is collected. The privacy notice includes English and Bahasa Melayu, optional GA4 choices, browser storage, providers, AI redaction limits, enquiry/WhatsApp retention and manual deletion instructions. It does not falsely promise that free-text sensitive information can never be stored or that every record is automatically deleted. Terms preserve proposal-specific revision/payment arrangements and applicable rights.
+
+Content is versioned in `src/legal/content.mjs`; review the wording and update `legalUpdated` when changing practices. Public contact addresses use your existing site content rather than an invented legal contact. Confirm these channels are monitored and that retention, provider configuration and handling of privacy requests match the notice. The content describes current functionality and is not a certification of legal compliance.
+
+The build prerenders all three pages independently of public-content availability, and Vercel routes them to HTTP 200 static documents. They are included in the dynamic sitemap and readable without signing in or a runtime database request. Deploy the frontend after editing them; no SQL or Edge Function changes are required for these pages. After deployment, enter `https://mv-aistudio.vercel.app/privacy` as Meta's privacy-policy URL and use `/data-deletion` where Meta asks for a **data-deletion instructions URL** (not an automated deletion callback).
+
 ### Enquiry email design
 
 Admin notifications use the branded HTML template in [`supabase/functions/_shared/email-template.mjs`](supabase/functions/_shared/email-template.mjs): a forest-green header, readable contact details, selected features, a preliminary estimate, optional chatbot scope, meeting preferences and a reply button. Core styles are inline, the layout uses presentation tables, and a small media query adjusts spacing on mobile. The existing plain-text version is also sent. Customer-entered values are HTML-escaped, and the email uses system fonts without external images or stylesheets. Rendering can vary between email clients.

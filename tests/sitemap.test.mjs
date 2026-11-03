@@ -20,6 +20,7 @@ test('sitemap follows published project changes and admin managed site paths',as
     const first=response();await sitemap({method:'GET'},first);
     assert.equal(first.statusCode,200);assert.match(first.headers['Content-Type'],/application\/xml/);
     assert.match(first.body,new RegExp(`/projects/${id}`));assert.match(first.body,/<loc>https:\/\/mv-aistudio.vercel.app\/faq<\/loc>/);
+    for(const path of ['/privacy','/terms','/data-deletion'])assert.ok(first.body.includes(`https://mv-aistudio.vercel.app${path}</loc>`));
     assert.match(first.body,/<loc>https:\/\/mv-aistudio.vercel.app\/APMoodle.html<\/loc>/);
     assert.doesNotMatch(first.body,/database\.example|admin|mailto:/);
     projects=[];extra='';

@@ -10,12 +10,21 @@ function browser({origin='https://mv-aistudio.vercel.app',path='/',consent='',re
   const document={title:'MV Studio',readyState:'complete',referrer,head:{appendChild:node=>inserted.push(node)},body:{append:(...nodes)=>inserted.push(...nodes)},createElement:element,addEventListener:(name,fn)=>handlers[name]=fn};
   const window={addEventListener:(name,fn)=>handlers[name]=fn};
   runInNewContext(source,{window,document,location,localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},URL,Set,Date,String});
-  return {window,location,inserted,handlers,storage,page:(path='/',title='MV Studio')=>{location.pathname=path;window.mvAnalytics?.updatePage({path,title});},choose:value=>inserted.find(n=>n.id==='mv-analytics-choice').buttons.find(n=>n.dataset.choice===value).click(),events:()=>Array.from(window.dataLayer||[],args=>Array.from(args)).filter(args=>args[0]==='event')};
+  return {window,document,location,inserted,handlers,storage,page:(path='/',title='MV Studio')=>{location.pathname=path;window.mvAnalytics?.updatePage({path,title});},choose:value=>inserted.find(n=>n.id==='mv-analytics-choice').buttons.find(n=>n.dataset.choice===value).click(),events:()=>Array.from(window.dataLayer||[],args=>Array.from(args)).filter(args=>args[0]==='event')};
 }
 test('no Google script or events before consent; decline remains usable',()=>{
   const b=browser();b.page();assert.equal(b.inserted.filter(n=>n.tag==='script').length,0);
   b.window.mvAnalytics.event('generate_lead',{method:'enquiry_form'});assert.equal(b.events().length,0);
   b.choose('denied');assert.equal(b.inserted.filter(n=>n.tag==='script').length,0);assert.equal(b.storage.get('mv-analytics-consent-v1'),'denied');
+});
+
+test('privacy-page preferences work without tracking legal pages or loading Google before public consent',()=>{
+  const b=browser({path:'/privacy'});let focusOptions;b.document.activeElement={isConnected:true,focus:options=>{focusOptions=options;}};b.page('/privacy');b.window.mvAnalytics.openPreferences();
+  b.choose('granted');assert.equal(b.events().length,0);assert.equal(b.inserted.filter(n=>n.tag==='script').length,0);
+  assert.equal(focusOptions.preventScroll,true);
+  b.page('/');assert.equal(b.events().length,1);assert.equal(b.inserted.filter(n=>n.tag==='script').length,1);
+  b.page('/privacy/');b.window.mvAnalytics.openPreferences();b.choose('denied');assert.equal(b.storage.get('mv-analytics-consent-v1'),'denied');
+  b.window.mvAnalytics.event('generate_lead',{method:'enquiry_form'});assert.equal(b.events().length,1);
 });
 test('one page view per route, sanitized URLs, bounded events, and a single tag',()=>{
   const b=browser();b.page();b.choose('granted');b.page();b.page();
