@@ -5,6 +5,7 @@ import {database,client} from './database.mjs';
 import {createSubmitHandler} from '../../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../../supabase/functions/_shared/retry-handler.mjs';
 import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
+import {createWhatsAppAdmin} from '../../supabase/functions/_shared/whatsapp/handlers.mjs';
 import {safeJson} from '../../scripts/seo.mjs';
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.xml':'application/xml','.txt':'text/plain'};
 export async function staticFile(req,res,folder){
@@ -20,9 +21,9 @@ export async function browserServers({prerender=false}={}){
   const user={id:adminId,email:'admin@example.test',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()};
   const b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   const token=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.fixture`;
-  const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188,http://127.0.0.1:4187',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
-  const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async(url,options)=>{mails++;mailPayloads.push(JSON.parse(options.body));return Response.json({id:`local-email-${mails}`});}};
-  const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
+  const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188,http://127.0.0.1:4187',SUPABASE_SERVICE_ROLE_KEY:'fixture',WHATSAPP_ENABLED:'true',WHATSAPP_LINK_SECRET:'fixture-link',WHATSAPP_PHONE_NUMBER_ID:'fixture-phone',WHATSAPP_API_VERSION:'v25.0',WHATSAPP_ACCESS_TOKEN:'fixture-meta',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
+  const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async(url,options)=>{if(url.includes('graph.facebook.com'))return Response.json({messages:[{id:'fixture-whatsapp-'+crypto.randomUUID()}]});mails++;mailPayloads.push(JSON.parse(options.body));return Response.json({id:`local-email-${mails}`});}};
+  const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps),whatsappAdmin=createWhatsAppAdmin(deps);
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
@@ -66,7 +67,7 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/functions/v1/')){
         const bytes=[];for await(const chunk of req)bytes.push(chunk);
         const request=new Request(url,{method:req.method,headers:req.headers,body:Buffer.concat(bytes)});
-        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin};
+        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin,'whatsapp-admin':whatsappAdmin};
         const handler=handlers[url.pathname.split('/').at(-1)];if(!handler){send({error:'Unknown function'},404);return;}
         const result=await handler(request);
         res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;

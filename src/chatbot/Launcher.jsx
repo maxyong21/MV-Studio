@@ -6,7 +6,7 @@ import Availability,{PublicBoundary} from '../components/Availability.jsx';
 import {trackEvent} from '../lib/analytics.mjs';
 import useAssistantIntro from './useAssistantIntro.js';
 const ChatDialog=lazy(()=>import('./ChatDialog.jsx'));
-export default function Launcher(){
+export default function Launcher({whatsappNumber=''}){
   const {pathname}=useLocation();
   const [open,setOpen]=useState(false);
   const [quiet,setQuiet]=useState(false);
@@ -31,5 +31,5 @@ export default function Launcher(){
     <h2 id="assistant-intro-title">Not sure where to start?</h2>
     <p id="assistant-intro-description">Answer a few questions to outline your website or system and see a preliminary estimate. Custom work is reviewed by our team.</p>
     <button type="button" className="button button-dark assistant-intro-start" aria-haspopup="dialog" onClick={openAssistant}>Plan my project <ArrowUpRight size={16}/></button>
-  </aside>}<button ref={trigger} className={`chat-launcher${quiet?' is-quiet':''}`} type="button" aria-label="Open project assistant" title="Plan your project with guided questions and preliminary pricing" aria-describedby={intro.visible?'assistant-intro-description':undefined} aria-haspopup="dialog" onClick={openAssistant}><MessageCircle size={22}/><span>Plan your project</span></button>{open&&<PublicBoundary target="Chatbot interface" fallback={<div className="chat-fallback"><section role="dialog" aria-modal="true" aria-label="Project assistant availability"><button className="chat-fallback-close" type="button" aria-label="Close project assistant" onClick={close}>×</button><Availability compact onContact={close} onRetry={()=>window.location.reload()}/></section></div>}><Suspense fallback={<div className="chat-loading" role="status">Opening project assistant…</div>}><ChatDialog onClose={close}/></Suspense></PublicBoundary>}</>;
+  </aside>}<button ref={trigger} className={`chat-launcher${quiet?' is-quiet':''}`} type="button" aria-label="Open project assistant" title="Plan your project with guided questions and preliminary pricing" aria-describedby={intro.visible?'assistant-intro-description':undefined} aria-haspopup="dialog" onClick={openAssistant}><MessageCircle size={22}/><span>Plan your project</span></button>{open&&<PublicBoundary target="Chatbot interface" fallback={<div className="chat-fallback"><section role="dialog" aria-modal="true" aria-label="Project assistant availability"><button className="chat-fallback-close" type="button" aria-label="Close project assistant" onClick={close}>×</button><Availability compact onContact={close} onRetry={()=>window.location.reload()}/></section></div>}><Suspense fallback={<div className="chat-loading" role="status">Opening project assistant…</div>}><ChatDialog onClose={close} whatsappNumber={whatsappNumber}/></Suspense></PublicBoundary>}</>;
 }
