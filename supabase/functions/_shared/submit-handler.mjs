@@ -2,6 +2,7 @@ import {validateEnquiryInput,estimateFeatures} from './enquiry.mjs';
 import {originAllowed,headersFor,json,digest,readInput} from './http.mjs';
 import {notifyEnquiry} from './notify.mjs';
 import {estimateRecord} from './chatbot/estimates.mjs';
+import {handoffReference} from './whatsapp/security.mjs';
 import {ChatError} from './chatbot/data.mjs';
 
 export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
@@ -28,12 +29,12 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
       if(existing.error)throw existing.error;
       if(existing.data){
         if(existing.data.request_hash!==fingerprint)return respond({error:'This submission reference was already used. Refresh the form and try again.'},409);
-        return respond({ok:true,id:existing.data.id,notification:existing.data.notification_status,duplicate:true});
+        return respond({ok:true,id:existing.data.id,notification:existing.data.notification_status,duplicate:true,...await handoffReference(existing.data,env)});
       }
       if(chat){
         const previous=await admin.from('enquiries').select('id,request_hash,notification_status').eq('chatbot_estimate_id',chat.id).maybeSingle();
         if(previous.error)throw previous.error;
-        if(previous.data){if(previous.data.request_hash!==fingerprint)return respond({error:'This estimate has already been submitted. Start a new enquiry for another request.'},409);return respond({ok:true,id:previous.data.id,notification:previous.data.notification_status,duplicate:true});}
+        if(previous.data){if(previous.data.request_hash!==fingerprint)return respond({error:'This estimate has already been submitted. Start a new enquiry for another request.'},409);return respond({ok:true,id:previous.data.id,notification:previous.data.notification_status,duplicate:true,...await handoffReference(previous.data,env)});}
         await estimateRecord(admin,input,true);
       }
       const address=request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0].trim()||'unknown';
@@ -55,14 +56,14 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
       if(saved.error){
         if(saved.error.code==='23505'){
           const repeat=await admin.from('enquiries').select('id,request_hash,notification_status').eq(chat?'chatbot_estimate_id':'request_id',chat?chat.id:requestId).single();
-          if(repeat.data?.request_hash===fingerprint)return respond({ok:true,id:repeat.data.id,notification:repeat.data.notification_status,duplicate:true});
+          if(repeat.data?.request_hash===fingerprint)return respond({ok:true,id:repeat.data.id,notification:repeat.data.notification_status,duplicate:true,...await handoffReference(repeat.data,env)});
           return respond({error:'This submission reference was already used.'},409);
         }
         throw saved.error;
       }
       let notification='failed';
       try{notification=await notifyEnquiry({admin,enquiry:saved.data,env,fetcher});}catch(cause){console.error('Enquiry saved; notification state failed',cause.code||cause.name);}
-      return respond({ok:true,id:saved.data.id,notification});
+      return respond({ok:true,id:saved.data.id,notification,...await handoffReference(saved.data,env)});
     }catch(cause){console.error('submit-enquiry failed',cause.code||cause.name);return respond({error:cause instanceof ChatError?cause.message:cause.code==='P0001'?'The estimate changed or expired. Please generate it again.':'We could not save your enquiry. Please try again shortly.'},cause instanceof ChatError?cause.status:cause.code==='P0001'?409:500);}
   };
 }

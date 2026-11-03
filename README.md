@@ -12,6 +12,12 @@ Visitors can open **Plan your project** to describe an idea, complete adaptive c
 
 Follow the detailed [chatbot setup and operating guide](docs/CHATBOT.md). Existing installations need the new [`20261025_chatbot.sql`](supabase/migrations/20261025_chatbot.sql) migration and the `chatbot`, `chatbot-admin` and updated `submit-enquiry` functions. New installations can use the complete `supabase/schema.sql`. Default BM25 retrieval works without AI keys; optional Gemini/Groq settings stay server-side. Review and publish the starter draft before the public assistant becomes available.
 
+## WhatsApp assistant and team inbox
+
+The optional official WhatsApp integration reuses published assistant questions and current database prices. Customers can plan a project, ask approved questions, pause/resume, stop, or request a human at any point. Admins claim and reply to conversations under **WhatsApp inbox**, with delivery diagnostics and team email alerts. Website submissions retain their detailed WhatsApp draft and can include a signed reference to skip repeated questions.
+
+Follow [the complete WhatsApp setup guide](docs/WHATSAPP_SETUP.md): apply `20261103_whatsapp.sql`, configure Meta and server-only secrets, deploy the three WhatsApp functions plus updated `submit-enquiry`, schedule the recovery worker and deploy the frontend. Real-number activation requires your Meta account setup and live acceptance testing. The feature stays optional; no additional backend host is required.
+
 ### Enquiry email design
 
 Admin notifications use the branded HTML template in [`supabase/functions/_shared/email-template.mjs`](supabase/functions/_shared/email-template.mjs): a forest-green header, readable contact details, selected features, a preliminary estimate, optional chatbot scope, meeting preferences and a reply button. Core styles are inline, the layout uses presentation tables, and a small media query adjusts spacing on mobile. The existing plain-text version is also sent. Customer-entered values are HTML-escaped, and the email uses system fonts without external images or stylesheets. Rendering can vary between email clients.
