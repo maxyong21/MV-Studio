@@ -87,6 +87,8 @@
     if (!active() || consent !== 'granted') return;
     let parameters;
     if (name === 'chatbot_open') parameters = {};
+    else if (name === 'project_path_selected' && ['advice','plan','work'].includes(values.path)) parameters = {path: values.path};
+    else if (['assistant_guided_start','assistant_message_sent','assistant_scope_estimated'].includes(name)) parameters = {};
     else if (name === 'contact_click' && ['email', 'phone', 'whatsapp'].includes(values.method)) parameters = {method: values.method};
     else if (name === 'generate_lead' && ['enquiry_form', 'chatbot'].includes(values.method)) parameters = {method: values.method};
     else return;

@@ -33,10 +33,16 @@ test('one page view per route, sanitized URLs, bounded events, and a single tag'
   assert.equal(b.events().filter(e=>e[1]==='page_view').length,3);
   assert.equal(b.inserted.filter(n=>n.tag==='script').length,1);
   b.window.mvAnalytics.event('generate_lead',{method:'chatbot',email:'private@example.org',message:'SECRET',value:999});
+  b.window.mvAnalytics.event('project_path_selected',{path:'plan',email:'private@example.org'});
+  b.window.mvAnalytics.event('project_path_selected',{path:'unknown',message:'SECRET'});
+  b.window.mvAnalytics.event('assistant_message_sent',{message:'SECRET'});
   b.window.mvAnalytics.event('unknown',{method:'chatbot'});
-  const last=b.events().at(-1);assert.equal(last[1],'generate_lead');assert.equal(last[2].method,'chatbot');
+  const last=b.events().findLast(event=>event[1]==='generate_lead');assert.equal(last[1],'generate_lead');assert.equal(last[2].method,'chatbot');
   assert.equal(last[2].email,undefined);assert.equal(last[2].value,undefined);
   assert.ok(!JSON.stringify(b.events()).includes('private'));assert.ok(!JSON.stringify(b.events()).includes('SECRET'));
+  assert.ok(b.events().some(event=>event[1]==='project_path_selected'&&event[2].path==='plan'));
+  assert.ok(!b.events().some(event=>event[2]?.path==='unknown'));
+  assert.ok(b.events().some(event=>event[1]==='assistant_message_sent'&&Object.keys(event[2]).every(key=>!['message','answers','email'].includes(key))));
   assert.equal(b.events()[0][2].page_referrer,'https://example.org');
 });
 test('admin routes suppress analytics after public navigation, and opt-out stops collection',()=>{

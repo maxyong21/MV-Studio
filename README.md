@@ -182,7 +182,7 @@ npm.cmd run test:browser
 - **Team:** manage names, biographies, social links, order, and photos.
 - **Promotions:** manage popup offer copy, destination, image, publication, enablement, and start/end dates. A visitor who dismisses or follows the offer will not see it again in that browser for 30 minutes.
 - **Enquiry features:** manage the customer-facing feature catalogue, third-party options, pricing, availability, and annual free-month rules.
-- **Enquiries:** view customer requests, selected features, server-calculated estimates, meeting requests, email delivery state, and update the enquiry status.
+- **Enquiries:** review a source-labelled customer summary, copy it, prepare a WhatsApp reply for manual sending, assign an owner, add private team notes, schedule a follow-up, and inspect the status timeline. Create versioned manual quote drafts with itemized charges, expiry, scope, revisions, exclusions and payment terms; print or save a reviewed proposal as PDF before sharing it yourself. Customer submissions remain preliminary until the team confirms them.
 - **Site content:** edit the home hero, about copy, business contact information, and contact email addresses and phone numbers with add/remove controls. These are stored as JSON arrays in Supabase.
 - **Media:** project preview images, team avatar photos, promotion/advertisement images, and project demo clips all use the same public `site-media` bucket. Their admin editors can upload images; project editors can upload MP4/WebM/MOV clips or embed a YouTube link. You can also upload through the Supabase Storage dashboard and paste the resulting public URL into an image or video URL field. Public bucket URLs are accessible to anyone who has the URL.
 
@@ -195,6 +195,8 @@ The sitemap reads **published Projects** from Supabase whenever its five-minute 
 ## Database SQL
 
 The complete setup and seed query is [`supabase/schema.sql`](supabase/schema.sql). It is safe to run again: seeded records have unique names and are inserted only if missing.
+
+For an existing database, apply [`supabase/migrations/20261104_enquiry_workspace.sql`](supabase/migrations/20261104_enquiry_workspace.sql) before deploying the enquiry workspace UI. It adds private assignment, notes and follow-up fields, status history, and admin-only versioned quote records. Fresh databases created from `supabase/schema.sql` already include these objects. If Supabase rejects the SQL, the admin enquiry page shows a retryable error rather than presenting a false “no enquiries” state.
 
 ## Enquiry email (Resend)
 

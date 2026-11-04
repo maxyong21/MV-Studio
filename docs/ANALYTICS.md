@@ -18,6 +18,10 @@ Measurement ID: **G-D92C2BPTH3**. The shared `public/analytics.js` script is inc
 | `page_view` | An available public homepage, project detail page or static demo is viewed | Title, URL without query strings or fragments, previous public URL/external referring origin |
 | `contact_click` | An email, phone or WhatsApp link is clicked | `method`: email, phone or whatsapp |
 | `chatbot_open` | The customer opens the project assistant | No chat content |
+| `project_path_selected` | The visitor chooses quick advice, guided planning, or project examples | `path`: advice, plan, or work |
+| `assistant_guided_start` | The visitor starts the guided brief | No answers |
+| `assistant_message_sent` | A message receives a successful assistant response | No prompt or response text |
+| `assistant_scope_estimated` | The server returns a preliminary estimate | No selected features or prices |
 | `generate_lead` | A normal enquiry or chatbot enquiry is successfully saved | `method`: enquiry_form or chatbot |
 
 No names, email addresses, phone numbers, company names, messages, answers, enquiry IDs, quote values, or clicked contact URLs are sent in these events. Query parameters are deliberately excluded, including UTM tags, so campaign-level attribution is limited in this initial implementation. External referrers are reduced to their origin. Only allowlisted public routes and event parameters are accepted.
