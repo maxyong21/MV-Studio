@@ -157,7 +157,7 @@ create table if not exists public.enquiries (
   status text not null default 'new' check (status in ('new','contacted','qualified','won','closed')),
   notification_status text not null default 'pending' check (notification_status in ('pending','sent','failed')),
   notification_error text not null default '',
-  resend_email_id text not null default '',
+  email_message_id text not null default '',
   assigned_to text not null default '',
   internal_notes text not null default '',
   follow_up_at timestamptz,

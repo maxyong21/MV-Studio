@@ -4,7 +4,7 @@ MV Studio's customer website and private content manager are built with React, V
 
 ## What this website is for
 
-MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. The public footer links to key sections, selected projects, and configured contact channels. Supabase stores the website content and enquiry records; Resend sends enquiry notifications when configured.
+MV Studio is a small web development studio website for introducing the team and its services to new businesses, startups, and SMEs. Visitors can browse services and project examples, view demo links or videos, request a project estimate, and ask for a short meeting. Administrators sign in to manage services and prices, projects, team profiles, promotions, feature options, contact details, and customer enquiries. The public footer links to key sections, selected projects, and configured contact channels. Supabase stores the website content and enquiry records; a Supabase Edge Function sends styled enquiry notifications through Gmail SMTP.
 
 ## Guided project assistant
 
@@ -16,7 +16,7 @@ Follow the detailed [chatbot setup and operating guide](docs/CHATBOT.md). Existi
 
 WhatsApp buttons open your existing WhatsApp Business conversation with a detailed draft containing the visitor's entered contact details, project requirements, selected features, billing preference and meeting request. The customer reviews it and presses Send in WhatsApp; the team replies manually. After a successful website enquiry or website-assistant submission, the draft still contains the submitted details. No Meta API token, phone registration, bot subscription or WhatsApp webhook is required for this link-based flow.
 
-The website project assistant, database enquiries and Resend notifications remain available. See [WhatsApp enquiry behaviour and retiring any previously deployed bot](docs/WHATSAPP_ENQUIRIES.md). The optional shutdown SQL preserves old records; removing files locally does not delete previously deployed Supabase functions or schedules.
+The website project assistant, database enquiries and Gmail SMTP notifications remain available. See [WhatsApp enquiry behaviour and retiring any previously deployed bot](docs/WHATSAPP_ENQUIRIES.md). The optional shutdown SQL preserves old records; removing files locally does not delete previously deployed Supabase functions or schedules.
 
 ## Privacy, terms and data-deletion instructions
 
@@ -30,7 +30,7 @@ The build prerenders all three pages independently of public-content availabilit
 
 Admin notifications use the branded HTML template in [`supabase/functions/_shared/email-template.mjs`](supabase/functions/_shared/email-template.mjs): a forest-green header, readable contact details, selected features, a preliminary estimate, optional chatbot scope, meeting preferences and a reply button. Core styles are inline, the layout uses presentation tables, and a small media query adjusts spacing on mobile. The existing plain-text version is also sent. Customer-entered values are HTML-escaped, and the email uses system fonts without external images or stylesheets. Rendering can vary between email clients.
 
-After changing this shared template, redeploy **both** `submit-enquiry` and `retry-enquiry` so new notifications and retried notifications use it. No SQL changes are required for email styling. This project currently sends notifications to the configured team inbox; automatic customer confirmation emails are a separate sending flow. Styling does not change Resend's sender or recipient restrictions: `onboarding@resend.dev` can be used for testing to your own Resend account email, while sending to other recipients requires a verified sending domain.
+After changing this shared template, redeploy **both** `submit-enquiry` and `retry-enquiry` so new and retried notifications use it. The mail contains a responsive, inline-styled HTML version and a plain-text fallback. This project sends notifications to the configured team inbox; it does not send an automatic customer confirmation. Gmail requires the account's sender address and applies its sending limits.
 
 ## Create a Git branch for this work
 
@@ -72,7 +72,7 @@ The main enquiry starts with the four required contact fields and an optional me
 
 The hero and enquiry area offer WhatsApp directly. **Get guided help** opens the existing project assistant on demand and returns focus to its trigger when closed. Contact details already entered into the enquiry remain in place.
 
-Both WhatsApp buttons inside the enquiry section prepare a message using the currently entered contact details, message, selected service names, recurring billing preference and meeting request. The draft URL is generated only when clicked, keeping personal details out of page anchor URLs. Empty fields are omitted, and the form can be partially completed for WhatsApp. The customer reviews the draft and presses Send in WhatsApp. Clicking this button does not save an enquiry or trigger Resend; **Send project enquiry** remains the path that saves to the admin inbox. Hero, footer and contact links start a general conversation. Custom analytics events record the contact method only, never the draft text or full WhatsApp URL; keep GA4 Enhanced measurement disabled as documented in `docs/ANALYTICS.md`.
+Both WhatsApp buttons inside the enquiry section prepare a message using the currently entered contact details, message, selected service names, recurring billing preference and meeting request. The draft URL is generated only when clicked, keeping personal details out of page anchor URLs. Empty fields are omitted, and the form can be partially completed for WhatsApp. The customer reviews the draft and presses Send in WhatsApp. Clicking this button does not save an enquiry or trigger an email; **Send project enquiry** remains the path that saves to the admin inbox. Hero, footer and contact links start a general conversation. Custom analytics events record the contact method only, never the draft text or full WhatsApp URL; keep GA4 Enhanced measurement disabled as documented in `docs/ANALYTICS.md`.
 
 Run [`supabase/migrations/20261026_short_enquiry_whatsapp.sql`](supabase/migrations/20261026_short_enquiry_whatsapp.sql) to save the requested WhatsApp destination, **011-5403 9173**, and update the original starter CTA. Then deploy the frontend. Manage the destination independently of ordinary call numbers in **Admin → Site content → WhatsApp number**. Local Malaysian numbers are converted to the international `wa.me` format; this number links to `https://wa.me/601154039173`. The existing enquiry tables and functions are reused; no function redeployment is required for this layout change.
 
@@ -129,7 +129,7 @@ Apply these changes in this order so the frontend and Edge Functions can use the
 7. In `/admin`, edit **Services & pricing** to enter actual scope, revisions, hosting/domain charges, maintenance costs, support, and payment terms. Empty policies stay hidden; the website does not invent guarantees.
 8. In **Projects**, add the challenge, approach, and verified outcome for each case study. In **Client feedback**, add genuine quotes and confirm permission before publishing. There are no seeded testimonials or fabricated results.
 9. The sitemap updates automatically within about five minutes after publishing or hiding a project. Rebuild/redeploy after publishing content to refresh prerendered HTML and search previews. The browser continues to fetch current database content. Builds with configured Supabase credentials stop if public content cannot be read, so preview data cannot silently replace production content in search snapshots.
-10. After deployment, check `/sitemap.xml`, `/robots.txt`, a `/projects/PROJECT_ID` URL, and `/admin`. Send one enquiry with your own details and confirm that it appears in **Admin → Enquiries** and reaches the configured notification inbox. Email “accepted by provider” means Resend accepted it; actual delivery still depends on the recipient/provider. Failed notifications show an error and an admin-only **Retry email** action.
+10. After deployment, check `/sitemap.xml`, `/robots.txt`, a `/projects/PROJECT_ID` URL, and `/admin`. Send one enquiry with your own details and confirm that it appears in **Admin → Enquiries** and reaches the configured notification inbox. “Accepted” means Gmail SMTP accepted the message for delivery; inbox placement still depends on Gmail and the receiving provider. Failed or stale notifications can be retried by an administrator.
 
 The React app and the build use the same public page components. The build renders visible homepage/project HTML and a safe public content snapshot, then React hydrates it in the browser. Unknown routes still use the animated error page. Vercel serves generated files before applying the SPA fallback; see [Vercel rewrite precedence](https://vercel.com/docs/project-configuration/vercel-json#rewrites).
 
@@ -147,7 +147,7 @@ npm.cmd run build
 npm.cmd run test:browser
 ```
 
-`npm test` uses an in-memory PostgreSQL runtime to run the schema, repeat migrations, check RLS/grants, and exercise enquiry handlers against database records. Resend is mocked; no real emails are sent. The test bootstrap supplies minimal Supabase Auth/Storage schemas and uses PostgreSQL's built-in UUID generator instead of loading the hosted `pgcrypto` extension.
+`npm test` uses an in-memory PostgreSQL runtime to run the schema, repeat migrations, check RLS/grants, and exercise enquiry handlers against database records. Gmail SMTP is mocked; no real emails are sent. The test bootstrap supplies minimal Supabase Auth/Storage schemas and uses PostgreSQL's built-in UUID generator instead of loading the hosted `pgcrypto` extension.
 
 `test:browser` requires Node.js 22 or newer and Chrome or Edge (set `BROWSER_PATH` if it is not detected). It uses ports 4187, 4188, and 9228, a temporary browser profile, a separate fixture build under `.generated/`, and temporary local database records. It checks production hydration, responsive layouts, lazy admin loading, admin editing, contact lists, testimonial permissions, enquiry submission, meetings, and notification handoff. Screenshots are saved to the temporary directory printed by the command. It does not modify your online database or send notifications. Run a production build first.
 
@@ -199,23 +199,23 @@ The complete setup and seed query is [`supabase/schema.sql`](supabase/schema.sql
 
 For an existing database, apply [`supabase/migrations/20261104_enquiry_workspace.sql`](supabase/migrations/20261104_enquiry_workspace.sql) before deploying the enquiry workspace UI. It adds private assignment, notes and follow-up fields, status history, and admin-only versioned quote records. Fresh databases created from `supabase/schema.sql` already include these objects. If Supabase rejects the SQL, the admin enquiry page shows a retryable error rather than presenting a false “no enquiries” state.
 
-## Enquiry email (Resend)
+## Enquiry email (Gmail SMTP)
 
-The enquiry form stores customer data only through the `submit-enquiry` Supabase Edge Function. The function recalculates prices from active feature records, inserts the enquiry, then sends an email notification with Resend. The public browser key cannot read or insert enquiries. The database keeps a request even if Resend is temporarily unavailable; its email status and error are visible in the admin inbox. The displayed estimate is a guide, and the team confirms final scope and any third-party charges.
+The enquiry form sends a notification to the configured team inbox through `submit-enquiry`. The function recalculates prices and saves the enquiry before attempting email delivery, so an SMTP outage does not lose the request. Email uses a branded, responsive HTML template with inline CSS and a plain-text alternative. SMTP credentials are used only inside the Supabase Edge Functions; never put them in Vite variables or the browser. Customer confirmation emails are not currently sent.
 
-1. Verify a sending domain in Resend and create an API key. Set a verified sender address such as `MV Studio <hello@yourdomain.com>`.
-2. Install and authenticate the [Supabase CLI](https://supabase.com/docs/guides/cli), link your project, then set server-only secrets (never add these to `.env.local` or Vite variables):
+1. On the Gmail account that will send the notifications, enable Google 2-Step Verification and create an App Password for this application. Use the generated App Password, not your normal Google password. If the option is unavailable on a managed Workspace account, ask the Workspace administrator or use Google OAuth SMTP instead.
+2. Apply [`supabase/migrations/20261104_gmail_smtp.sql`](supabase/migrations/20261104_gmail_smtp.sql) in the SQL Editor. It renames the old provider-specific message-ID column while preserving its values.
+3. In **Supabase → Edge Functions → Secrets**, set `GMAIL_SMTP_USER` to the Gmail sender account, `GMAIL_SMTP_APP_PASSWORD` to its App Password, optional `GMAIL_FROM_NAME=MV Studio`, and `ENQUIRY_TO_EMAIL` to the team recipient(s). Separate multiple recipients with commas. Keep `ALLOWED_ORIGIN`, `RATE_LIMIT_SALT`, and Turnstile secrets configured as described in the security setup above. Never commit these secrets.
+4. Deploy both email functions from the repository root (replace `YOUR_PROJECT_REF`):
 
    ```powershell
-   supabase login
-   supabase link --project-ref YOUR_PROJECT_REF
-   supabase secrets set RESEND_API_KEY=re_xxx ENQUIRY_TO_EMAIL=you@example.com RESEND_FROM_EMAIL="MV Studio <hello@yourdomain.com>" ALLOWED_ORIGIN=https://your-domain.com TURNSTILE_REQUIRED=true TURNSTILE_SECRET_KEY=0x-your-secret TURNSTILE_ALLOWED_HOSTNAMES=your-domain.com
-   supabase functions deploy submit-enquiry
+   npx.cmd supabase functions deploy submit-enquiry --project-ref YOUR_PROJECT_REF --no-verify-jwt
+   npx.cmd supabase functions deploy retry-enquiry --project-ref YOUR_PROJECT_REF --no-verify-jwt
    ```
 
-   For multiple recipients, comma-separate `ENQUIRY_TO_EMAIL`. For local development, leaving `ALLOWED_ORIGIN` unset permits localhost origins.
-3. Run the current [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor. For an existing install, rerun the full script; it adds feature and enquiry tables, preserves saved website content, and converts legacy newline-separated contact values into JSON arrays.
-4. Add the production Supabase URL and publishable key to the host as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then rebuild/redeploy the site. Keep `VITE_SITE_URL` set to the canonical domain for SEO output.
+5. Send a test enquiry and check the notification status in **Admin → Enquiries**. Gmail SMTP uses `smtp.gmail.com` with implicit TLS on port `465`. The system retries once after explicit temporary SMTP deferrals. Other failures keep the enquiry saved, show an admin-only error, and expose **Retry email**. A retry of an ambiguous network timeout can duplicate a message if Gmail accepted the first attempt but its reply was lost; SMTP does not provide a guaranteed idempotency mechanism.
+
+Personal Gmail accounts currently have a sending limit of up to 500 messages per rolling 24 hours; Workspace limits depend on the account and plan. This flow is intended for low-volume transactional notifications, not bulk marketing. Gmail’s SMTP settings and limits are documented by [Google](https://developers.google.com/workspace/gmail/imap/imap-smtp). App Passwords require 2-Step Verification and may be restricted by account policy ([Google Account Help](https://support.google.com/accounts/answer/185833)).
 
 The function rate-limits to five attempts per trusted Cloudflare connection-IP hash per hour and verifies each production enquiry with Turnstile on the server. Requests without an allowed Origin are rejected. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
 

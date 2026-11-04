@@ -5,13 +5,13 @@ The website uses ordinary `wa.me` links with a prepared enquiry message. Your ex
 ## Customer flow
 
 1. Enter contact information and describe the project on the website. Optional feature selections, billing preference and meeting details are included in the draft.
-2. Click **Use WhatsApp instead** to review those details in WhatsApp. This does not submit the website enquiry or send a Resend notification.
-3. Alternatively, click **Send project enquiry** to save the validated enquiry in Supabase and invoke the existing Resend notification. **Continue on WhatsApp** then keeps the submitted details even though the form resets.
+2. Click **Use WhatsApp instead** to review those details in WhatsApp. This does not submit the website enquiry or send a Gmail SMTP notification.
+3. Alternatively, click **Send project enquiry** to save the validated enquiry in Supabase and invoke the Gmail SMTP notification. **Continue on WhatsApp** then keeps the submitted details even though the form resets.
 4. The website project assistant remains available. After its confirmed enquiry submission, its **Continue on WhatsApp** button also prepares a detailed message for manual follow-up.
 
 No bot references or estimate access tokens are included in the WhatsApp message. Clicking a button never sends the message automatically. Hero/footer contact links open a general conversation. The destination is managed in **Admin → Site content → WhatsApp number**, independently of ordinary call numbers.
 
-This flow does not require Meta developer onboarding, a Cloud API number, Coexistence, a webhook, a scheduled worker or a paid WhatsApp bot provider. Supabase enquiries, the website assistant, optional analytics consent and Resend remain separate existing services with their own setup and usage limits.
+This flow does not require Meta developer onboarding, a Cloud API number, Coexistence, a webhook, a scheduled worker or a paid WhatsApp bot provider. Supabase enquiries, the website assistant, optional analytics consent and Gmail SMTP remain separate existing services with their own setup and usage limits.
 
 ## If the removed WhatsApp bot was deployed previously
 
@@ -40,7 +40,7 @@ Removing its files from Git does not disable an already deployed function. The f
 
 5. Push and redeploy the frontend through your usual Vercel workflow. Confirm the WhatsApp admin inbox is gone and the enquiry button opens your existing Business app conversation with the form details.
 
-6. After the functions and schedule are retired, remove unused `WHATSAPP_*` API secrets through Supabase's secret settings if desired. Keep the normal frontend Supabase settings, Resend configuration and `RATE_LIMIT_SALT`. The website's public `whatsapp_number` contact setting is still used.
+6. After the functions and schedule are retired, remove unused `WHATSAPP_*` API secrets through Supabase's secret settings if desired. Keep the normal frontend Supabase settings, Gmail SMTP configuration and `RATE_LIMIT_SALT`. The website's public `whatsapp_number` contact setting is still used.
 
 Old private bot tables and records are left untouched. They are no longer created by `supabase/schema.sql` or accessed by the application. If you later decide to delete archived data, review retention requirements and backups separately before any database removal.
 

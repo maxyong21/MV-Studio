@@ -1,4 +1,4 @@
-// Uses temporary local PostgreSQL fixtures and a mocked email provider; sends no email.
+// Uses temporary local PostgreSQL fixtures and a mocked SMTP transport; sends no email.
 import {spawn} from 'node:child_process';
 import {existsSync} from 'node:fs';
 import {mkdtemp,writeFile,readFile} from 'node:fs/promises';
@@ -10,7 +10,7 @@ import {browserServers} from '../tests/helpers/browser-server.mjs';
 
 const executable=process.env.BROWSER_PATH||['C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','/usr/bin/google-chrome','/usr/bin/chromium'].find(existsSync);
 if(!executable)throw new Error('Set BROWSER_PATH to a Chrome or Edge executable.');
-process.env.VITE_SUPABASE_URL='http://127.0.0.1:4188';process.env.VITE_SUPABASE_ANON_KEY='local-browser-fixture';process.env.VITE_SITE_URL='http://127.0.0.1:4188';
+process.env.VITE_SUPABASE_URL='http://127.0.0.1:4188';process.env.VITE_SUPABASE_ANON_KEY='local-browser-fixture';process.env.VITE_SITE_URL='http://127.0.0.1:4188';process.env.VITE_TURNSTILE_REQUIRED='false';
 await build({mode:'test',build:{outDir:'.generated/browser-site'},logLevel:'warn'});
 await build({mode:'test',build:{ssr:'src/entry-server.jsx',outDir:'.generated/browser-ssr'},logLevel:'warn'});
 const servers=await browserServers({prerender:true}),folder=await mkdtemp(join(tmpdir(),'mv-studio-browser-'));

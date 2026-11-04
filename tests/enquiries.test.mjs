@@ -5,6 +5,8 @@ import {createSubmitHandler} from '../supabase/functions/_shared/submit-handler.
 import {createRetryHandler} from '../supabase/functions/_shared/retry-handler.mjs';
 import {estimateFeatures,validateContact} from '../supabase/functions/_shared/enquiry.mjs';
 import {verifyTurnstile,originAllowed} from '../supabase/functions/_shared/http.mjs';
+import {recoverStaleEmail} from '../src/admin/email-status.mjs';
+import {createGmailSendMail} from '../supabase/functions/_shared/notify.mjs';
 
 test('origin and Turnstile verification fail closed when enabled',async()=>{
   assert.equal(originAllowed(undefined,key=>({ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app'})[key]),false);
@@ -18,6 +20,20 @@ test('origin and Turnstile verification fail closed when enabled',async()=>{
   assert.equal(verified,true);
   await assert.rejects(verifyTurnstile(request,{turnstile_token:'invalid-token'},env,async()=>Response.json({success:false,action:'enquiry'})),error=>error.status===400);
   await assert.rejects(verifyTurnstile(request,{turnstile_token:'valid-token'},key=>({TURNSTILE_REQUIRED:'true'})[key]),error=>error.status===503);
+  const pending={notification_status:'pending',updated_at:new Date(0).toISOString()};
+  assert.equal(recoverStaleEmail({...pending,updated_at:new Date().toISOString()}).notification_status,'pending');
+  assert.equal(recoverStaleEmail(pending).notification_status,'failed');
+});
+
+test('Gmail transport uses TLS 465 and keeps credentials out of message fields',async()=>{
+  let transportOptions,delivered;
+  const nodemailer={createTransport:options=>{transportOptions=options;return {sendMail:async message=>{delivered=message;return {messageId:'<fixture@gmail.test>'};},close(){}};}};
+  const env=key=>({GMAIL_SMTP_USER:'studio@gmail.test',GMAIL_SMTP_APP_PASSWORD:'abcd efgh',GMAIL_FROM_NAME:'MV Studio'}[key]);
+  const sender=createGmailSendMail(nodemailer,env);
+  await sender({to:['owner@example.test'],subject:'Test',text:'Plain text',html:'<p>Styled</p>'});
+  assert.equal(transportOptions.host,'smtp.gmail.com');assert.equal(transportOptions.port,465);assert.equal(transportOptions.secure,true);
+  assert.equal(transportOptions.auth.user,'studio@gmail.test');assert.equal(transportOptions.auth.pass,'abcdefgh');
+  assert.deepEqual(delivered.from,{name:'MV Studio',address:'studio@gmail.test'});assert.equal(delivered.html,'<p>Styled</p>');
 });
 
 test('enquiry validation, storage, email failures, idempotency, meetings and admin retries',async t=>{
@@ -25,18 +41,20 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
   const adminId=crypto.randomUUID();
   await db.query('insert into auth.users(id) values($1)',[adminId]);await db.query('insert into admin_users(user_id) values($1)',[adminId]);
   const admin=client(db,adminId);
-  const secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app,http://localhost:5173',TURNSTILE_REQUIRED:'false',SUPABASE_SERVICE_ROLE_KEY:'test-only',RESEND_API_KEY:'test-only',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'};
+  const secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app,http://localhost:5173',TURNSTILE_REQUIRED:'false',SUPABASE_SERVICE_ROLE_KEY:'test-only',GMAIL_SMTP_USER:'studio@gmail.test',GMAIL_SMTP_APP_PASSWORD:'test-only-password',ENQUIRY_TO_EMAIL:'owner@example.test'};
   const env=name=>secrets[name];
-  const fetcher=async(url,options)=>{
-    mailCalls++;assert.equal(url,'https://api.resend.com/emails');
-    assert.ok(options.headers['Idempotency-Key'].startsWith('enquiry/'));
-    const body=JSON.parse(options.body);assert.equal(body.reply_to,'client@example.test');assert.equal(body.to[0],'owner@example.test');
-    assert.ok(!body.html.includes('<script>alert'));
-    if(behavior==='timeout')throw new Error('Network timeout');
-    return Response.json(behavior==='failure'?{message:'Sender not verified'}:{id:'mock-email-id'},{status:behavior==='failure'?403:200});
+  let temporaryFailures=0;
+  const sendMail=async message=>{
+    mailCalls++;assert.deepEqual(message.to,['owner@example.test']);assert.equal(message.replyTo,'client@example.test');
+    assert.match(message.html,/<!doctype html>/i);assert.match(message.html,/style=/i);assert.ok(!message.html.includes('<script>alert'));
+    assert.match(message.text,/Name: Alex Tan/);assert.match(message.messageId,/mv-studio-enquiry-/);
+    if(behavior==='timeout')throw Object.assign(new Error('Network timeout'),{code:'ETIMEDOUT'});
+    if(behavior==='failure')throw Object.assign(new Error('Authentication rejected'),{code:'EAUTH',responseCode:535});
+    if(behavior==='temporary'&&temporaryFailures++===0)throw Object.assign(new Error('Try again shortly'),{code:'ETEMP',responseCode:451});
+    return {messageId:'<mock.gmail.test>'};
   };
-  const submit=createSubmitHandler({createAdmin:()=>admin,env,fetcher});
-  const retry=createRetryHandler({createAdmin:()=>admin,env,fetcher});
+  const submit=createSubmitHandler({createAdmin:()=>admin,env,sendMail});
+  const retry=createRetryHandler({createAdmin:()=>admin,env,sendMail});
   const payload=()=>({request_id:crypto.randomUUID(),name:'Alex Tan',company_name:'Example Company',phone:'+60 12-345 6789',email:'client@example.test',message:'<script>alert("x")</script>',billing_period:'yearly',meeting_requested:true,preferred_meeting_at:new Date(Date.now()+86400000).toISOString(),selected_feature_ids:[]});
   const request=(body,{origin='https://mv-aistudio.vercel.app',method='POST',token,address=`test-${++ip}`}={})=>new Request('http://functions.test/submit-enquiry',{method,headers:{Origin:origin,'Content-Type':'application/json','cf-connecting-ip':address,...(token?{Authorization:`Bearer ${token}`}:{})},...(method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{})});
   try{
@@ -70,6 +88,11 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
       assert.equal(first.id,duplicate.id);assert.equal(duplicate.duplicate,true);assert.equal(mailCalls,before+1);
       assert.equal((await submit(request({...input,message:'changed'}))).status,409);
     });
+    await t.test('an explicit temporary SMTP rejection retries once',async()=>{
+      behavior='temporary';temporaryFailures=0;const before=mailCalls;
+      const result=await (await submit(request(payload()))).json();
+      assert.equal(result.notification,'sent');assert.equal(mailCalls,before+2);behavior='success';
+    });
     await t.test('concurrent retries cannot create duplicate enquiries or emails',async()=>{
       const input=payload(),before=mailCalls;
       const results=await Promise.all([submit(request(input)),submit(request(input))]);
@@ -90,15 +113,18 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
       const results=await Promise.all([retry(request({id:failedId},{token:'admin-token'})),retry(request({id:failedId},{token:'admin-token'}))]);
       assert.deepEqual(results.map(v=>v.status).sort(),[200,409]);assert.equal(mailCalls,before+1);
       assert.equal((await db.query('select notification_status from enquiries where id=$1',[failedId])).rows[0].notification_status,'sent');
+      await db.query("update enquiries set notification_status='pending',updated_at=now()-interval '11 minutes' where id=$1",[failedId]);
+      const recovered=await retry(request({id:failedId},{token:'admin-token'}));assert.equal(recovered.status,200);
+      assert.equal((await db.query('select notification_status from enquiries where id=$1',[failedId])).rows[0].notification_status,'sent');
     });
     await t.test('five requests accepted per connection, sixth is rate limited',async()=>{
       const statuses=[];for(let i=0;i<6;i++)statuses.push((await submit(request(payload(),{address:'same-connection'}))).status);
       assert.deepEqual(statuses,[200,200,200,200,200,429]);
     });
     await t.test('missing email secrets preserve the request and record a useful admin error',async()=>{
-      delete secrets.RESEND_API_KEY;
+      delete secrets.GMAIL_SMTP_APP_PASSWORD;
       const result=await (await submit(request(payload()))).json();assert.equal(result.ok,true);assert.equal(result.notification,'failed');
-      assert.match((await db.query('select notification_error from enquiries where id=$1',[result.id])).rows[0].notification_error,/secrets/);
+      assert.match((await db.query('select notification_error from enquiries where id=$1',[result.id])).rows[0].notification_error,/GMAIL_SMTP_APP_PASSWORD/);
     });
   }finally{await db.close();}
 });

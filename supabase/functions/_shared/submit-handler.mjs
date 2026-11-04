@@ -4,7 +4,7 @@ import {notifyEnquiry} from './notify.mjs';
 import {estimateRecord} from './chatbot/estimates.mjs';
 import {ChatError} from './chatbot/data.mjs';
 
-export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
+export function createSubmitHandler({createAdmin,env,fetcher=fetch,sendMail}){
   return async request=>{
     const origin=request.headers.get('origin');
     const respond=(body,status=200)=>json(body,status,origin,env);
@@ -62,7 +62,7 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
         throw saved.error;
       }
       let notification='failed';
-      try{notification=await notifyEnquiry({admin,enquiry:saved.data,env,fetcher});}catch(cause){console.error('Enquiry saved; notification state failed',cause.code||cause.name);}
+      try{notification=await notifyEnquiry({admin,enquiry:saved.data,env,sendMail});}catch(cause){console.error('Enquiry saved; notification state failed',cause.code||cause.name);}
       return respond({ok:true,id:saved.data.id,notification});
     }catch(cause){console.error('submit-enquiry failed',cause.code||cause.name);return respond({error:cause instanceof ChatError?cause.message:cause.status?cause.message:cause.code==='P0001'?'The estimate changed or expired. Please generate it again.':'We could not save your enquiry. Please try again shortly.'},cause instanceof ChatError?cause.status:cause.status||(cause.code==='P0001'?409:500));}
   };

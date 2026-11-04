@@ -21,7 +21,7 @@ npx.cmd supabase functions deploy submit-enquiry --project-ref YOUR_PROJECT_REF 
 npx.cmd supabase functions deploy retry-enquiry --project-ref YOUR_PROJECT_REF --no-verify-jwt
 ```
 
-Admin functions still verify the signed-in user and admin membership inside their handlers. Do not put service-role, Resend or AI provider secrets in frontend variables. Existing secrets and allowed-origin settings remain necessary.
+Admin functions still verify the signed-in user and admin membership inside their handlers. Do not put service-role, Gmail SMTP or AI provider secrets in frontend variables. Existing secrets and allowed-origin settings remain necessary.
 
 The feature catalogue is live and separate from the draft publishing system. Adding or changing catalogue items affects available features and invalidates old estimates and release-check results. Build and test after the catalogue is ready. Knowledge and question changes remain private until a candidate is published.
 
