@@ -8,6 +8,10 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
   try{
     await db.exec(await readFile('supabase/migrations/20261024_growth_and_reliability.sql','utf8'));
     await db.exec((await readFile('supabase/schema.sql','utf8')).replace('create extension if not exists pgcrypto;',''));
+    const workspaceMigration=await readFile('supabase/migrations/20261104_enquiry_workspace.sql','utf8');
+    await db.exec(workspaceMigration);await db.exec(workspaceMigration);
+    const workspaceColumns=(await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='enquiries'")).rows.map(row=>row.column_name);
+    assert.ok(['assigned_to','internal_notes','follow_up_at'].every(name=>workspaceColumns.includes(name)));
     assert.equal((await db.query('select count(*)::int as n from public.services')).rows[0].n,4);
     const publicDetails=await readFile('supabase/migrations/20261027_complete_public_details.sql','utf8');
     assert.ok((await db.query("select challenge,solution,outcome from projects where name='APMoodle'")).rows.every(p=>p.challenge&&p.solution&&p.outcome));
@@ -42,6 +46,12 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
     const results=[];for(let i=0;i<6;i++)results.push((await db.query("select consume_enquiry_rate_limit('test-limit',5,3600) as ok")).rows[0].ok);
     assert.deepEqual(results,[true,true,true,true,true,false]);
     await db.query("insert into enquiries(name,company_name,phone,email,request_id) values ('Client','Company','+60123456789','client@example.test','22222222-2222-4222-8222-222222222222')");
+    const workspaceEnquiry=(await db.query("select id from enquiries where email='client@example.test'")).rows[0].id;
+    assert.equal((await db.query('select count(*)::int as n from enquiry_status_history where enquiry_id=$1',[workspaceEnquiry])).rows[0].n,1);
+    await db.query("insert into enquiry_quotes(enquiry_id,version,scope,items,one_time_total) values($1,1,'Bakery ordering website','[{\"name\":\"Ordering\",\"amount\":500,\"cadence\":\"one-time\"}]',500)",[workspaceEnquiry]);
+    assert.equal((await db.query('select version from enquiry_quotes where enquiry_id=$1',[workspaceEnquiry])).rows[0].version,1);
+    await db.query("update enquiries set status='contacted',assigned_to='Team',internal_notes='Private follow-up',follow_up_at=now() where id=$1",[workspaceEnquiry]);
+    assert.equal((await db.query('select count(*)::int as n from enquiry_status_history where enquiry_id=$1',[workspaceEnquiry])).rows[0].n,2);
     await assert.rejects(db.query("insert into enquiries(name,company_name,phone,email,request_id) values ('Client','Company','+60123456789','client@example.test','22222222-2222-4222-8222-222222222222')"),e=>e.code==='23505');
     await db.exec('reset role');
     const ids=(await db.query('select id from projects')).rows;

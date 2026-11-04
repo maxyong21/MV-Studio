@@ -31,3 +31,11 @@
 /* Mobile team cards: give each developer a full-width row. */
 @media(max-width:650px){.team-grid{grid-template-columns:minmax(0,1fr);gap:18px}.team-card{display:grid;grid-template-columns:minmax(112px,.72fr) minmax(0,1fr);align-items:stretch;gap:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}.team-photo{height:100%;min-height:190px;border-radius:8px}.team-card h3{font-size:20px}.team-card>div:last-child>span{font-size:13px}.team-card p{font-size:14px;line-height:1.65}.social-row{gap:8px}}
 @media(max-width:380px){.team-card{grid-template-columns:96px minmax(0,1fr);gap:12px;padding:11px}.team-photo{min-height:160px}.team-card p{font-size:13px}}
+.client-paths { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding-top:34px; padding-bottom:34px; }
+.client-paths > :is(a,button) { position:relative; display:grid; gap:9px; min-height:150px; padding:22px 48px 22px 22px; border:1px solid #d9dfd4; border-radius:14px; background:#fffdf8; color:#193e32; text-align:left; text-decoration:none; transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+.client-paths > :is(a,button):hover { transform:translateY(-3px); border-color:#91a995; box-shadow:0 12px 25px #193e3210; }
+.client-paths > :is(a,button) > span { color:#a7472a; font-size:11px; font-weight:700; letter-spacing:.1em; }
+.client-paths > :is(a,button) > b { font-size:18px; }
+.client-paths > :is(a,button) > small { color:#586258; font-size:13px; line-height:1.5; }
+.client-paths > :is(a,button) > svg { position:absolute; top:22px; right:20px; }
+@media(max-width:760px){.client-paths{grid-template-columns:1fr;gap:10px;padding-top:22px;padding-bottom:22px}.client-paths>:is(a,button){min-height:118px;padding:17px 48px 17px 17px}.client-paths>:is(a,button)>svg{top:18px;right:17px}}

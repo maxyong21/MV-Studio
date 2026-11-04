@@ -24,7 +24,7 @@ export async function browserServers({prerender=false}={}){
   const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188,http://127.0.0.1:4187',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
   const deps={env,createAdmin:()=>client(db,adminId,token),fetcher:async(url,options)=>{mails++;mailPayloads.push(JSON.parse(options.body));return Response.json({id:`local-email-${mails}`});}};
   const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
-  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','faqs']);
+  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
     if(['http://127.0.0.1:4187','http://127.0.0.1:4188'].includes(req.headers.origin)){

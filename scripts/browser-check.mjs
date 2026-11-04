@@ -56,7 +56,8 @@ try{
   await wait("getComputedStyle(document.querySelector('.chat-launcher')).display!=='none'");
   await screenshot('customer-mobile.png');
   await wait("!!document.querySelector('.assistant-intro')");
-  assert.match(await evaluate("document.querySelector('.assistant-intro').textContent"),/outline your website or system.*preliminary estimate/);
+  assert.match(await evaluate("document.querySelector('.assistant-intro').textContent"),/bakery.*tuition site.*custom system.*catalogue prices.*manual quotation/);
+  assert.equal(await evaluate("document.querySelectorAll('.client-paths > *').length"),3,'Customers can choose quick advice, guided planning, or project examples');
   for(const width of [1440,768,390,320]){
     await viewport(width);
     assert.ok(await evaluate("(()=>{const card=document.querySelector('.assistant-intro').getBoundingClientRect(),button=document.querySelector('.chat-launcher').getBoundingClientRect();return card.left>=0&&card.right<=innerWidth&&card.top>=0&&card.bottom<=button.top-8})()"),`Introduction fits above launcher at ${width}px`);
@@ -228,7 +229,26 @@ try{
   await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");
   await navigate('http://127.0.0.1:4188/admin','.admin-header');
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Enquiries').click()");
-  await wait("[...document.querySelectorAll('.enquiry-admin-row')].some(row=>row.textContent.includes('Learning Centre')&&row.textContent.includes('Scope and pricing to be discussed'))");
+  await wait("[...document.querySelectorAll('.enquiry-workspace-card')].some(row=>row.textContent.includes('Learning Centre')&&row.textContent.includes('No catalogue price'))");
+  const adminReply=await evaluate("Array.from(Array.from(document.querySelectorAll('.enquiry-workspace-card')).find(row=>row.textContent.includes('Learning Centre')).querySelectorAll('a')).find(link=>link.href.includes('wa.me')).href");
+  assert.ok(adminReply.startsWith('https://wa.me/60123456789?text='),'Admin reply draft opens the customer’s WhatsApp number');
+  assert.doesNotMatch(adminReply,/learning@example\.test|chatbot_estimate|internal_notes/);
+  await evaluate("[...document.querySelectorAll('.enquiry-workspace-card')].find(row=>row.textContent.includes('Learning Centre')).querySelector('button[aria-expanded]').click()");
+  await wait("!!document.querySelector('.enquiry-private-panel')&&!!document.querySelector('.enquiry-history li')");
+  await fill('.enquiry-private-panel input[placeholder="Team member name or email"]','Vincent');
+  await fill('.enquiry-private-panel input[type=datetime-local]','2099-01-01T10:00');
+  await fill('.enquiry-private-panel textarea','Call to confirm student roles and integrations.');
+  await click('.enquiry-private-panel .button-dark');await wait("document.querySelector('.admin-toast')?.textContent.includes('Assignment, notes')");
+  assert.equal((await servers.db.query("select assigned_to,internal_notes,follow_up_at from enquiries where company_name='Learning Centre'")).rows[0].assigned_to,'Vincent');
+  await evaluate("(()=>{const card=[...document.querySelectorAll('.enquiry-workspace-card')].find(row=>row.textContent.includes('Learning Centre'));card.querySelector('.enquiry-card-actions select').value='contacted';card.querySelector('.enquiry-card-actions select').dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await wait("document.querySelector('.enquiry-history')?.textContent.includes('new → contacted')");
+  await click('.enquiry-quotes-head .button-light');await wait("!!document.querySelector('.quote-editor')");
+  await fill('.quote-editor-fields > label:first-child textarea','Custom learning portal discovery and build.');
+  await evaluate("document.querySelector('.quote-items-head .button-light').click()");
+  await fill('.quote-item-editor input[maxlength="160"]','Learning portal build');
+  await fill('.quote-item-editor input[type=number]','2500');
+  await click('.quote-editor footer .button-dark');await wait("!document.querySelector('.quote-editor')&&!!document.querySelector('.quote-summary')");
+  assert.equal(+((await servers.db.query("select one_time_total from enquiry_quotes where scope='Custom learning portal discovery and build.'")).rows[0].one_time_total),2500);
   await navigate('http://127.0.0.1:4188/','.site-footer-full');
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await screenshot('footer-mobile.png');
   // Public legal pages are readable without API requests or working database content.

@@ -1,0 +1,120 @@
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {ArrowUpRight,Clipboard,Download,FileText,MessageCircle,Plus,RefreshCw,Save,Search,Trash2} from 'lucide-react';
+import {supabase} from '../supabase.js';
+import {money,localDateTime} from '../lib/site.js';
+import InlineFieldError from '../components/InlineFieldError.jsx';
+import {useDialogFocus} from './useDialogFocus.js';
+import {hasPricedSelection} from '../../supabase/functions/_shared/enquiry.mjs';
+
+const statuses=['new','contacted','qualified','won','closed'];
+const quoteStatuses=['draft','shared','accepted','declined','expired'];
+const localValue=value=>value?localDateTime(value):'';
+const displayDate=value=>value?new Date(value).toLocaleString():'Not set';
+const number=value=>Math.max(0,Number(value)||0);
+const fmt=value=>new Intl.NumberFormat('en-MY',{style:'currency',currency:'MYR'}).format(number(value));
+const whatsappRecipient=value=>{const digits=String(value||'').replace(/\D/g,'');if(String(value||'').trim().startsWith('+'))return digits;if(digits.startsWith('00'))return digits.slice(2);if(digits.startsWith('0'))return `60${digits.slice(1)}`;return digits;};
+const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function summaryText(row){
+  const features=(row.selected_features||[]).map(item=>`• ${item.name||'Selected feature'}: ${item.billing_type==='monthly'?`${money(item.price)}/month`:money(item.price)}`).join('\n');
+  const assistant=(row.chatbot_answers?.summary||[]).map(item=>`• ${item.label}: ${item.value}`).join('\n');
+  return [`Project enquiry from ${row.name} (${row.company_name})`,`Email: ${row.email}`,`Phone: ${row.phone}`,row.message&&`Brief: ${row.message}`,features&&`Requested features:\n${features}`,assistant&&`Guided brief:\n${assistant}`,row.preferred_meeting_at&&`Meeting request: ${displayDate(row.preferred_meeting_at)}`].filter(Boolean).join('\n');
+}
+function useNotice(notify){return (message,error)=>notify(error?`${message}: ${error.message||error}`:message);}
+
+export default function EnquiryWorkspace({rows,loading,loadError='',onRefresh,notify,busy,retryNotification}){
+  const [open,setOpen]=useState('');
+  const [search,setSearch]=useState('');
+  const filtered=useMemo(()=>rows.filter(row=>JSON.stringify(row).toLowerCase().includes(search.trim().toLowerCase())),[rows,search]);
+  const show=useNotice(notify);
+  const total=rows.length;
+  return <section className="enquiry-workspace" aria-label="Customer enquiry workspace">
+    <header className="enquiry-workspace-toolbar"><div><span className="section-overline">SALES WORKSPACE</span><h2>{total} {total===1?'enquiry':'enquiries'}</h2><p>Assign an owner, record private notes, set a follow-up, and prepare a reviewed quotation.</p></div><div className="enquiry-workspace-actions"><label className="admin-search"><Search size={17}/><input type="search" aria-label="Search enquiries" placeholder="Search name, company, email…" value={search} onChange={event=>setSearch(event.target.value)}/></label><button type="button" className="button button-light" onClick={onRefresh} disabled={loading}><RefreshCw size={15}/> Refresh</button></div></header>
+    {loading&&<p className="entity-loading" role="status">Loading enquiries from Supabase…</p>}
+    {!loading&&loadError&&<div className="enquiry-db-error" role="alert"><b>Enquiries are temporarily unavailable.</b><span>{loadError}</span><button type="button" className="button button-light" onClick={onRefresh}><RefreshCw size={15}/> Retry</button></div>}
+    {!loading&&!loadError&&!filtered.length&&<div className="empty-state"><FileText/><h3>{search?'No matching enquiries':'No enquiries yet'}</h3><p>{search?'Try a different name, company, email or phone.':'New website and project assistant enquiries will appear here.'}</p></div>}
+    <div className="enquiry-workspace-list" aria-busy={loading}>{!loading&&filtered.map(row=><EnquiryCard key={row.id} row={row} expanded={open===row.id} onToggle={()=>setOpen(open===row.id?'':row.id)} notify={show} busy={busy} retryNotification={retryNotification} onRefresh={onRefresh}/>)}</div>
+  </section>;
+}
+
+function EnquiryCard({row,expanded,onToggle,notify,busy,retryNotification,onRefresh}){
+  const [owner,setOwner]=useState(row.assigned_to||'');
+  const [notes,setNotes]=useState(row.internal_notes||'');
+  const [followUp,setFollowUp]=useState(localValue(row.follow_up_at));
+  const [saving,setSaving]=useState(false);
+  const [history,setHistory]=useState([]);
+  const [quotes,setQuotes]=useState([]);
+  const [loadError,setLoadError]=useState('');
+  const [loadingDetail,setLoadingDetail]=useState(false);
+  const [quoteEditor,setQuoteEditor]=useState(false);
+  const [copyState,setCopyState]=useState('Copy enquiry summary');
+  const [reload,setReload]=useState(0);
+  useEffect(()=>{setOwner(row.assigned_to||'');setNotes(row.internal_notes||'');setFollowUp(localValue(row.follow_up_at));},[row.assigned_to,row.internal_notes,row.follow_up_at]);
+  useEffect(()=>{
+    if(!expanded)return;
+    let alive=true;setLoadingDetail(true);setLoadError('');
+    Promise.all([
+      supabase.from('enquiry_status_history').select('id,old_status,new_status,changed_at').eq('enquiry_id',row.id).order('changed_at',{ascending:false}),
+      supabase.from('enquiry_quotes').select('*').eq('enquiry_id',row.id).order('version',{ascending:false}),
+    ]).then(([historyResult,quoteResult])=>{
+      if(!alive)return;
+      const failures=[historyResult.error,quoteResult.error].filter(Boolean);
+      if(failures.length)setLoadError(`${failures.map(error=>error.message).join(' · ')} Apply supabase/migrations/20261104_enquiry_workspace.sql, then retry.`);
+      else {setHistory(historyResult.data||[]);setQuotes(quoteResult.data||[]);}
+    }).catch(error=>{if(alive)setLoadError(`${error.message||'Could not load enquiry details.'} Please retry.`);}).finally(()=>{if(alive)setLoadingDetail(false);});
+    return()=>{alive=false;};
+  },[expanded,row.id,reload]);
+  const savePrivate=async()=>{
+    setSaving(true);
+    try{const {error}=await supabase.from('enquiries').update({assigned_to:owner.trim(),internal_notes:notes,follow_up_at:followUp?new Date(followUp).toISOString():null}).eq('id',row.id);if(error)throw error;await onRefresh();notify('Assignment, notes and follow-up saved');}
+    catch(error){notify('Could not save enquiry details',error);}
+    finally{setSaving(false);}
+  };
+  const changeStatus=async status=>{
+    try{const {error}=await supabase.from('enquiries').update({status}).eq('id',row.id);if(error)throw error;notify('Status updated');await onRefresh();setReload(value=>value+1);}
+    catch(error){notify('Could not update status',error);}
+  };
+  const copy=async()=>{try{await navigator.clipboard.writeText(summaryText(row));setCopyState('Copied');}catch{setCopyState('Select and copy the enquiry details');}setTimeout(()=>setCopyState('Copy enquiry summary'),2200);};
+  const customerWhatsApp=whatsappRecipient(row.phone);
+  const replyText=`Hi ${row.name}, thanks for reaching out to MV Studio. We’ve reviewed your enquiry${row.company_name?` for ${row.company_name}`:''} and would be happy to discuss the next steps.\n\n${row.message?`Your brief: ${row.message}\n\n`:''}Could you let us know a convenient time to talk?`;
+  const waUrl=customerWhatsApp.length>=7?`https://wa.me/${customerWhatsApp}?text=${encodeURIComponent(replyText)}`:'';
+  const source=row.chatbot_estimate_id||row.chatbot_answers?'Project assistant':'Website form';
+  const hasPriced=hasPricedSelection(row.selected_features||[]);
+  return <article className={`enquiry-workspace-card ${expanded?'is-expanded':''}`}>
+    <div className="enquiry-card-top"><div><div className="enquiry-tags"><span className={`enquiry-status-tag status-${row.status}`}>{row.status}</span><span className="enquiry-source-tag">{source}</span>{row.meeting_requested&&<span className="enquiry-source-tag">Meeting requested</span>}</div><h3>{row.name} <span>· {row.company_name}</span></h3><div className="enquiry-contact-links"><a href={`mailto:${encodeURIComponent(row.email)}`}>{row.email}</a><a href={`tel:${row.phone.replace(/[^+\d]/g,'')}`}>{row.phone}</a><time>{displayDate(row.created_at)}</time></div></div><div className="enquiry-card-actions"><select aria-label={`Status for ${row.name}`} value={row.status} onChange={event=>changeStatus(event.target.value)}>{statuses.map(status=><option key={status} value={status}>{status[0].toUpperCase()+status.slice(1)}</option>)}</select><button type="button" className="button button-light" aria-expanded={expanded} onClick={onToggle}>{expanded?'Close details':'Open workspace'}</button></div></div>
+    <p className="enquiry-brief">{row.message||'The customer did not add a message.'}</p>
+    {(row.selected_features||[]).length>0&&<div className="admin-feature-tags">{row.selected_features.map((feature,index)=><span key={`${feature.name}-${index}`}>{feature.name}</span>)}</div>}
+    <div className="enquiry-financial-summary">{hasPriced?<>Catalogue indication: <b>{money(row.one_time_estimate)} one-time</b> · <b>{money(row.monthly_estimate)}/month</b> · <b>{money(row.annual_estimate)}/year</b></>:'No catalogue price was calculated; prepare a manual quotation.'}<small>These are enquiry estimates, not an approved proposal. Third-party charges may be separate.</small></div>
+    {row.chatbot_answers&&<details className="enquiry-chatbot-scope"><summary>Customer-confirmed guided brief</summary><p>{row.chatbot_answers.brief}</p><dl>{(row.chatbot_answers.summary||[]).map(item=><div key={item.key}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}</dl><small>Assistant release: {row.chatbot_release_id||'—'} · Requires team review.</small></details>}
+    {row.notification_error&&<p className="enquiry-notification-error">Email notification error: {row.notification_error}</p>}
+    <div className="enquiry-quick-actions"><button type="button" className="button button-light" onClick={copy}><Clipboard size={15}/>{copyState}</button>{waUrl?<a className="button button-light" href={waUrl} target="_blank" rel="noreferrer"><MessageCircle size={15}/>Open customer WhatsApp to reply <ArrowUpRight size={14}/></a>:<span className="enquiry-help">No valid customer phone number is available for WhatsApp.</span>}{row.notification_status==='failed'&&<button type="button" className="button button-light" disabled={busy} onClick={()=>retryNotification(row)}>Retry enquiry email</button>}</div>
+    {row.preferred_meeting_at&&<p className="enquiry-meeting">Requested meeting time: <b>{displayDate(row.preferred_meeting_at)}</b> (customer's local time; confirm with them).</p>}
+    {expanded&&<div className="enquiry-detail-grid">
+      <section className="enquiry-private-panel"><div><span className="section-overline">TEAM ONLY</span><h4>Ownership & next step</h4><p>Private notes never appear on the customer site or in the customer’s WhatsApp draft.</p></div><label>Assigned to<input maxLength={160} placeholder="Team member name or email" value={owner} onChange={event=>setOwner(event.target.value)}/></label><label>Follow-up date and time<input type="datetime-local" value={followUp} onChange={event=>setFollowUp(event.target.value)}/></label><label>Internal notes<textarea maxLength={5000} rows={4} placeholder="Call notes, questions to confirm, or next action…" value={notes} onChange={event=>setNotes(event.target.value)}/></label><button className="button button-dark" type="button" disabled={saving} onClick={savePrivate}><Save size={15}/>{saving?'Saving…':'Save team notes'}</button></section>
+      <section className="enquiry-history-panel"><div><span className="section-overline">FOLLOW-UP</span><h4>Activity & quotations</h4></div>{loadingDetail&&<p role="status">Loading history and quotes…</p>}{loadError&&<div className="enquiry-db-error" role="alert">{loadError}<button className="button button-light" type="button" onClick={()=>setReload(value=>value+1)}><RefreshCw size={14}/> Retry</button></div>}{!loadingDetail&&!loadError&&<><ol className="enquiry-history">{history.map(item=><li key={item.id}><span>{item.old_status?`${item.old_status} → ${item.new_status}`:`Enquiry received · ${item.new_status}`}</span><time>{displayDate(item.changed_at)}</time></li>)}{row.follow_up_at&&<li><span>Follow-up scheduled</span><time>{displayDate(row.follow_up_at)}</time></li>}</ol><div className="enquiry-quotes-head"><h5>Proposal versions</h5><button type="button" className="button button-light" onClick={()=>setQuoteEditor(true)}><Plus size={15}/> New quote</button></div><p className="enquiry-help">This workspace does not send a quote. Mark it Shared only after you send it to the customer yourself.</p>{quotes.map(quote=><QuoteSummary key={quote.id} quote={quote} notify={notify} onUpdate={async(status)=>{const {error}=await supabase.from('enquiry_quotes').update({status,updated_at:new Date().toISOString()}).eq('id',quote.id);if(error){notify('Could not update quotation',error);return false;}setQuotes(current=>current.map(item=>item.id===quote.id?{...item,status}:item));return true;}}/>)}{!quotes.length&&<p className="enquiry-help">No proposal yet. A draft stays private until your team marks it shared.</p>}</>}</section>
+    </div>}
+    {quoteEditor&&<QuoteEditor row={row} existing={quotes} onClose={()=>setQuoteEditor(false)} onSaved={quote=>{setQuotes(current=>[quote,...current]);setQuoteEditor(false);notify('Quote draft saved. Review it before sharing.');}} notify={notify}/>}
+  </article>;
+}
+
+function QuoteSummary({quote,onUpdate,notify}){
+  const [status,setStatus]=useState(quote.status);
+  const text=`MV Studio · Proposal v${quote.version}\n${quote.scope}\n\n${(quote.items||[]).map(item=>`${item.name}: ${fmt(item.amount)}${item.cadence==='monthly'?'/month':item.cadence==='annual'?'/year':''}`).join('\n')}\n\nOne-time: ${fmt(quote.one_time_total)}\nMonthly: ${fmt(quote.monthly_total)}\nAnnual: ${fmt(quote.annual_total)}\n\nRevisions: ${quote.revisions||'As agreed in the proposal'}\nExclusions: ${quote.exclusions||'Third-party charges are separate'}\nPayment: ${quote.payment_terms||'As agreed in the proposal'}\nValid until: ${displayDate(quote.expires_at)}`;
+  const print=()=>{const popup=window.open('','_blank','width=900,height=800');if(!popup){window.alert('Allow pop-ups for this admin site to print or save the proposal as a PDF.');return;}popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>MV Studio proposal v${quote.version}</title><style>body{font:16px/1.6 Arial,sans-serif;color:#20372c;max-width:780px;margin:50px auto;padding:0 24px}h1{font-size:32px}.brand{font-weight:bold;color:#a7472a;letter-spacing:.08em}.meta{color:#657267}table{width:100%;border-collapse:collapse;margin:24px 0}td,th{text-align:left;padding:10px;border-bottom:1px solid #d8dfd4}.totals{background:#f2f5ef;padding:18px;border-radius:12px}section{margin:24px 0;white-space:pre-wrap}@media print{button{display:none}body{margin:0 auto}}</style></head><body><div class="brand">MV STUDIO</div><p class="meta">PRELIMINARY PROPOSAL · VERSION ${quote.version}</p><h1>${safe(quote.scope||'Website project proposal')}</h1><p class="meta">Prepared ${safe(displayDate(quote.created_at))} · Valid until ${safe(displayDate(quote.expires_at))}</p><table><thead><tr><th>Item</th><th>Billing</th><th>Amount</th></tr></thead><tbody>${(quote.items||[]).map(item=>`<tr><td>${safe(item.name)}</td><td>${safe(item.cadence)}</td><td>${safe(fmt(item.amount))}</td></tr>`).join('')}</tbody></table><div class="totals"><b>One-time:</b> ${safe(fmt(quote.one_time_total))} &nbsp; <b>Monthly:</b> ${safe(fmt(quote.monthly_total))} &nbsp; <b>Annual:</b> ${safe(fmt(quote.annual_total))}</div><section><b>Scope</b>\n${safe(quote.scope)}\n\n<b>Revisions</b>\n${safe(quote.revisions||'To be agreed in the project proposal.')}\n\n<b>Exclusions</b>\n${safe(quote.exclusions||'Hosting, domain and third-party fees are separate unless listed above.')}\n\n<b>Payment terms</b>\n${safe(quote.payment_terms||'Confirmed with the team before work begins.')}</section><p class="meta">Preliminary proposal for discussion. Work starts after written scope and payment terms are agreed.</p><button onclick="window.print()">Print / Save as PDF</button></body></html>`);popup.document.close();};
+  return <article className="quote-summary"><div><b>Proposal v{quote.version}</b><span>{fmt(quote.one_time_total)} once · {fmt(quote.monthly_total)}/mo · {fmt(quote.annual_total)}/yr</span><small>Valid until {displayDate(quote.expires_at)}</small></div><select aria-label={`Proposal version ${quote.version} status`} value={status} onChange={async event=>{const next=event.target.value;setStatus(next);if(await onUpdate(next)===false)setStatus(quote.status);}}>{quoteStatuses.map(value=><option key={value} value={value}>{value[0].toUpperCase()+value.slice(1)}</option>)}</select><button type="button" className="button button-light" onClick={print}><Download size={14}/> Print / PDF</button><button type="button" className="button button-light" onClick={async()=>{try{await navigator.clipboard.writeText(text);}catch{notify('Clipboard access is unavailable. Open Print / PDF to review the proposal.');}}}>Copy proposal</button></article>;
+}
+
+function QuoteEditor({row,existing,onClose,onSaved,notify}){
+  const [scope,setScope]=useState(row.chatbot_answers?.brief||row.message||'');
+  const [items,setItems]=useState((row.selected_features||[]).filter(item=>item.name&&item.unit_price!==null&&item.unit_price!==undefined&&Number.isFinite(Number(item.unit_price))&&item.billing_type!=='quote').map(item=>({name:item.name||'',amount:number(item.unit_price),cadence:item.billing_type==='monthly'?'monthly':'one-time'})));
+  const [revisions,setRevisions]=useState('To be confirmed in the written project proposal.');
+  const [exclusions,setExclusions]=useState('Hosting, domain, payment gateway, and third-party subscription fees are separate unless listed above.');
+  const [payment,setPayment]=useState('Development payment stages to be confirmed in the written proposal. Third-party purchases are paid in full before setup.');
+  const [expiry,setExpiry]=useState(()=>{const date=new Date();date.setDate(date.getDate()+14);date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,16);});
+  const [saving,setSaving]=useState(false),[error,setError]=useState('');
+  const dialogRef=useRef(null);
+  useDialogFocus(dialogRef);
+  useEffect(()=>{const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';const closeOnEscape=event=>{if(event.key==='Escape')onClose();};window.addEventListener('keydown',closeOnEscape);return()=>{document.body.style.overflow=oldOverflow;window.removeEventListener('keydown',closeOnEscape);};},[onClose]);
+  const total=items.reduce((sum,item)=>sum+number(item.amount),0);
+  const save=async event=>{event.preventDefault();setError('');const valid=items.every(item=>item.name.trim()&&Number.isFinite(Number(item.amount))&&Number(item.amount)>=0);if(!scope.trim()||!valid){setError('Add a scope summary and make sure every item has a name and a non-negative amount.');return;}setSaving(true);try{const quote={enquiry_id:row.id,version:Math.max(0,...existing.map(item=>Number(item.version)||0))+1,scope:scope.trim(),items:items.map(item=>({name:item.name.trim(),amount:number(item.amount),cadence:item.cadence})),one_time_total:items.filter(item=>item.cadence==='one-time').reduce((sum,item)=>sum+number(item.amount),0),monthly_total:items.filter(item=>item.cadence==='monthly').reduce((sum,item)=>sum+number(item.amount),0),annual_total:items.filter(item=>item.cadence==='annual').reduce((sum,item)=>sum+number(item.amount),0),revisions:revisions.trim(),exclusions:exclusions.trim(),payment_terms:payment.trim(),expires_at:expiry?new Date(expiry).toISOString():null};const {data,error}=await supabase.from('enquiry_quotes').insert(quote).select('*').single();if(error)throw error;onSaved(data);}catch(error){setError(`${error.message||'Could not save the quote.'} Check the enquiry workspace migration and your admin permissions.`);}finally{setSaving(false);}};
+  return <div className="quote-editor-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}><form ref={dialogRef} className="quote-editor" role="dialog" aria-modal="true" aria-labelledby="quote-editor-title" onSubmit={save} noValidate><header><div><span className="section-overline">MANUAL REVIEW</span><h3 id="quote-editor-title">Prepare proposal v{Math.max(0,...existing.map(item=>Number(item.version)||0))+1}</h3><p>This saves a private draft. Confirm scope and pricing with your team before marking it shared.</p></div><button type="button" className="modal-close" onClick={onClose} aria-label="Close quotation editor">×</button></header><div className="quote-editor-fields"><label>Scope summary<textarea required maxLength={3000} rows={3} value={scope} onChange={event=>setScope(event.target.value)}/></label><div className="quote-items-head"><b>Itemized charges</b><button type="button" className="button button-light" onClick={()=>setItems(current=>[...current,{name:'',amount:0,cadence:'one-time'}])}><Plus size={14}/> Add line item</button></div>{items.map((item,index)=><div className="quote-item-editor" key={index}><label>Item name<input maxLength={160} value={item.name} onChange={event=>setItems(current=>current.map((entry,i)=>i===index?{...entry,name:event.target.value}:entry))}/></label><label>Amount (RM)<input type="number" min="0" step="0.01" value={item.amount} onChange={event=>setItems(current=>current.map((entry,i)=>i===index?{...entry,amount:event.target.value}:entry))}/></label><label>Billing<select value={item.cadence} onChange={event=>setItems(current=>current.map((entry,i)=>i===index?{...entry,cadence:event.target.value}:entry))}><option value="one-time">One-time</option><option value="monthly">Monthly</option><option value="annual">Annual</option></select></label><button type="button" className="delete-action" onClick={()=>setItems(current=>current.filter((_,i)=>i!==index))} aria-label={`Remove item ${index+1}`}><Trash2 size={15}/></button></div>)}<div className="quote-preview-totals"><span>One-time <b>{fmt(items.filter(item=>item.cadence==='one-time').reduce((sum,item)=>sum+number(item.amount),0))}</b></span><span>Monthly <b>{fmt(items.filter(item=>item.cadence==='monthly').reduce((sum,item)=>sum+number(item.amount),0))}/mo</b></span><span>Annual <b>{fmt(items.filter(item=>item.cadence==='annual').reduce((sum,item)=>sum+number(item.amount),0))}/yr</b></span><small>Combined item value: {fmt(total)}. Each billing cadence is kept separate.</small></div><label>Revisions<textarea rows={2} maxLength={1500} value={revisions} onChange={event=>setRevisions(event.target.value)}/></label><label>Exclusions and third-party costs<textarea rows={2} maxLength={1500} value={exclusions} onChange={event=>setExclusions(event.target.value)}/></label><label>Payment terms<textarea rows={2} maxLength={1500} value={payment} onChange={event=>setPayment(event.target.value)}/></label><label>Quote expiry<input type="datetime-local" value={expiry} onChange={event=>setExpiry(event.target.value)}/></label></div>{error&&<InlineFieldError message={error}/>}<footer><button type="button" className="button button-light" onClick={onClose}>Cancel</button><button className="button button-dark" disabled={saving}>{saving?'Saving draft…':'Save private draft'}</button></footer></form></div>;
+}

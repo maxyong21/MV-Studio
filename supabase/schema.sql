@@ -158,9 +158,46 @@ create table if not exists public.enquiries (
   notification_status text not null default 'pending' check (notification_status in ('pending','sent','failed')),
   notification_error text not null default '',
   resend_email_id text not null default '',
+  assigned_to text not null default '',
+  internal_notes text not null default '',
+  follow_up_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table if not exists public.enquiry_status_history (
+  id bigint generated always as identity primary key,
+  enquiry_id uuid not null references public.enquiries(id) on delete cascade,
+  old_status text,
+  new_status text not null,
+  changed_at timestamptz not null default now(),
+  changed_by uuid default auth.uid()
+);
+create index if not exists enquiry_status_history_enquiry_idx on public.enquiry_status_history(enquiry_id,changed_at desc);
+create or replace function public.record_enquiry_status_change()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op='INSERT' then
+    insert into public.enquiry_status_history(enquiry_id,old_status,new_status,changed_by) values(new.id,null,new.status,auth.uid());
+  elsif old.status is distinct from new.status then
+    insert into public.enquiry_status_history(enquiry_id,old_status,new_status,changed_by) values(new.id,old.status,new.status,auth.uid());
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists enquiries_status_history on public.enquiries;
+create trigger enquiries_status_history after insert or update of status on public.enquiries for each row execute function public.record_enquiry_status_change();
+revoke all on function public.record_enquiry_status_change() from public,anon,authenticated;
+
+create table if not exists public.enquiry_quotes (
+  id uuid primary key default gen_random_uuid(), enquiry_id uuid not null references public.enquiries(id) on delete cascade,
+  version integer not null check(version>0), scope text not null default '', items jsonb not null default '[]'::jsonb check(jsonb_typeof(items)='array'),
+  one_time_total numeric(12,2) not null default 0 check(one_time_total>=0), monthly_total numeric(12,2) not null default 0 check(monthly_total>=0), annual_total numeric(12,2) not null default 0 check(annual_total>=0),
+  revisions text not null default '', exclusions text not null default '', payment_terms text not null default '',
+  status text not null default 'draft' check(status in('draft','shared','accepted','declined','expired')), expires_at timestamptz, created_by uuid default auth.uid(),
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique(enquiry_id,version)
+);
+create index if not exists enquiry_quotes_enquiry_idx on public.enquiry_quotes(enquiry_id,version desc);
 
 create table if not exists public.enquiry_rate_limits (
   key_hash text primary key,
@@ -262,6 +299,8 @@ alter table public.team_members enable row level security;
 alter table public.promotions enable row level security;
 alter table public.feature_options enable row level security;
 alter table public.enquiries enable row level security;
+alter table public.enquiry_status_history enable row level security;
+alter table public.enquiry_quotes enable row level security;
 alter table public.enquiry_rate_limits enable row level security;
 
 drop policy if exists "Admins can view their own admin record" on public.admin_users;
@@ -320,11 +359,19 @@ drop policy if exists "Admins delete enquiries" on public.enquiries;
 create policy "Admins delete enquiries" on public.enquiries
 for delete to authenticated using ((select public.is_admin()));
 
+drop policy if exists "Admins view enquiry status history" on public.enquiry_status_history;
+create policy "Admins view enquiry status history" on public.enquiry_status_history for select to authenticated using((select public.is_admin()));
+drop policy if exists "Admins manage enquiry quotes" on public.enquiry_quotes;
+create policy "Admins manage enquiry quotes" on public.enquiry_quotes for all to authenticated using((select public.is_admin())) with check((select public.is_admin()));
+
 grant usage on schema public to anon, authenticated;
 grant select on public.site_content, public.services, public.projects, public.team_members, public.promotions, public.feature_options to anon, authenticated;
 grant update on public.site_content to authenticated;
 grant insert, update, delete on public.services, public.projects, public.team_members, public.promotions to authenticated;
 grant insert, update, delete on public.feature_options to authenticated;
+grant select on public.enquiry_status_history to authenticated;
+grant select,insert,update,delete on public.enquiry_quotes to authenticated;
+grant usage,select on sequence public.enquiry_status_history_id_seq to authenticated;
 grant select, update, delete on public.enquiries to authenticated;
 grant select on public.admin_users to authenticated;
 
@@ -332,6 +379,8 @@ grant select on public.admin_users to authenticated;
 -- to validate selected features and save/update enquiry records.
 grant select on public.feature_options to service_role;
 grant select, insert, update on public.enquiries to service_role;
+grant select,insert,update on public.enquiry_quotes to service_role;
+grant select,insert on public.enquiry_status_history to service_role;
 
 -- Public website media: project previews, team avatars, promotion images, and project demo clips.
 -- 50 MiB is compatible with Supabase Free's documented global maximum; the project global limit still applies.
