@@ -8,7 +8,7 @@ import {ChatError,must,stateFor,catalogueFor,releaseFor,chunksFor,publicFlow,req
 import {evaluateRelease} from './evaluate.mjs';
 
 async function limitPublic(request,admin,env){
-  const address=request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||'unknown';
+  const address=request.headers.get('cf-connecting-ip')||'unknown';
   const key=await digest(`chat:${env('RATE_LIMIT_SALT')||env('SUPABASE_SERVICE_ROLE_KEY')}:${address}`);
   const result=await admin.rpc('consume_enquiry_rate_limit',{p_key:key,p_max:Math.min(120,Math.max(10,Math.floor(Number(env('CHATBOT_HOURLY_REQUESTS'))||60))),p_window_seconds:3600});
   if(result.error)throw result.error;if(!result.data)throw new ChatError('The chat request limit was reached. Please use the enquiry form or try again later.',429);

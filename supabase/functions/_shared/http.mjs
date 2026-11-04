@@ -1,4 +1,4 @@
-export const originAllowed=(origin,env)=>!origin||((env('ALLOWED_ORIGIN')||'').split(',').map(v=>v.trim()).filter(Boolean).length
+export const originAllowed=(origin,env)=>Boolean(origin)&&((env('ALLOWED_ORIGIN')||'').split(',').map(v=>v.trim()).filter(Boolean).length
   ?(env('ALLOWED_ORIGIN')||'').split(',').map(v=>v.trim()).includes(origin)
   :/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
 export const headersFor=(origin,env)=>({
@@ -16,4 +16,31 @@ export async function readInput(request){
   const text=await request.text();
   if(new TextEncoder().encode(text).length>32768)throw new Error('Request is too large.');
   return JSON.parse(text);
+}
+
+export async function verifyTurnstile(request,input,env,fetcher=fetch,action='enquiry'){
+  const secret=env('TURNSTILE_SECRET_KEY');
+  const required=env('TURNSTILE_REQUIRED')!=='false';
+  if(!secret){
+    if(required)throw Object.assign(new Error('Human verification is temporarily unavailable.'),{status:503});
+    return;
+  }
+  const token=input?.turnstile_token;
+  if(typeof token!=='string'||token.length<10||token.length>2048)
+    throw Object.assign(new Error('Complete the human verification and try again.'),{status:400});
+  const body=new URLSearchParams({secret,response:token});
+  let result;
+  try{
+    const response=await fetcher('https://challenges.cloudflare.com/turnstile/v0/siteverify',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString(),signal:AbortSignal.timeout(5000)});
+    result=await response.json();
+    if(!response.ok)throw new Error('Verification service returned an error.');
+  }catch{
+    throw Object.assign(new Error('Human verification is temporarily unavailable. Please try again.'),{status:503});
+  }
+  if(!result?.success||result.action!==action)
+    throw Object.assign(new Error('Human verification expired or was not accepted. Please try again.'),{status:400});
+  const allowed=(env('TURNSTILE_ALLOWED_HOSTNAMES')||'').split(',').map(value=>value.trim().toLowerCase()).filter(Boolean);
+  if(!allowed.length)throw Object.assign(new Error('Human verification is not configured for this website.'),{status:503});
+  if(allowed.length&&!allowed.includes(String(result.hostname||'').toLowerCase()))
+    throw Object.assign(new Error('Human verification was not accepted for this site.'),{status:400});
 }

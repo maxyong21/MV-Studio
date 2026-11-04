@@ -52,10 +52,10 @@ test('provider adapters validate embeddings, restrict returned IDs and fail safe
 test('PostgreSQL chatbot lifecycle, publication isolation, estimates and confirmed enquiries',async t=>{
   const db=await database(),adminId=crypto.randomUUID();
   await db.query('insert into auth.users(id) values($1)',[adminId]);await db.query('insert into admin_users(user_id) values($1)',[adminId]);
-  const admin=client(db,adminId),secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'};
+  const admin=client(db,adminId),secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app',TURNSTILE_REQUIRED:'false',SUPABASE_SERVICE_ROLE_KEY:'fixture',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'};
   const env=key=>secrets[key];let emailCount=0,ip=0,release,run,estimate;
   const deps={createAdmin:()=>admin,env,fetcher:async()=>{emailCount++;return Response.json({id:'mail-test'});}},chat=createChatbotHandler(deps),manage=createChatbotAdminHandler(deps),submit=createSubmitHandler(deps);
-  const request=(body,token,address=`chat-test-${++ip}`)=>new Request('https://local.test/functions/v1/chatbot',{method:'POST',headers:{Origin:secrets.ALLOWED_ORIGIN,'Content-Type':'application/json','x-forwarded-for':address,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
+  const request=(body,token,address=`chat-test-${++ip}`)=>new Request('https://local.test/functions/v1/chatbot',{method:'POST',headers:{Origin:secrets.ALLOWED_ORIGIN,'Content-Type':'application/json','cf-connecting-ip':address,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
   const call=async(handler,body,token='admin-token')=>{const response=await handler(request(body,token));const data=await response.json();return {status:response.status,...data};};
   const editCatalogue=async(sql,params=[])=>{await db.exec('set role authenticated');try{return await db.query(sql,params);}finally{await db.exec('set role service_role');}};
   try{

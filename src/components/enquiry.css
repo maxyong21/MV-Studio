@@ -24,3 +24,4 @@
 .hero-actions .hero-whatsapp{min-height:48px;white-space:nowrap}
 .hero-clear-offer .hero-actions{flex-wrap:wrap}
 @media(max-width:520px){.enquiry-details>summary{padding:16px}.enquiry-details-body{padding:0 14px 16px}.enquiry-details .feature-option em{grid-column:2}.enquiry-details .feature-option{grid-template-columns:18px minmax(0,1fr)}.enquiry-contact-options .button,.enquiry-guidance .button{width:100%}}
+.turnstile-wrap{margin:14px 0;min-height:0}.turnstile-error{margin:8px 0;color:#a33824;font-size:13px;line-height:1.5}.turnstile-wrap iframe{max-width:100%}
