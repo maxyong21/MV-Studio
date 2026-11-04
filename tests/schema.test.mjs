@@ -10,6 +10,11 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
     await db.exec((await readFile('supabase/schema.sql','utf8')).replace('create extension if not exists pgcrypto;',''));
     const securityMigration=await readFile('supabase/migrations/20261104_security_hardening.sql','utf8');
     await db.exec(securityMigration);await db.exec(securityMigration);
+    await db.query('alter table public.enquiries rename column email_message_id to resend_email_id');
+    const smtpMigration=await readFile('supabase/migrations/20261104_gmail_smtp.sql','utf8');
+    await db.exec(smtpMigration);await db.exec(smtpMigration);
+    assert.ok((await db.query("select 1 from information_schema.columns where table_schema='public' and table_name='enquiries' and column_name='email_message_id'")).rows.length);
+    assert.equal((await db.query("select 1 from information_schema.columns where table_schema='public' and table_name='enquiries' and column_name='resend_email_id'")).rows.length,0);
     const workspaceMigration=await readFile('supabase/migrations/20261104_enquiry_workspace.sql','utf8');
     await db.exec(workspaceMigration);await db.exec(workspaceMigration);
     const workspaceColumns=(await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='enquiries'")).rows.map(row=>row.column_name);

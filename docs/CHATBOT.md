@@ -1,6 +1,6 @@
 # Project assistant: setup, operation and flow
 
-The assistant turns an idea into an editable project brief and a **preliminary estimate**, then saves a confirmed enquiry in the existing Supabase database. It reuses the existing Resend notification and admin follow-up workflow. It does not accept payments, promise a delivery date, book a meeting, or issue a binding quotation.
+The assistant turns an idea into an editable project brief and a **preliminary estimate**, then saves a confirmed enquiry in the existing Supabase database. It reuses the existing Gmail SMTP notification and admin follow-up workflow. It does not accept payments, promise a delivery date, book a meeting, or issue a binding quotation.
 
 ## Stack and design
 
@@ -14,7 +14,7 @@ The assistant turns an idea into an editable project brief and a **preliminary e
 | Optional semantic search | Gemini embeddings, 768 dimensions, exact cosine search + reciprocal rank fusion with BM25 |
 | Optional intent/source selection | Groq chat model, configurable in server secrets |
 | Estimates | Server validates the flow and selections, then calculates from active `feature_options` prices |
-| Notifications | Existing Resend integration, with failure tracking and admin retry |
+| Notifications | Gmail SMTP, with failure tracking and admin retry |
 
 I reviewed the local PortfolioChatbot backend as a reference for Gemini embeddings, Groq, retrieval and Supabase content. MV Studio uses the same provider roles in JavaScript Edge Functions and stores its small knowledge base in Supabase. No separate Python server, Pinecone account or Cloudflare database is needed.
 
@@ -39,7 +39,7 @@ flowchart TD
   K --> L[Confirm estimate and submit]
   L --> M[Validate token, active release, expiry and price revision]
   M --> N[Save enquiry and confirmed scope once]
-  N --> O[Notify team via Resend]
+  N --> O[Notify team via Gmail SMTP]
   C --> P[Unknown facts: human handoff]
 ```
 
@@ -83,7 +83,7 @@ VITE_SITE_URL=https://mv-aistudio.vercel.app
 
 Use the URL and public key for **your** Supabase project. Put the same three variables in **Vercel → Project → Settings → Environment Variables**. Restart Vite after local changes and redeploy Vercel after changing hosted variables.
 
-The public/anon key is expected to be visible in the browser. RLS and Edge Function authorization protect the data. Never put a service-role key, Gemini key, Groq key or Resend key in any `VITE_` variable.
+The public/anon key is expected to be visible in the browser. RLS and Edge Function authorization protect the data. Never put a service-role key, Gemini key, Groq key or Gmail SMTP key in any `VITE_` variable.
 
 ## 3. Configure backend secrets
 
@@ -92,8 +92,9 @@ Open **Supabase → Edge Functions → Secrets**. For the working default mode, 
 | Secret | Example / purpose |
 | --- | --- |
 | `ALLOWED_ORIGIN` | `https://mv-aistudio.vercel.app,http://localhost:5173,http://127.0.0.1:5173` |
-| `RESEND_API_KEY` | Your server-only Resend API key |
-| `RESEND_FROM_EMAIL` | A sender allowed by your Resend account and verified domain |
+| `GMAIL_SMTP_USER` | The Gmail account used to send the team notification |
+| `GMAIL_SMTP_APP_PASSWORD` | The account's server-only Google App Password |
+| `GMAIL_FROM_NAME` | Optional display name, defaults to MV Studio |
 | `ENQUIRY_TO_EMAIL` | Your team inbox; multiple recipients separated by commas |
 | `RATE_LIMIT_SALT` | Optional long random value used to hash connection identifiers |
 | `CHATBOT_HOURLY_REQUESTS` | Optional; default 60 per connection, clamped to 10–120 |
@@ -183,7 +184,7 @@ Example: Landing page RM449 + maintenance RM120/month with one annual free month
 
 ## 7. Follow up and maintain data
 
-Under **Enquiries**, each chatbot enquiry includes its confirmed brief, readable answers, release reference, selected features, totals and contact details. It uses the existing follow-up statuses and notification retry controls. Resend acceptance is not proof of delivery; inspect provider events for actual delivery problems. A mail failure does not discard the saved enquiry.
+Under **Enquiries**, each chatbot enquiry includes its confirmed brief, readable answers, release reference, selected features, totals and contact details. It uses the existing follow-up statuses and notification retry controls. Gmail SMTP acceptance is not proof of delivery; inspect provider events for actual delivery problems. A mail failure does not discard the saved enquiry.
 
 The assistant sends only the **current redacted question** and approved knowledge/goal choices to AI providers. It does not send the contact form, entire conversation, enquiry records, secret keys or administrator data. Email addresses and phone-like numbers are masked, but this is not complete PII detection: names, addresses or sensitive text typed into the free-form chat may remain. The UI asks customers to avoid private information. Provider processing and billing are subject to the provider account's terms.
 
@@ -199,11 +200,11 @@ npm.cmd run build
 npm.cmd run test:browser
 ```
 
-The Node tests run the real SQL in temporary PostgreSQL and exercise the Edge Function handlers. Browser tests build fixture pages, open Chrome/Edge, manage/publish a release in admin, run the public mobile flow, verify validation and save an enquiry. AI/Resend responses are mocked; tests do not send email, incur AI charges or modify your hosted database. See the root README for browser prerequisites.
+The Node tests run the real SQL in temporary PostgreSQL and exercise the Edge Function handlers. Browser tests build fixture pages, open Chrome/Edge, manage/publish a release in admin, run the public mobile flow, verify validation and save an enquiry. AI/Gmail SMTP responses are mocked; tests do not send email, incur AI charges or modify your hosted database. See the root README for browser prerequisites.
 
 After these checks, deploy the React site to Vercel as usual (`npm run build`, output `dist`). The existing public HTML prerendering, page metadata, sitemap and robots remain in place. The launcher is small; conversation code, styles, requests and AI calls load only when a visitor opens it. Published knowledge is not a substitute for crawlable service/project pages.
 
-Finally, verify your actual deployment with your own details: open the widget, request an estimate, send one enquiry, check **Admin → Enquiries**, check Supabase Function logs, and confirm Resend delivery. Optional live model access, email sender verification, production credentials and your actual business content cannot be proven by the isolated local tests.
+Finally, verify your actual deployment with your own details: open the widget, request an estimate, send one enquiry, check **Admin → Enquiries**, check Supabase Function logs, and confirm Gmail SMTP delivery. Optional live model access, email sender verification, production credentials and your actual business content cannot be proven by the isolated local tests.
 
 ## Code map
 

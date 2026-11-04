@@ -1,7 +1,7 @@
 import {originAllowed,headersFor,json,readInput} from './http.mjs';
 import {uuidPattern} from './enquiry.mjs';
 import {notifyEnquiry} from './notify.mjs';
-export function createRetryHandler({env,createAdmin,fetcher=fetch}){
+export function createRetryHandler({env,createAdmin,sendMail}){
   return async request=>{
     const origin=request.headers.get('origin');const reply=(body,status=200)=>json(body,status,origin,env);
     if(!originAllowed(origin,env))return reply({error:'Origin is not allowed.'},403);
@@ -16,10 +16,16 @@ export function createRetryHandler({env,createAdmin,fetcher=fetch}){
       if(membership.error||!membership.data)return reply({error:'Administrator access required.'},403);
       let input;try{input=await readInput(request);}catch{return reply({error:'Send a valid enquiry reference.'},400);}
       if(!uuidPattern.test(input?.id||''))return reply({error:'Invalid enquiry reference.'},400);
-      const claim=await admin.from('enquiries').update({notification_status:'pending',notification_error:'',updated_at:new Date().toISOString()}).eq('id',input.id).eq('notification_status','failed').select('*').maybeSingle();
+      const claimValues={notification_status:'pending',notification_error:'',updated_at:new Date().toISOString()};
+      let claim=await admin.from('enquiries').update(claimValues).eq('id',input.id).eq('notification_status','failed').select('*').maybeSingle();
       if(claim.error)throw claim.error;
-      if(!claim.data)return reply({error:'Only failed notifications can be retried. Refresh the inbox.'},409);
-      const notification=await notifyEnquiry({admin,enquiry:claim.data,env,fetcher});
+      if(!claim.data){
+        const staleBefore=new Date(Date.now()-10*60*1000).toISOString();
+        claim=await admin.from('enquiries').update(claimValues).eq('id',input.id).eq('notification_status','pending').lt('updated_at',staleBefore).select('*').maybeSingle();
+        if(claim.error)throw claim.error;
+      }
+      if(!claim.data)return reply({error:'This email is already being sent or cannot be retried yet. Refresh the inbox.'},409);
+      const notification=await notifyEnquiry({admin,enquiry:claim.data,env,sendMail});
       return reply({ok:true,notification});
     }catch(cause){console.error('retry-enquiry failed',cause.code||cause.name);return reply({error:'Notification could not be retried. Refresh the inbox.'},500);}
   };
