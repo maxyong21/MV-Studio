@@ -7,13 +7,14 @@ import {publicFailure} from '../lib/availability.mjs';
 import {trackEvent} from '../lib/analytics.mjs';
 import {estimateFeatures,validateContact} from '../../supabase/functions/_shared/enquiry.mjs';
 import InlineFieldError from './InlineFieldError.jsx';
+import Turnstile,{turnstileRequired} from './Turnstile.jsx';
 import './enquiry.css';
 
 const emptyValues={name:'',company_name:'',phone:'',email:'',message:'',billing_period:'monthly',meeting_requested:false,preferred_meeting_at:'',website:''};
 export default function EnquiryForm({options=[],whatsappNumber=''}){
   const submissionRef=useRef(null);
   const [savedWhatsapp,setSavedWhatsapp]=useState(null);
-  const [values,setValues]=useState(emptyValues),[selected,setSelected]=useState([]),[sending,setSending]=useState(false),[feedback,setFeedback]=useState(''),[feedbackError,setFeedbackError]=useState(false),[errors,setErrors]=useState({}),[touched,setTouched]=useState({}),[attempted,setAttempted]=useState(false),[detailsOpen,setDetailsOpen]=useState(false);
+  const [values,setValues]=useState(emptyValues),[selected,setSelected]=useState([]),[sending,setSending]=useState(false),[feedback,setFeedback]=useState(''),[feedbackError,setFeedbackError]=useState(false),[errors,setErrors]=useState({}),[touched,setTouched]=useState({}),[attempted,setAttempted]=useState(false),[detailsOpen,setDetailsOpen]=useState(false),[captchaToken,setCaptchaToken]=useState(''),[captchaReset,setCaptchaReset]=useState(0);
   const active=options.filter(item=>item.active).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   const chosen=active.filter(item=>selected.includes(item.id)),recurring=chosen.filter(item=>item.billing_type==='monthly');
   const estimate=estimateFeatures(chosen),whatsapp=whatsappHref(whatsappNumber);
@@ -30,6 +31,7 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
     event.preventDefault();setAttempted(true);setTouched({name:true,company_name:true,phone:true,email:true,message:true,preferred_meeting_at:true});
     const nextErrors=validateContact(values);setErrors(nextErrors);
     if(Object.keys(nextErrors).length){document.getElementById('enquiry-'+Object.keys(nextErrors)[0])?.focus();return;}
+    if(turnstileRequired&&!captchaToken){setFeedback('Complete the human verification before sending your enquiry.');setFeedbackError(true);return;}
     setFeedback('');setFeedbackError(false);
     if(!isSupabaseConfigured){setFeedback('Coming soon. Please contact the team directly.');setFeedbackError(true);return;}
     setSending(true);
@@ -37,13 +39,13 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
       const body={...values,name:values.name.trim(),company_name:values.company_name.trim(),phone:values.phone.trim(),email:values.email.trim(),preferred_meeting_at:values.preferred_meeting_at?new Date(values.preferred_meeting_at).toISOString():null,selected_feature_ids:[...selected].sort()};
       const signature=JSON.stringify(body);
       if(submissionRef.current?.signature!==signature)submissionRef.current={signature,id:crypto.randomUUID()};
-      const result=await submitEnquiry({...body,request_id:submissionRef.current.id});
+      const result=await submitEnquiry({...body,request_id:submissionRef.current.id,turnstile_token:captchaToken||undefined});
       if(!result?.ok)throw new Error('Enquiry confirmation was unavailable.');
       setSavedWhatsapp({values:{...values},features:chosen});
       trackEvent('generate_lead',{method:'enquiry_form'});
       setFeedback('Thanks — your enquiry has been saved. We will contact you to discuss your idea and confirm the next steps.'+(result.id?' Reference: '+result.id:''));
-      submissionRef.current=null;setValues(emptyValues);setSelected([]);setErrors({});setTouched({});setAttempted(false);setDetailsOpen(false);
-    }catch(error){if(error.fields){setErrors(error.fields);document.getElementById('enquiry-'+Object.keys(error.fields)[0])?.focus();}setFeedback(publicFailure(error).message);setFeedbackError(true);}
+      submissionRef.current=null;setValues(emptyValues);setSelected([]);setErrors({});setTouched({});setAttempted(false);setDetailsOpen(false);setCaptchaToken('');setCaptchaReset(value=>value+1);
+    }catch(error){setCaptchaToken('');setCaptchaReset(value=>value+1);if(error.fields){setErrors(error.fields);document.getElementById('enquiry-'+Object.keys(error.fields)[0])?.focus();}setFeedback(publicFailure(error).message);setFeedbackError(true);}
     finally{setSending(false);}
   };
   const fieldError=key=>visibleError(key)&&<InlineFieldError id={`enquiry-${key}-error`} message={visibleError(key)}/>;
@@ -71,7 +73,8 @@ export default function EnquiryForm({options=[],whatsappNumber=''}){
       <label className="meeting-toggle"><input type="checkbox" checked={values.meeting_requested} onChange={e=>change('meeting_requested',e.target.checked)}/><span><b>Request a short meeting</b><small>Optional. We’ll contact you to agree a time.</small></span></label>
       {values.meeting_requested&&<label className="meeting-time">Preferred time (optional)<input {...fieldProps('preferred_meeting_at')} type="datetime-local" min={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)} value={values.preferred_meeting_at} onChange={e=>change('preferred_meeting_at',e.target.value)}/>{fieldError('preferred_meeting_at')}</label>}
       <input className="honeypot" name="website" tabIndex="-1" autoComplete="off" aria-hidden="true" value={values.website} onChange={e=>change('website',e.target.value)}/>
-      <button type="submit" className="button button-dark" disabled={sending}>{sending?'Sending enquiry…':'Send project enquiry'} <ArrowUpRight size={15}/></button>
+      <Turnstile onToken={setCaptchaToken} resetKey={captchaReset}/>
+      <button type="submit" className="button button-dark" disabled={sending||(turnstileRequired&&!captchaToken)}>{sending?'Sending enquiry…':'Send project enquiry'} <ArrowUpRight size={15}/></button>
       <small className="privacy-note">Your details are saved to respond to this enquiry and may be processed by our service providers. Please do not include sensitive information. Read our <a href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a> and <a href="/terms" target="_blank" rel="noopener noreferrer">terms</a>.</small>
       {feedback&&<div className={`enquiry-feedback ${feedbackError?'public-service-notice':''}`} role="status">{feedback}{feedbackError&&<><br/><a href="#contact">Contact the team directly</a></>}</div>}
       {whatsapp&&<div className="enquiry-whatsapp-alternative"><button type="button" className="button button-light enquiry-whatsapp" onClick={openWhatsapp}><MessageCircle size={18}/> {savedWhatsapp?'Continue on WhatsApp':'Use WhatsApp instead'} <ArrowUpRight size={16}/></button><small>{savedWhatsapp?'Your enquiry is saved. Review and send the same details in WhatsApp to continue with our team.':'Review and send your entered details in WhatsApp. This does not submit the website enquiry.'}</small></div>}

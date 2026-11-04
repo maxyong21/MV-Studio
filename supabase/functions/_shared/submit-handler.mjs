@@ -1,5 +1,5 @@
 import {validateEnquiryInput,estimateFeatures} from './enquiry.mjs';
-import {originAllowed,headersFor,json,digest,readInput} from './http.mjs';
+import {originAllowed,headersFor,json,digest,readInput,verifyTurnstile} from './http.mjs';
 import {notifyEnquiry} from './notify.mjs';
 import {estimateRecord} from './chatbot/estimates.mjs';
 import {ChatError} from './chatbot/data.mjs';
@@ -18,6 +18,12 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
     if(Object.keys(errors).length)return respond({error:'Please review the highlighted fields.',errors},400);
     try{
       const admin=createAdmin();
+      const address=request.headers.get('cf-connecting-ip')||'unknown';
+      const key=await digest(`${env('RATE_LIMIT_SALT')||env('SUPABASE_SERVICE_ROLE_KEY')}:${address}`);
+      const limit=await admin.rpc('consume_enquiry_rate_limit',{p_key:key,p_max:5,p_window_seconds:3600});
+      if(limit.error)throw limit.error;
+      if(!limit.data)return respond({error:'Too many enquiries from this connection. Please try again later.'},429);
+      await verifyTurnstile(request,input,env,fetcher);
       const chat=input.chatbot_estimate_id?await estimateRecord(admin,input,false):null;
       const ids=[...new Set(chat?chat.selected_feature_ids:input.selected_feature_ids||[])].sort();
       const normalized={name:input.name.trim(),company_name:input.company_name.trim(),phone:input.phone.trim(),email:input.email.trim().toLowerCase(),message:(input.message||'').trim(),billing_period:input.billing_period||'monthly',meeting_requested:!!input.meeting_requested,preferred_meeting_at:input.preferred_meeting_at?new Date(input.preferred_meeting_at).toISOString():null};
@@ -36,11 +42,6 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
         if(previous.data){if(previous.data.request_hash!==fingerprint)return respond({error:'This estimate has already been submitted. Start a new enquiry for another request.'},409);return respond({ok:true,id:previous.data.id,notification:previous.data.notification_status,duplicate:true});}
         await estimateRecord(admin,input,true);
       }
-      const address=request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0].trim()||'unknown';
-      const key=await digest(`${env('RATE_LIMIT_SALT')||env('SUPABASE_SERVICE_ROLE_KEY')}:${address}`);
-      const limit=await admin.rpc('consume_enquiry_rate_limit',{p_key:key,p_max:5,p_window_seconds:3600});
-      if(limit.error)throw limit.error;
-      if(!limit.data)return respond({error:'Too many enquiries from this connection. Please try again later.'},429);
       let options=[];
       if(ids.length){
         const result=await admin.from('feature_options').select('id,name,category,billing_type,price,annual_free_months').in('id',ids).eq('active',true);
@@ -63,6 +64,6 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch}){
       let notification='failed';
       try{notification=await notifyEnquiry({admin,enquiry:saved.data,env,fetcher});}catch(cause){console.error('Enquiry saved; notification state failed',cause.code||cause.name);}
       return respond({ok:true,id:saved.data.id,notification});
-    }catch(cause){console.error('submit-enquiry failed',cause.code||cause.name);return respond({error:cause instanceof ChatError?cause.message:cause.code==='P0001'?'The estimate changed or expired. Please generate it again.':'We could not save your enquiry. Please try again shortly.'},cause instanceof ChatError?cause.status:cause.code==='P0001'?409:500);}
+    }catch(cause){console.error('submit-enquiry failed',cause.code||cause.name);return respond({error:cause instanceof ChatError?cause.message:cause.status?cause.message:cause.code==='P0001'?'The estimate changed or expired. Please generate it again.':'We could not save your enquiry. Please try again shortly.'},cause instanceof ChatError?cause.status:cause.status||(cause.code==='P0001'?409:500));}
   };
 }

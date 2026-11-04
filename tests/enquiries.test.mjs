@@ -4,13 +4,28 @@ import {database,client} from './helpers/database.mjs';
 import {createSubmitHandler} from '../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../supabase/functions/_shared/retry-handler.mjs';
 import {estimateFeatures,validateContact} from '../supabase/functions/_shared/enquiry.mjs';
+import {verifyTurnstile,originAllowed} from '../supabase/functions/_shared/http.mjs';
+
+test('origin and Turnstile verification fail closed when enabled',async()=>{
+  assert.equal(originAllowed(undefined,key=>({ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app'})[key]),false);
+  const request=new Request('https://functions.test/submit-enquiry',{method:'POST',headers:{Origin:'https://mv-aistudio.vercel.app'}});
+  const env=key=>({TURNSTILE_SECRET_KEY:'server-secret',TURNSTILE_ALLOWED_HOSTNAMES:'mv-aistudio.vercel.app'}[key]);
+  let verified=false;
+  await verifyTurnstile(request,{turnstile_token:'valid-token'},env,async(url,options)=>{
+    verified=true;assert.match(url,/siteverify$/);assert.equal(new URLSearchParams(options.body).get('secret'),'server-secret');
+    return Response.json({success:true,action:'enquiry',hostname:'mv-aistudio.vercel.app'});
+  });
+  assert.equal(verified,true);
+  await assert.rejects(verifyTurnstile(request,{turnstile_token:'invalid-token'},env,async()=>Response.json({success:false,action:'enquiry'})),error=>error.status===400);
+  await assert.rejects(verifyTurnstile(request,{turnstile_token:'valid-token'},key=>({TURNSTILE_REQUIRED:'true'})[key]),error=>error.status===503);
+});
 
 test('enquiry validation, storage, email failures, idempotency, meetings and admin retries',async t=>{
   const db=await database();let mailCalls=0,behavior='success',ip=0;
   const adminId=crypto.randomUUID();
   await db.query('insert into auth.users(id) values($1)',[adminId]);await db.query('insert into admin_users(user_id) values($1)',[adminId]);
   const admin=client(db,adminId);
-  const secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app,http://localhost:5173',SUPABASE_SERVICE_ROLE_KEY:'test-only',RESEND_API_KEY:'test-only',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'};
+  const secrets={ALLOWED_ORIGIN:'https://mv-aistudio.vercel.app,http://localhost:5173',TURNSTILE_REQUIRED:'false',SUPABASE_SERVICE_ROLE_KEY:'test-only',RESEND_API_KEY:'test-only',RESEND_FROM_EMAIL:'test@example.test',ENQUIRY_TO_EMAIL:'owner@example.test'};
   const env=name=>secrets[name];
   const fetcher=async(url,options)=>{
     mailCalls++;assert.equal(url,'https://api.resend.com/emails');
@@ -23,11 +38,12 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
   const submit=createSubmitHandler({createAdmin:()=>admin,env,fetcher});
   const retry=createRetryHandler({createAdmin:()=>admin,env,fetcher});
   const payload=()=>({request_id:crypto.randomUUID(),name:'Alex Tan',company_name:'Example Company',phone:'+60 12-345 6789',email:'client@example.test',message:'<script>alert("x")</script>',billing_period:'yearly',meeting_requested:true,preferred_meeting_at:new Date(Date.now()+86400000).toISOString(),selected_feature_ids:[]});
-  const request=(body,{origin='https://mv-aistudio.vercel.app',method='POST',token,address=`test-${++ip}`}={})=>new Request('http://functions.test/submit-enquiry',{method,headers:{Origin:origin,'Content-Type':'application/json','x-forwarded-for':address,...(token?{Authorization:`Bearer ${token}`}:{})},...(method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{})});
+  const request=(body,{origin='https://mv-aistudio.vercel.app',method='POST',token,address=`test-${++ip}`}={})=>new Request('http://functions.test/submit-enquiry',{method,headers:{Origin:origin,'Content-Type':'application/json','cf-connecting-ip':address,...(token?{Authorization:`Bearer ${token}`}:{})},...(method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{})});
   try{
     await t.test('preflight, origin restriction and invalid JSON',async()=>{
       const response=await submit(request(null,{method:'OPTIONS'}));assert.equal(response.status,204);assert.equal(response.headers.get('access-control-allow-origin'),'https://mv-aistudio.vercel.app');
       assert.equal((await submit(request(payload(),{origin:'https://untrusted.test'}))).status,403);
+      assert.equal((await submit(request(payload(),{origin:''}))).status,403);
       assert.equal((await submit(request('{broken'))).status,400);
       assert.equal((await submit(request(null))).status,400);
     });

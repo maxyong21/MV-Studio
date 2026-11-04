@@ -123,12 +123,13 @@ Apply these changes in this order so the frontend and Edge Functions can use the
    ```
 
    `submit-enquiry` accepts public requests. `retry-enquiry` verifies the bearer token through Supabase Auth and checks the `admin_users` table before allowing a retry. Its server-side authorization is required even though gateway JWT verification is disabled.
-4. Check server secrets in **Supabase → Edge Functions → Secrets**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ENQUIRY_TO_EMAIL`, and `ALLOWED_ORIGIN`. For this deployment, set `ALLOWED_ORIGIN` to `https://mv-aistudio.vercel.app`; add local origins separated by commas if required. `RATE_LIMIT_SALT` is optional. Keep all these secrets out of Vite variables. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to the functions by Supabase.
-5. In **Vercel → Project → Settings → Environment Variables**, set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_SITE_URL=https://mv-aistudio.vercel.app`. Redeploy with build command `npm run build` and output directory `dist`.
-6. In `/admin`, edit **Services & pricing** to enter actual scope, revisions, hosting/domain charges, maintenance costs, support, and payment terms. Empty policies stay hidden; the website does not invent guarantees.
-7. In **Projects**, add the challenge, approach, and verified outcome for each case study. In **Client feedback**, add genuine quotes and confirm permission before publishing. There are no seeded testimonials or fabricated results.
-8. The sitemap updates automatically within about five minutes after publishing or hiding a project. Rebuild/redeploy after publishing content to refresh prerendered HTML and search previews. The browser continues to fetch current database content. Builds with configured Supabase credentials stop if public content cannot be read, so preview data cannot silently replace production content in search snapshots.
-9. After deployment, check `/sitemap.xml`, `/robots.txt`, a `/projects/PROJECT_ID` URL, and `/admin`. Send one enquiry with your own details and confirm that it appears in **Admin → Enquiries** and reaches the configured notification inbox. Email “accepted by provider” means Resend accepted it; actual delivery still depends on the recipient/provider. Failed notifications show an error and an admin-only **Retry email** action.
+4. Apply [`supabase/migrations/20261104_security_hardening.sql`](supabase/migrations/20261104_security_hardening.sql) in the Supabase SQL Editor. It bounds and periodically cleans the private hashed-IP rate-limit table. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side; never put it in a Vite variable.
+5. Create a Cloudflare Turnstile widget restricted to your production hostname. In **Supabase → Edge Functions → Secrets**, set `TURNSTILE_REQUIRED=true`, `TURNSTILE_SECRET_KEY`, and `TURNSTILE_ALLOWED_HOSTNAMES=mv-aistudio.vercel.app` alongside `ALLOWED_ORIGIN=https://mv-aistudio.vercel.app` and the email secrets. `ALLOWED_ORIGIN` may include your exact local development origins while developing. Do not use wildcard hostnames. Without a server secret, Turnstile is required and submissions fail closed.
+6. In **Vercel → Project → Settings → Environment Variables**, set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL=https://mv-aistudio.vercel.app`, `VITE_TURNSTILE_SITE_KEY`, and `VITE_TURNSTILE_REQUIRED=true`. Redeploy with build command `npm run build` and output directory `dist`. The site key is public; the Turnstile secret is not. For local development only, use `VITE_TURNSTILE_REQUIRED=false` and `TURNSTILE_REQUIRED=false` if you are not using a local Turnstile widget.
+7. In `/admin`, edit **Services & pricing** to enter actual scope, revisions, hosting/domain charges, maintenance costs, support, and payment terms. Empty policies stay hidden; the website does not invent guarantees.
+8. In **Projects**, add the challenge, approach, and verified outcome for each case study. In **Client feedback**, add genuine quotes and confirm permission before publishing. There are no seeded testimonials or fabricated results.
+9. The sitemap updates automatically within about five minutes after publishing or hiding a project. Rebuild/redeploy after publishing content to refresh prerendered HTML and search previews. The browser continues to fetch current database content. Builds with configured Supabase credentials stop if public content cannot be read, so preview data cannot silently replace production content in search snapshots.
+10. After deployment, check `/sitemap.xml`, `/robots.txt`, a `/projects/PROJECT_ID` URL, and `/admin`. Send one enquiry with your own details and confirm that it appears in **Admin → Enquiries** and reaches the configured notification inbox. Email “accepted by provider” means Resend accepted it; actual delivery still depends on the recipient/provider. Failed notifications show an error and an admin-only **Retry email** action.
 
 The React app and the build use the same public page components. The build renders visible homepage/project HTML and a safe public content snapshot, then React hydrates it in the browser. Unknown routes still use the animated error page. Vercel serves generated files before applying the SPA fallback; see [Vercel rewrite precedence](https://vercel.com/docs/project-configuration/vercel-json#rewrites).
 
@@ -208,7 +209,7 @@ The enquiry form stores customer data only through the `submit-enquiry` Supabase
    ```powershell
    supabase login
    supabase link --project-ref YOUR_PROJECT_REF
-   supabase secrets set RESEND_API_KEY=re_xxx ENQUIRY_TO_EMAIL=you@example.com RESEND_FROM_EMAIL="MV Studio <hello@yourdomain.com>" ALLOWED_ORIGIN=https://your-domain.com
+   supabase secrets set RESEND_API_KEY=re_xxx ENQUIRY_TO_EMAIL=you@example.com RESEND_FROM_EMAIL="MV Studio <hello@yourdomain.com>" ALLOWED_ORIGIN=https://your-domain.com TURNSTILE_REQUIRED=true TURNSTILE_SECRET_KEY=0x-your-secret TURNSTILE_ALLOWED_HOSTNAMES=your-domain.com
    supabase functions deploy submit-enquiry
    ```
 
@@ -216,7 +217,16 @@ The enquiry form stores customer data only through the `submit-enquiry` Supabase
 3. Run the current [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor. For an existing install, rerun the full script; it adds feature and enquiry tables, preserves saved website content, and converts legacy newline-separated contact values into JSON arrays.
 4. Add the production Supabase URL and publishable key to the host as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then rebuild/redeploy the site. Keep `VITE_SITE_URL` set to the canonical domain for SEO output.
 
-The function rate-limits to five attempts per IP hash per hour. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
+The function rate-limits to five attempts per trusted Cloudflare connection-IP hash per hour and verifies each production enquiry with Turnstile on the server. Requests without an allowed Origin are rejected. Meeting requests are requests for a callback; a date preference is not a confirmed booking. Annual recurring estimates apply the feature's `annual_free_months` value (maintenance defaults to one free month, so 11 months are charged). You can change the monthly amount and annual free-month rule in **Admin → Enquiry features**.
+
+## Security deployment checklist
+
+- Set the Turnstile server secret only in Supabase Edge Function secrets and its site key in Vercel build environment variables. Rotate any key that was ever committed or pasted into a public issue/chat.
+- Keep Supabase Row Level Security enabled and review policies before adding a table. The public anon/publishable key is expected in the browser; the service-role key is never public.
+- Enable MFA for every Supabase administrator, use unique passwords, remove former team members from `admin_users`, and enable Supabase Auth's leaked-password protection and email confirmation.
+- Keep the Vercel security headers in `vercel.json`; check CSP violations after deployment if adding a new media, analytics, or embed provider.
+- The public chatbot has server-side per-IP limits and an AI daily budget. CAPTCHA currently protects project-enquiry submission; keep both limits enabled and review Supabase function logs for unusual spikes.
+- CAPTCHA, rate limits, origin checks, validation, RLS, and headers reduce risk in layers. They cannot guarantee that a public website will never be attacked; monitor logs, rotate exposed credentials, and keep dependencies updated.
 
 ## Review improvements: deployment and content
 

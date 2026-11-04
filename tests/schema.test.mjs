@@ -8,6 +8,8 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
   try{
     await db.exec(await readFile('supabase/migrations/20261024_growth_and_reliability.sql','utf8'));
     await db.exec((await readFile('supabase/schema.sql','utf8')).replace('create extension if not exists pgcrypto;',''));
+    const securityMigration=await readFile('supabase/migrations/20261104_security_hardening.sql','utf8');
+    await db.exec(securityMigration);await db.exec(securityMigration);
     const workspaceMigration=await readFile('supabase/migrations/20261104_enquiry_workspace.sql','utf8');
     await db.exec(workspaceMigration);await db.exec(workspaceMigration);
     const workspaceColumns=(await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='enquiries'")).rows.map(row=>row.column_name);
@@ -45,6 +47,7 @@ test('schema migration, RLS, permissions, rate limits, publication and duplicate
     assert.ok((await db.query('select * from feature_options')).rows.length);
     const results=[];for(let i=0;i<6;i++)results.push((await db.query("select consume_enquiry_rate_limit('test-limit',5,3600) as ok")).rows[0].ok);
     assert.deepEqual(results,[true,true,true,true,true,false]);
+    await assert.rejects(db.query("select consume_enquiry_rate_limit('bad-limit',1001,3600)"),e=>e.code==='22023');
     await db.query("insert into enquiries(name,company_name,phone,email,request_id) values ('Client','Company','+60123456789','client@example.test','22222222-2222-4222-8222-222222222222')");
     const workspaceEnquiry=(await db.query("select id from enquiries where email='client@example.test'")).rows[0].id;
     assert.equal((await db.query('select count(*)::int as n from enquiry_status_history where enquiry_id=$1',[workspaceEnquiry])).rows[0].n,1);
