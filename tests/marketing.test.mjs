@@ -5,12 +5,41 @@ import {database,client} from './helpers/database.mjs';
 import {transform} from 'esbuild';
 import {pathToFileURL} from 'node:url';
 import {renderMarketing,validateCampaign} from '../supabase/functions/_shared/marketing.mjs';
+import {outreachEligible} from '../supabase/functions/_shared/outreach.mjs';
+const signature={company:'MV Studio',logo_url:'https://studio.example/logo.png',portfolio:'https://studio.example',members:[{enabled:true,name:'Developer',email:'developer@example.com',phone:'+60123456789',portfolio:'https://portfolio.example'}]};
 test('email escapes untrusted text, restricts URLs, and provides personalized text fallback',()=>{
  const c={name:'Pilot',subject:'Hello {{first_name}}',headline:'<script>x</script>',body:'For {{company_name}}',sender_identity:'Studio',cta_url:'javascript:alert(1)',images:[{url:'javascript:alert(1)',alt:'x'}]};
  assert.ok(validateCampaign(c).cta_url);assert.ok(validateCampaign(c).images);
  const result=renderMarketing(c,{first_name:'Alex',company_name:'A & B'},'https://example.com/unsubscribe');
  assert.equal(result.subject,'Hello Alex');assert.ok(result.text.includes('For A & B'));assert.ok(result.html.includes('&lt;script&gt;'));assert.ok(!result.html.includes('javascript:'));
  assert.ok(renderMarketing({...c,body:'Hello {{first_name}} for {{company_name}}'}).text.includes('Hello there for your business'));
+});
+test('outreach eligibility distinguishes first introductions, customer updates and do-not-contact',()=>{
+ const contact={contact_source:'Direct correspondence',outreach_note:'Business needs a website',relationship:'prospect'};
+ assert.equal(outreachEligible(contact),true);assert.equal(outreachEligible({...contact,intro_blocked:true}),false);
+ assert.equal(outreachEligible(contact,{purpose:'customer_update'}),false);
+ assert.equal(outreachEligible({...contact,relationship:'customer',intro_blocked:true},{purpose:'customer_update'}),true);
+ assert.equal(outreachEligible({...contact,suppressed:true}),false);
+ const rendered=renderMarketing({signature:{...signature,members:[...signature.members,{enabled:false,name:'Hidden person'}]},body:'Hello',headline:'Introduction',cta_url:'https://studio.example'});
+ assert.match(rendered.html,/logo.png/);assert.match(rendered.html,/developer@example.com/);assert.doesNotMatch(rendered.html,/Hidden person|agreed to receive/);assert.match(rendered.text,/MV Studio/);
+ assert.ok(validateCampaign({signature:{...signature,members:[]}}).signature);
+});
+test('outreach migration prevents cross-campaign repeat introductions and requires a reason for customer updates',async()=>{
+ const db=await database();try{
+ const migration=await readFile('supabase/migrations/20261107_outreach.sql','utf8');await db.exec(migration);await db.exec(migration);
+ const c=(await db.query("insert into marketing_contacts(email,contact_source,outreach_note) values ('prospect@example.com','Direct correspondence','Relevant website discussion') returning id")).rows[0];
+ const first=(await db.query("insert into email_campaigns(name,content,tested_hash) values ('First','{}','tested') returning id")).rows[0];
+ const second=(await db.query("insert into email_campaigns(name,content,tested_hash) values ('Second','{}','tested') returning id")).rows[0];
+ await db.query('select start_marketing_campaign($1,$2,$3)',[first.id,'{}',[c.id]]);
+ await assert.rejects(db.query('select start_marketing_campaign($1,$2,$3)',[second.id,'{}',[c.id]]));
+ await db.exec("update email_campaign_recipients set status='accepted'; update email_campaigns set status='completed' where status='sending'");
+ await assert.rejects(db.query('select start_marketing_campaign($1,$2,$3)',[second.id,'{}',[c.id]]));
+ const content={purpose:'customer_update',followup_reason:'Discuss the requested project change'};
+ await db.query('update email_campaigns set content=$1 where id=$2',[JSON.stringify(content),second.id]);
+ await assert.rejects(db.query('select start_marketing_campaign($1,$2,$3)',[second.id,JSON.stringify(content),[c.id]]));
+ await db.exec("update marketing_contacts set relationship='customer'");
+ await db.query('select start_marketing_campaign($1,$2,$3)',[second.id,JSON.stringify(content),[c.id]]);
+ }finally{await db.close();}
 });
 test('admin send flow requires auth and current test; worker honors opt-out and one-recipient envelopes',async()=>{
  const db=await database();const sent=[];let smtpError=null;const user='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -24,9 +53,9 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  const {code}=await transform(source,{loader:'ts',format:'esm'});await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  const call=(body,token='admin-token')=>handler(new Request('https://project.supabase.co/functions/v1/marketing',{method:'POST',headers:{origin:'https://studio.example',authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify(body)}));
  assert.equal((await call({action:'list'},'bad-token')).status,401);
- const content={name:'Campaign',subject:'Hello {{first_name}}',headline:'A useful website',body:'For {{company_name}}',cta_url:'https://studio.example',sender_identity:'Studio · hello@example.com',images:[]};
+ const content={name:'Campaign',subject:'Hello {{first_name}}',headline:'A useful website',body:'For {{company_name}}',cta_url:'https://studio.example',signature,purpose:'introduction',images:[]};
  const campaign=(await (await call({action:'save',content})).json()).campaign;assert.ok(campaign.id);
- await call({action:'contact',contact:{email:'customer@example.com',consent_at:new Date().toISOString(),consent_source:'Signup',consent_notice:'Receive promotional email'}});
+ await call({action:'contact',contact:{email:'customer@example.com',relationship:'prospect',contact_source:'Direct business contact',outreach_note:'Requested information about a new website'}});
  const contact=(await db.query('select * from marketing_contacts')).rows[0];
  assert.equal((await call({action:'start',id:campaign.id,contact_ids:[contact.id]})).status,400);
  assert.equal((await call({action:'test',id:campaign.id})).status,200);assert.equal(sent.length,1);assert.equal(sent[0].to,'owner@example.com');

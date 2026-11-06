@@ -113,9 +113,12 @@ try{
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Marketing email').click()");
   await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
+  assert.equal(await evaluate("[...document.querySelectorAll('.marketing-signature-editor input[type=checkbox]')].filter(el=>el.checked).length"),2,'Both team signatures default on');
+  await evaluate("document.querySelector('.marketing-signature-editor input[type=checkbox]').click()");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Preview email').click()");
   await wait("!!document.querySelector('.marketing-preview iframe')");
   assert.equal(await evaluate("document.querySelector('.marketing-preview iframe').getAttribute('sandbox')"),'');
+  assert.ok(await evaluate("document.querySelector('.marketing-preview iframe').srcdoc.includes('Vincent Teo')&&!document.querySelector('.marketing-preview iframe').srcdoc.includes('Max Yong')"),'Only selected team members appear in preview');
   assert.equal(await evaluate("window.marketingCalls.some(a=>a==='test'||a==='start')"),false,'Preview must not send emails');
   for(const width of [390,320,1440]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Marketing preview overflow at ${width}`);}
   await screenshot('marketing-preview.png');

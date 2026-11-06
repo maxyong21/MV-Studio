@@ -1,3 +1,4 @@
+import {contactReady} from '../_shared/outreach.mjs';
 import {createClient} from 'npm:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@10.3.1';
 import {createGmailSendMail} from '../_shared/notify.mjs';
@@ -14,7 +15,8 @@ async function processOne(admin:any){
  const campaign=checked(await admin.from('email_campaigns').select('*').eq('id',item.campaign_id).single());
  const contact=checked(await admin.from('marketing_contacts').select('*').eq('id',item.contact_id).single());
  let state:any={status:'suppressed',error:'Contact is no longer eligible, or campaign was paused.'};
- if(['sending','scheduled'].includes(campaign.status)&&contact.consent_at&&contact.consent_source&&contact.consent_notice&&!contact.suppressed){
+ const used=campaign.content.purpose!=='customer_update'&&checked(await admin.rpc('marketing_introduction_used',{p_contact:contact.id,p_exclude_campaign:campaign.id}));
+ if(['sending','scheduled'].includes(campaign.status)&&contactReady(contact)&&!used&&(campaign.content.purpose!=='customer_update'||contact.relationship==='customer')){
   try{
    const url=unsubscribeUrl(contact.unsubscribe_token),message=renderMarketing(campaign.content,contact,url);
    const result=await send({...message,to:contact.email,headers:{'List-Unsubscribe':`<${url}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'},messageId:`<marketing-${item.id}@${String(env('GMAIL_SMTP_USER')).split('@')[1]}>`});
@@ -35,10 +37,10 @@ Deno.serve(async request=>{
  if(url.pathname.endsWith('/unsubscribe')){
   const token=url.searchParams.get('token')||'';if(!/^[a-f0-9-]{36}$/i.test(token))return new Response('Invalid unsubscribe link.',{status:400});
   const html=(content:string)=>new Response(`<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email preferences | MV Studio</title><body style="font:18px Arial;background:#f3f4ef;padding:10%;color:#254d3e"><main>${content}</main></body></html>`,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",'Referrer-Policy':'no-referrer'}});
-  if(request.method==='GET')return html(`<h1>Email preferences</h1><p>Stop receiving promotional emails from MV Studio. Enquiry replies are unaffected.</p><form method="post"><button style="padding:14px">Unsubscribe</button></form>`);
+  if(request.method==='GET')return html(`<h1>Email preferences</h1><p>Ask MV Studio not to send further outreach emails. Replies to your enquiries are unaffected.</p><form method="post"><button style="padding:14px">Do not contact me</button></form>`);
   if(request.method!=='POST')return new Response('Method not allowed',{status:405});
   checked(await admin.from('marketing_contacts').update({suppressed:true,suppression_reason:'Unsubscribed'}).eq('unsubscribe_token',token));
-  return html('<h1>You have been unsubscribed.</h1><p>Your request has been recorded.</p>');
+  return html('<h1>Your do-not-contact request is recorded.</h1><p>Your request has been recorded.</p>');
  }
  if(request.method==='OPTIONS')return new Response(null,{status:originAllowed(origin,env)?204:403,headers:headersFor(origin,env)});
  if(request.method!=='POST')return reply({error:'Method not allowed.'},405);
@@ -49,13 +51,13 @@ Deno.serve(async request=>{
  const auth=await admin.auth.getUser(token);if(auth.error||!auth.data.user)return reply({error:'Sign in again.'},401);
  const member=checked(await admin.from('admin_users').select('user_id').eq('user_id',auth.data.user.id).maybeSingle());if(!member)return reply({error:'Administrator access required.'},403);
  const input=await readInput(request),action=input.action;
- if(action==='list'){const result:any={};for(const table of ['marketing_contacts','email_templates','email_campaigns','email_campaign_recipients'])result[table]=checked(await admin.from(table).select('*').order(table==='email_campaign_recipients'?'updated_at':'created_at',{ascending:false}).limit(1000));return reply(result);}
+ if(action==='list'){const result:any={};for(const table of ['marketing_contacts','email_templates','email_campaigns','email_campaign_recipients'])result[table]=checked(await admin.from(table).select('*').order(table==='email_campaign_recipients'?'updated_at':'created_at',{ascending:false}).limit(1000));const history=checked(await admin.rpc('marketing_introduction_history',{}));const blocked=new Set((history||[]).map((r:any)=>r.contact_id));result.marketing_contacts=result.marketing_contacts.map((c:any)=>({...c,intro_blocked:blocked.has(c.id)}));return reply(result);}
  if(action==='process')return reply(await processOne(admin));
  if(action==='contact'){
   const c=input.contact,email=String(c.email||'').trim().toLowerCase();if(!emailPattern.test(email)||email.length>254)fail('Enter a valid email address.');
-  const consent=!!c.consent_at;if(consent&&(!c.consent_source?.trim()||!c.consent_notice?.trim()))fail('Record the consent source and notice.');
-  const value={email,first_name:String(c.first_name||'').slice(0,100),company_name:String(c.company_name||'').slice(0,200),industry:String(c.industry||'general').slice(0,80),language:String(c.language||'en').slice(0,10),consent_at:consent?new Date(c.consent_at).toISOString():null,consent_source:String(c.consent_source||'').slice(0,1000),consent_notice:String(c.consent_notice||'').slice(0,2000)};
-  if(c.id){const previous=checked(await admin.from('marketing_contacts').select('email').eq('id',c.id).single());if(previous.email!==email)fail('Add a new contact for a different email address and record its permission separately.');checked(await admin.from('marketing_contacts').update(value).eq('id',c.id));}else checked(await admin.from('marketing_contacts').insert(value));return reply({ok:true});
+  const consent=!!c.consent_at;if(!c.contact_source?.trim()||!c.outreach_note?.trim()) {if(!consent||!c.consent_source?.trim()||!c.consent_notice?.trim())fail('Record the address source and reason for contacting this business.');}
+  const value={relationship:c.relationship==='customer'?'customer':'prospect',contact_source:String(c.contact_source||'').slice(0,1000),outreach_note:String(c.outreach_note||'').slice(0,2000),email,first_name:String(c.first_name||'').slice(0,100),company_name:String(c.company_name||'').slice(0,200),industry:String(c.industry||'general').slice(0,80),language:String(c.language||'en').slice(0,10),consent_at:consent?new Date(c.consent_at).toISOString():null,consent_source:String(c.consent_source||'').slice(0,1000),consent_notice:String(c.consent_notice||'').slice(0,2000)};
+  if(c.id){const previous=checked(await admin.from('marketing_contacts').select('email').eq('id',c.id).single());if(previous.email!==email)fail('Add a new contact for a different email address and record its source and relevance separately.');checked(await admin.from('marketing_contacts').update(value).eq('id',c.id));}else checked(await admin.from('marketing_contacts').insert(value));return reply({ok:true});
  }
  if(action==='suppress'){checked(await admin.from('marketing_contacts').update({suppressed:true,suppression_reason:'Suppressed by administrator'}).eq('id',input.id));return reply({ok:true});}
  if(action==='template'){
@@ -64,7 +66,7 @@ Deno.serve(async request=>{
   if(t.id)checked(await admin.from('email_templates').update(value).eq('id',t.id));else checked(await admin.from('email_templates').insert(value));return reply({ok:true});
  }
  if(action==='save'){
-  if(Object.keys(validateCampaign(input.content)).length)fail('Complete the subject, message, business identity, links and image descriptions.');
+  if(Object.keys(validateCampaign(input.content)).length)fail('Complete the subject, message, team signature, links and image descriptions.');
   const value={name:input.content.name,content:input.content,tested_hash:null};
   const result=input.id?checked(await admin.from('email_campaigns').update(value).eq('id',input.id).eq('status','draft').select().single()):checked(await admin.from('email_campaigns').insert(value).select().single());return reply({campaign:result});
  }
@@ -79,7 +81,7 @@ Deno.serve(async request=>{
  if(action==='start'){
   if(campaign?.status!=='draft'||campaign.tested_hash!==await digest(JSON.stringify(campaign.content)))fail('Save and test the current draft first.');
   const ids=[...new Set(input.contact_ids||[])];if(!ids.length||ids.length>200)fail('Choose between 1 and 200 recipients for this pilot.');
-  const contacts=checked(await admin.from('marketing_contacts').select('*').in('id',ids));if(contacts.length!==ids.length||contacts.some((c:any)=>c.suppressed||!c.consent_at||!c.consent_source||!c.consent_notice))fail('Some contacts are not eligible. Refresh and review consent.');
+  const contacts=checked(await admin.from('marketing_contacts').select('*').in('id',ids));if(contacts.length!==ids.length||contacts.some((c:any)=>!contactReady(c)||(campaign.content.purpose==='customer_update'&&c.relationship!=='customer')))fail('Some contacts are not eligible. Refresh and review recipient eligibility.');
   const scheduled=input.scheduled_at?new Date(input.scheduled_at).toISOString():null;if(scheduled&&new Date(scheduled)<=new Date())fail('Choose a future schedule.');
   checked(await admin.rpc('start_marketing_campaign',{p_id:campaign.id,p_content:campaign.content,p_contacts:ids,p_schedule:scheduled}));return reply({ok:true});
  }
@@ -88,5 +90,5 @@ Deno.serve(async request=>{
   checked(await admin.from('email_campaigns').update({status:input.status}).eq('id',campaign.id).eq('status',campaign.status).select().single());return reply({ok:true});
  }
  return reply({error:'Unknown action.'},400);
- }catch(error:any){console.error('Marketing request failed',error.code||error.name);return reply({error:error.code?'Marketing data is unavailable. Apply the marketing migration and check function logs.':String(error.message||'Request failed. Your saved draft is safe.').slice(0,400)},400);}
+ }catch(error:any){console.error('Marketing request failed',error.code||error.name);return reply({error:error.code==='23505'?'This address already exists. Edit its contact record instead.':error.code==='P0001'?'The audience or draft changed. Refresh and check previous introductions, do-not-contact status, and the customer update reason.':error.code?'Marketing data is unavailable. Apply the marketing migrations and check function logs.':String(error.message||'Request failed. Your saved draft is safe.').slice(0,400)},400);}
 });
