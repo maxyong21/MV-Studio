@@ -109,6 +109,21 @@ try{
   await viewport(390);await evaluate("document.querySelector('.admin-nav-list').scrollTo({left:10000,behavior:'instant'})");
   assert.ok(await evaluate("document.querySelector('.admin-nav-list').scrollLeft>0"),'Phone navigation can scroll horizontally');
   for(const width of [1440,768,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Admin overflow at ${width}px`);}
+  await evaluate(`(()=>{window.marketingCalls=[];window.originalMarketingFetch=window.fetch;window.fetch=(url,options)=>{if(String(url).includes('/functions/v1/marketing')){const body=JSON.parse(options.body);window.marketingCalls.push(body.action);return Promise.resolve(new Response(JSON.stringify({marketing_contacts:[],email_templates:[],email_campaigns:[],email_campaign_recipients:[]}),{status:200,headers:{'Content-Type':'application/json'}}));}return window.originalMarketingFetch(url,options);};})()`);
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Marketing email').click()");
+  await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
+  await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
+  await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Preview email').click()");
+  await wait("!!document.querySelector('.marketing-preview iframe')");
+  assert.equal(await evaluate("document.querySelector('.marketing-preview iframe').getAttribute('sandbox')"),'');
+  assert.equal(await evaluate("window.marketingCalls.some(a=>a==='test'||a==='start')"),false,'Preview must not send emails');
+  for(const width of [390,320,1440]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Marketing preview overflow at ${width}`);}
+  await screenshot('marketing-preview.png');
+  await evaluate("document.querySelector('.marketing-preview header button').click()");
+  await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Save draft').click()");
+  await wait("!!document.querySelector('.marketing-field-error')");
+  assert.deepEqual(await evaluate('window.marketingCalls'),['list'],'Invalid content must not be saved or sent');
+  await evaluate("window.fetch=window.originalMarketingFetch;[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");
   await viewport(1440);await screenshot('admin-desktop.png');
   await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await click('.admin-theme-toggle');
   const initialFeatures=(await servers.db.query("select features from services where name='Landing Page'")).rows[0].features;
@@ -268,7 +283,7 @@ try{
   for(const route of ['/privacy','/terms','/data-deletion']){const html=renderPage({...emptyPublicContent(),__availability:'maintenance'},route);assert.match(html,/legal-article/);assert.doesNotMatch(html,/availability-page/);}
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();

@@ -280,3 +280,6 @@ HTML and search preview. The animated 404 countdown still returns to the homepag
 Validation commands: `npm.cmd test`, `npm.cmd run build`, and
 `npm.cmd run test:browser`. Browser tests use a temporary database and mocked
 email delivery; they do not send real enquiries or notifications.
+# Marketing email
+
+The admin includes a Marketing email workspace for consent-managed contacts, editable EN/MS/Chinese industry starters and saved templates, campaign drafts, hosted artwork, responsive previews, test emails and queued individual sends. Apply the marketing migration and deploy the function before using it. Follow [the complete setup and testing guide](docs/MARKETING_EMAIL.md), including the required Supabase Cron worker. Gmail acceptance is reported honestly; delivery/open tracking is not available through SMTP.
