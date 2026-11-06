@@ -29,6 +29,8 @@ export function validateEntity(values,config){
   for(const [key,label,type] of config.fields){
     const value=values[key],text=String(value??'').trim();
     if(key===requiredKey&&!text)errors[key]=`${label} is required.`;
+    else if(key==='email'&&text&&!emailPattern.test(text))errors[key]='Enter a valid work email address.';
+    else if(key==='phone'&&text&&(!phonePattern.test(text)||text.replace(/\D/g,'').length<7||text.replace(/\D/g,'').length>15))errors[key]='Enter a valid phone number with 7–15 digits.';
     else if(type==='number'&&text){const number=Number(text);if(!Number.isFinite(number)||number<0)errors[key]='Enter a number of zero or more.';else if(['sort_order','annual_free_months'].includes(key)&&!Number.isInteger(number))errors[key]='Enter a whole number.';else if(key==='annual_free_months'&&number>11)errors[key]='Use a value between 0 and 11.';}
     else if((key==='price'||key==='original_price')&&text&&Number(text)<0)errors[key]='Price cannot be negative.';
     else if(key==='annual_free_months'&&text&&(Number(text)<0||Number(text)>11))errors[key]='Use a value between 0 and 11.';

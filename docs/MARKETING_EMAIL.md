@@ -1,5 +1,11 @@
 # Marketing email setup
 
+## Team contact details for signatures
+
+For existing installations apply `supabase/migrations/20261108_team_contacts.sql`, then redeploy `marketing` and the frontend. In **Admin → Team**, edit each member and save **Public work email**, **Public work phone**, and **Website URL** (personal portfolio). These are work contact details on publicly readable active team profiles; do not enter private contact information. The general Site content contact lists do not identify an owner and are not assigned to people by array order.
+
+New email signatures load active profiles from the database, selected by default. Templates and draft campaigns refresh their team details when opened; checkbox selections are matched by team ID (or name for older drafts). **Reload from Team** reloads the latest saved contacts and invalidates the draft's previous test. Campaign-specific edits remain in that draft; changes to central profiles belong in Team. Sent/queued campaigns retain their content snapshot. After changing the team email/phone, reopen a draft or reload its signature, save and test again. Missing contacts remain blank and block sending until completed; no personal names or numbers are guessed.
+
 This admin module sends individual HTML and plain-text messages through the existing Gmail SMTP transport. It does not import enquiry addresses as marketing contacts. It supports one-time introductions and documented existing-customer updates. Record the address source and why contact is appropriate. The system checks suppression immediately before delivery; sending once does not remove applicable privacy or email obligations.
 
 1. Apply `supabase/migrations/20261106_marketing.sql`, then `supabase/migrations/20261107_outreach.sql` in Supabase SQL Editor. New installations can use the updated `supabase/schema.sql` instead. The migration is repeatable.
