@@ -6,7 +6,7 @@ import {renderMarketing,validateCampaign,emailPattern} from '../_shared/marketin
 import {originAllowed,headersFor,json,readInput,digest} from '../_shared/http.mjs';
 const env=(key:string)=>Deno.env.get(key),send=createGmailSendMail(nodemailer,env);
 const db=()=>createClient(env('SUPABASE_URL')!,env('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
-const checked=(r:any)=>{if(r.error)throw r.error;return r.data;};
+const checked=(r:any,stage='')=>{if(r.error)throw Object.assign(new Error(r.error.message),{code:r.error.code,stage});return r.data;};
 const fail=(message:string)=>{throw new Error(message);};
 const unsubscribeUrl=(token:string)=>`${env('SUPABASE_URL')}/functions/v1/marketing/unsubscribe?token=${encodeURIComponent(token)}`;
 async function processOne(admin:any){
@@ -32,6 +32,7 @@ async function processOne(admin:any){
 }
 Deno.serve(async request=>{
  const origin=request.headers.get('origin'),reply=(body:any,status=200)=>json(body,status,origin,env);
+ let adminVerified=false;
  try{
  const admin=db(),url=new URL(request.url);
  if(url.pathname.endsWith('/unsubscribe')){
@@ -50,8 +51,15 @@ Deno.serve(async request=>{
  if(!originAllowed(origin,env))return reply({error:'Origin is not allowed.'},403);
  const auth=await admin.auth.getUser(token);if(auth.error||!auth.data.user)return reply({error:'Sign in again.'},401);
  const member=checked(await admin.from('admin_users').select('user_id').eq('user_id',auth.data.user.id).maybeSingle());if(!member)return reply({error:'Administrator access required.'},403);
+ adminVerified=true;
  const input=await readInput(request),action=input.action;
- if(action==='list'){const result:any={};for(const table of ['marketing_contacts','email_templates','email_campaigns','email_campaign_recipients'])result[table]=checked(await admin.from(table).select('*').order(table==='email_campaign_recipients'?'updated_at':'created_at',{ascending:false}).limit(1000));result.team_members=checked(await admin.from('team_members').select('id,name,email,phone,website_url,active,sort_order').order('sort_order',{ascending:true}));const history=checked(await admin.rpc('marketing_introduction_history',{}));const blocked=new Set((history||[]).map((r:any)=>r.contact_id));result.marketing_contacts=result.marketing_contacts.map((c:any)=>({...c,intro_blocked:blocked.has(c.id)}));return reply(result);}
+ if(action==='list'){
+  const result:any={};
+  for(const table of ['marketing_contacts','email_templates','email_campaigns','email_campaign_recipients'])result[table]=checked(await admin.from(table).select('*').order(table==='email_campaign_recipients'?'updated_at':'created_at',{ascending:false}).limit(1000),table);
+  result.team_members=checked(await admin.from('team_members').select('id,name,email,phone,website_url,active,sort_order').order('sort_order',{ascending:true}),'team_members');
+  const history=checked(await admin.rpc('marketing_introduction_history',{}),'marketing_introduction_history');
+  const blocked=new Set((history||[]).map((r:any)=>r.contact_id));result.marketing_contacts=result.marketing_contacts.map((c:any)=>({...c,intro_blocked:blocked.has(c.id)}));return reply(result);
+ }
  if(action==='process')return reply(await processOne(admin));
  if(action==='contact'){
   const c=input.contact,email=String(c.email||'').trim().toLowerCase();if(!emailPattern.test(email)||email.length>254)fail('Enter a valid email address.');
@@ -90,5 +98,12 @@ Deno.serve(async request=>{
   checked(await admin.from('email_campaigns').update({status:input.status}).eq('id',campaign.id).eq('status',campaign.status).select().single());return reply({ok:true});
  }
  return reply({error:'Unknown action.'},400);
- }catch(error:any){console.error('Marketing request failed',error.code||error.name);return reply({error:error.code==='23505'?'This address already exists. Edit its contact record instead.':error.code==='P0001'?'The audience or draft changed. Refresh and check previous introductions, do-not-contact status, and the customer update reason.':error.code?'Marketing data is unavailable. Apply the marketing migrations and check function logs.':String(error.message||'Request failed. Your saved draft is safe.').slice(0,400)},400);}
+ }catch(error:any){
+  console.error('Marketing request failed',{code:error.code||error.name,stage:error.stage||'request'});
+  let message=error.code==='23505'?'This address already exists. Edit its contact record instead.':error.code==='P0001'?'The audience or draft changed. Refresh and check previous introductions, do-not-contact status, and the customer update reason.':error.code?'Marketing data is unavailable. Apply the marketing migrations and check function logs.':String(error.message||'Request failed. Your saved draft is safe.').slice(0,400);
+  if(adminVerified&&error.code==='42501')message=error.stage==='team_members'?'The marketing function cannot read Team. Run: GRANT SELECT ON public.team_members TO service_role;':'The marketing function lacks database privileges. Check the service_role grants in the marketing migrations.';
+  if(adminVerified&&['PGRST202','42883'].includes(error.code))message='An outreach database function is missing. Apply 20261107_outreach.sql, then retry.';
+  if(adminVerified&&['42P01','42703','PGRST204','PGRST205'].includes(error.code))message='A required marketing table or column is missing. Apply the marketing, outreach and team contacts migrations, then retry.';
+  return reply({error:message,...(adminVerified&&error.code?{code:error.code,stage:error.stage||'request'}:{})},400);
+ }
 });

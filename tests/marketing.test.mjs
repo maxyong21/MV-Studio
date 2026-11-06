@@ -20,6 +20,11 @@ test('signature uses saved team contacts, preserves choices and excludes inactiv
 test('team work contacts migration is repeatable and validates stored addresses and numbers',async()=>{
  const db=await database();try{
  const sql=await readFile('supabase/migrations/20261108_team_contacts.sql','utf8');await db.exec(sql);await db.exec(sql);
+ await db.exec('revoke select on public.team_members from service_role; set role service_role;');
+ await assert.rejects(db.query('select email,phone from public.team_members'),error=>error.code==='42501');
+ await db.exec('reset role');
+ const access=await readFile('supabase/migrations/20261109_marketing_team_access.sql','utf8');await db.exec(access);await db.exec(access);
+ await db.exec('set role service_role');await db.query('select email,phone from public.team_members');await db.exec('reset role');
  const team=(await db.query("select id from team_members limit 1")).rows[0];
  await db.query('update team_members set email=$1,phone=$2 where id=$3',['team@example.com','+60123456789',team.id]);
  const saved=(await db.query('select email,phone from team_members where id=$1',[team.id])).rows[0];assert.equal(saved.email,'team@example.com');assert.equal(saved.phone,'+60123456789');
@@ -75,6 +80,8 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  assert.equal((await call({action:'list'},'bad-token')).status,401);
  await db.query("update team_members set email='saved-team@example.com',phone='+60123456789'");
  const loaded=await (await call({action:'list'})).json();assert.ok(loaded.team_members.length);assert.equal(loaded.team_members[0].email,'saved-team@example.com');assert.equal(loaded.team_members[0].phone,'+60123456789');
+ const originalFrom=admin.from;admin.from=table=>table==='team_members'?{select:()=>({order:async()=>({error:{code:'42501',message:'permission denied'}})})}:originalFrom(table);
+ const denied=await (await call({action:'list'})).json();assert.equal(denied.code,'42501');assert.equal(denied.stage,'team_members');assert.match(denied.error,/GRANT SELECT ON public.team_members/);admin.from=originalFrom;
  const content={name:'Campaign',subject:'Hello {{first_name}}',headline:'A useful website',body:'For {{company_name}}',cta_url:'https://studio.example',signature,purpose:'introduction',images:[]};
  const campaign=(await (await call({action:'save',content})).json()).campaign;assert.ok(campaign.id);
  await call({action:'contact',contact:{email:'customer@example.com',relationship:'prospect',contact_source:'Direct business contact',outreach_note:'Requested information about a new website'}});

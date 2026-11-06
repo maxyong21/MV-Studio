@@ -2,6 +2,8 @@
 
 ## Team contact details for signatures
 
+For a `42501` error after deploying the Team-backed signature function, apply `supabase/migrations/20261109_marketing_team_access.sql` (or run `GRANT SELECT ON public.team_members TO service_role;`). Public read access and RLS bypass do not grant the Edge Function SQL table access. The updated handler reports the failing query stage and database code to verified administrators; it does not expose raw database records or credentials.
+
 If **Reload from Team** reports no active profiles while the public Team request returns populated rows, inspect the `marketing` function response. An older deployment may omit `team_members` entirely. Redeploy `marketing`; the updated frontend also falls back to an authenticated Team query when that field is absent. A failed query reports a loading error rather than claiming that profiles do not exist.
 
 For existing installations apply `supabase/migrations/20261108_team_contacts.sql`, then redeploy `marketing` and the frontend. In **Admin → Team**, edit each member and save **Public work email**, **Public work phone**, and **Website URL** (personal portfolio). These are work contact details on publicly readable active team profiles; do not enter private contact information. The general Site content contact lists do not identify an owner and are not assigned to people by array order.
