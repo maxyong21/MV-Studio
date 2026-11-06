@@ -1,0 +1,58 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {database,client} from './helpers/database.mjs';
+import {transform} from 'esbuild';
+import {pathToFileURL} from 'node:url';
+import {renderMarketing,validateCampaign} from '../supabase/functions/_shared/marketing.mjs';
+test('email escapes untrusted text, restricts URLs, and provides personalized text fallback',()=>{
+ const c={name:'Pilot',subject:'Hello {{first_name}}',headline:'<script>x</script>',body:'For {{company_name}}',sender_identity:'Studio',cta_url:'javascript:alert(1)',images:[{url:'javascript:alert(1)',alt:'x'}]};
+ assert.ok(validateCampaign(c).cta_url);assert.ok(validateCampaign(c).images);
+ const result=renderMarketing(c,{first_name:'Alex',company_name:'A & B'},'https://example.com/unsubscribe');
+ assert.equal(result.subject,'Hello Alex');assert.ok(result.text.includes('For A & B'));assert.ok(result.html.includes('&lt;script&gt;'));assert.ok(!result.html.includes('javascript:'));
+ assert.ok(renderMarketing({...c,body:'Hello {{first_name}} for {{company_name}}'}).text.includes('Hello there for your business'));
+});
+test('admin send flow requires auth and current test; worker honors opt-out and one-recipient envelopes',async()=>{
+ const db=await database();const sent=[];let smtpError=null;const user='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ try{
+ await db.query('insert into auth.users(id) values ($1)',[user]);await db.query('insert into admin_users(user_id) values ($1)',[user]);
+ const admin=client(db,user),originalRpc=admin.rpc;admin.auth.getUser=async token=>({data:{user:token==='admin-token'?{id:user,email:'owner@example.com'}:null},error:null});
+ admin.rpc=async(name,args)=>name==='claim_marketing_send'?{data:(await db.query('select * from claim_marketing_send($1)',[args.p_limit])).rows,error:null}:name==='start_marketing_campaign'?{data:(await db.query('select start_marketing_campaign($1,$2,$3,$4)',[args.p_id,JSON.stringify(args.p_content),args.p_contacts,args.p_schedule])).rows,error:null}:originalRpc(name,args);
+ const config={SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test',ALLOWED_ORIGIN:'https://studio.example',GMAIL_SMTP_USER:'owner@gmail.com',GMAIL_SMTP_APP_PASSWORD:'test-only',MARKETING_WORKER_SECRET:'worker-secret'};
+ let handler;globalThis.__marketingTest={createClient:()=>admin,nodemailer:{createTransport:()=>({sendMail:async message=>{if(smtpError)throw smtpError;sent.push(message);return {accepted:[message.to],messageId:'test-message'};},close(){}})},Deno:{env:{get:key=>config[key]},serve:fn=>{handler=fn;}}};
+ let source=await readFile('supabase/functions/marketing/index.ts','utf8');source=source.replace(/import \{createClient\}[^;]+;/,'const {createClient,nodemailer,Deno}=globalThis.__marketingTest;').replace(/import nodemailer[^;]+;/,'').replace(/from '(\.\.\/[^']+)'/g,(_,path)=>`from '${new URL(path,pathToFileURL(process.cwd()+'/supabase/functions/marketing/index.ts')).href}'`);
+ const {code}=await transform(source,{loader:'ts',format:'esm'});await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const call=(body,token='admin-token')=>handler(new Request('https://project.supabase.co/functions/v1/marketing',{method:'POST',headers:{origin:'https://studio.example',authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify(body)}));
+ assert.equal((await call({action:'list'},'bad-token')).status,401);
+ const content={name:'Campaign',subject:'Hello {{first_name}}',headline:'A useful website',body:'For {{company_name}}',cta_url:'https://studio.example',sender_identity:'Studio · hello@example.com',images:[]};
+ const campaign=(await (await call({action:'save',content})).json()).campaign;assert.ok(campaign.id);
+ await call({action:'contact',contact:{email:'customer@example.com',consent_at:new Date().toISOString(),consent_source:'Signup',consent_notice:'Receive promotional email'}});
+ const contact=(await db.query('select * from marketing_contacts')).rows[0];
+ assert.equal((await call({action:'start',id:campaign.id,contact_ids:[contact.id]})).status,400);
+ assert.equal((await call({action:'test',id:campaign.id})).status,200);assert.equal(sent.length,1);assert.equal(sent[0].to,'owner@example.com');
+ assert.equal((await call({action:'start',id:campaign.id,contact_ids:[contact.id]})).status,200);
+ assert.equal((await call({action:'process'})).status,200);assert.equal(sent.length,2);assert.equal(sent[1].to,'customer@example.com');assert.equal(sent[1].cc,undefined);assert.ok(sent[1].headers['List-Unsubscribe-Post']);
+ await db.exec("update email_campaigns set status='sending'; update email_campaign_recipients set status='queued'; update marketing_send_slots set created_at=now()-interval '1 minute'");
+ smtpError=Object.assign(new Error('Temporary SMTP deferral'),{responseCode:450,code:'EENVELOPE'});await call({action:'process'});assert.equal((await db.query('select status from email_campaign_recipients')).rows[0].status,'queued');
+ await db.exec("update email_campaign_recipients set next_attempt_at=now(); update marketing_send_slots set created_at=now()-interval '1 minute'");
+ smtpError=Object.assign(new Error('Connection lost after DATA'),{code:'ECONNECTION'});await call({action:'process'});assert.equal((await db.query('select status from email_campaign_recipients')).rows[0].status,'uncertain');
+ const unsub=await handler(new Request(`https://project.supabase.co/functions/v1/marketing/unsubscribe?token=${contact.unsubscribe_token}`,{method:'GET'}));assert.equal(unsub.status,200);assert.equal((await db.query('select suppressed from marketing_contacts')).rows[0].suppressed,false);
+ const post=()=>handler(new Request(`https://project.supabase.co/functions/v1/marketing/unsubscribe?token=${contact.unsubscribe_token}`,{method:'POST'}));assert.equal((await post()).status,200);assert.equal((await post()).status,200);assert.equal((await db.query('select suppressed from marketing_contacts')).rows[0].suppressed,true);
+ }finally{delete globalThis.__marketingTest;await db.close();}
+});
+test('marketing migration is repeatable, guards consent, freezes campaign, throttles queue and recovers stale claims',async()=>{
+ const db=await database();try{
+  const sql=await readFile('supabase/migrations/20261106_marketing.sql','utf8');await db.exec(sql);await db.exec(sql);
+  const contact=(await db.query("insert into marketing_contacts(email) values ('contact@example.com') returning id")).rows[0];
+  const campaign=(await db.query("insert into email_campaigns(name,content,tested_hash) values ('Pilot','{}','tested') returning id")).rows[0];
+  await assert.rejects(db.query('select start_marketing_campaign($1,$2,$3)',[campaign.id,'{}',[contact.id]]));
+  await db.query("update marketing_contacts set consent_at=now(),consent_source='Signup',consent_notice='Receive marketing updates'");
+  await db.query('select start_marketing_campaign($1,$2,$3)',[campaign.id,'{}',[contact.id]]);
+  await assert.rejects(db.query('select start_marketing_campaign($1,$2,$3)',[campaign.id,'{}',[contact.id]]));
+  const first=await db.query('select * from claim_marketing_send(50)');assert.equal(first.rows.length,1);assert.equal(first.rows[0].attempts,1);
+  assert.equal((await db.query('select * from claim_marketing_send(50)')).rows.length,0);
+  await db.query("update email_campaign_recipients set updated_at=now()-interval '6 minutes'");await db.query('select * from claim_marketing_send(50)');
+  assert.equal((await db.query('select status from email_campaign_recipients')).rows[0].status,'uncertain');
+  await db.query('set role anon');await assert.rejects(db.query('select * from marketing_contacts'));await assert.rejects(db.query('select * from claim_marketing_send(50)'));
+ }finally{await db.close();}
+});
