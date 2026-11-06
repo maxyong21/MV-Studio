@@ -2,6 +2,8 @@
 
 ## Team contact details for signatures
 
+If **Reload from Team** reports no active profiles while the public Team request returns populated rows, inspect the `marketing` function response. An older deployment may omit `team_members` entirely. Redeploy `marketing`; the updated frontend also falls back to an authenticated Team query when that field is absent. A failed query reports a loading error rather than claiming that profiles do not exist.
+
 For existing installations apply `supabase/migrations/20261108_team_contacts.sql`, then redeploy `marketing` and the frontend. In **Admin → Team**, edit each member and save **Public work email**, **Public work phone**, and **Website URL** (personal portfolio). These are work contact details on publicly readable active team profiles; do not enter private contact information. The general Site content contact lists do not identify an owner and are not assigned to people by array order.
 
 New email signatures load active profiles from the database, selected by default. Templates and draft campaigns refresh their team details when opened; checkbox selections are matched by team ID (or name for older drafts). **Reload from Team** reloads the latest saved contacts and invalidates the draft's previous test. Campaign-specific edits remain in that draft; changes to central profiles belong in Team. Sent/queued campaigns retain their content snapshot. After changing the team email/phone, reopen a draft or reload its signature, save and test again. Missing contacts remain blank and block sending until completed; no personal names or numbers are guessed.
