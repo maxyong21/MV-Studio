@@ -1166,6 +1166,7 @@ commit;
 begin;
 alter table public.team_members add column if not exists email text not null default '';
 alter table public.team_members add column if not exists phone text not null default '';
+grant select on public.team_members to service_role;
 -- Work contact fields are optional; when present validate them at the database boundary.
 do $$ begin
  if not exists(select 1 from pg_constraint where conname='team_work_email_valid' and conrelid='public.team_members'::regclass) then

@@ -164,7 +164,11 @@ try{
   await fill('#content-contact_emails-0','first@example.test');await evaluate("document.querySelector('#content-contact_emails-0').closest('.contact-list-editor').querySelector('.contact-add-button').click()");
   await wait("!!document.querySelector('#content-contact_emails-1')");await fill('#content-contact_emails-1','second@example.test');
   await fill('#content-contact_phones-0','+1 202-555-0123');await evaluate("document.querySelector('#content-contact_phones-0').closest('.contact-list-editor').querySelector('.contact-add-button').click()");await fill('#content-contact_phones-1','+1 202-555-0124');
-  await click('.content-editor-head .button');await wait("document.querySelector('.admin-toast')?.textContent==='Website content saved'");
+  await click('.content-editor-head .button');await wait("document.querySelector('.admin-toast-message')?.textContent.includes('Website content saved')");
+  assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('.admin-toast-message')).fontSize)>=16"),'Admin toast text must be readable');
+  await viewport(390);assert.ok(await evaluate("(()=>{const box=document.querySelector('.admin-toast').getBoundingClientRect();return box.left>=0&&box.right<=innerWidth})()"),'Admin toast fits mobile');
+  await screenshot('admin-notification-mobile.png');
+  await click('.admin-notification-close');await wait("!document.querySelector('.admin-toast')");await viewport(1440);
   const contacts=(await servers.db.query('select content from site_content')).rows[0].content;assert.equal(contacts.contact_emails.length,2);assert.equal(contacts.contact_phones.length,2);
   // Build, preview, test and publish the actual assistant using its admin UI.
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Project assistant').click()");
