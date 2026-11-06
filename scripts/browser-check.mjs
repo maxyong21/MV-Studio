@@ -24,7 +24,7 @@ try{
   socket=new WebSocket(target.webSocketDebuggerUrl);await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject;});
   let sequence=0;const pending=new Map();
   socket.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.id){const p=pending.get(msg.id);if(!p)return;pending.delete(msg.id);clearTimeout(p.timer);msg.error?p.reject(new Error(JSON.stringify(msg.error))):p.resolve(msg.result);}else if(msg.method==='Runtime.exceptionThrown')errors.push(msg.params.exceptionDetails.exception?.description||msg.params.exceptionDetails.text);else if(msg.method==='Runtime.consoleAPICalled'&&msg.params.type==='error')errors.push(msg.params.args.map(v=>v.value||v.description).join(' '));else if(msg.method==='Network.requestWillBeSent')requests.push(msg.params.request.url);};
-  send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error(`CDP timed out: ${method}`));},15000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
+  send=(method,params={},sessionId)=>new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error(`CDP timed out: ${method}`));},15000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));});
   const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value;};
   const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,100));}console.log(await evaluate("JSON.stringify({url:location.href,text:document.body.innerText.slice(0,1500)})"),errors);throw new Error(`UI timeout: ${expression}`);};
   const navigate=async(url,selector='h1')=>{await send('Page.navigate',{url});await wait(`location.href===${JSON.stringify(url)}&&document.readyState==='complete'&&!!document.querySelector(${JSON.stringify(selector)})`);};
@@ -109,7 +109,7 @@ try{
   await viewport(390);await evaluate("document.querySelector('.admin-nav-list').scrollTo({left:10000,behavior:'instant'})");
   assert.ok(await evaluate("document.querySelector('.admin-nav-list').scrollLeft>0"),'Phone navigation can scroll horizontally');
   for(const width of [1440,768,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Admin overflow at ${width}px`);}
-  await evaluate(`(()=>{window.marketingCalls=[];window.originalMarketingFetch=window.fetch;window.fetch=(url,options)=>{if(String(url).includes('/functions/v1/marketing')){const body=JSON.parse(options.body);window.marketingCalls.push(body.action);return Promise.resolve(new Response(JSON.stringify({marketing_contacts:[],email_templates:[],email_campaigns:[],email_campaign_recipients:[]}),{status:200,headers:{'Content-Type':'application/json'}}));}return window.originalMarketingFetch(url,options);};})()`);
+  await evaluate(`(()=>{window.marketingCalls=[];window.originalMarketingFetch=window.fetch;window.fetch=(url,options)=>{if(String(url).includes('/functions/v1/marketing')){const body=JSON.parse(options.body);window.marketingCalls.push(body.action);return Promise.resolve(new Response(JSON.stringify({marketing_contacts:[],email_templates:[],email_campaigns:[],email_campaign_recipients:[],team_members:[{id:'team-max',name:'Max Yong',email:'',phone:'',website_url:'https://max.example',active:true},{id:'team-vincent',name:'Vincent Teo',email:'',phone:'',website_url:'https://vincent.example',active:true}]}),{status:200,headers:{'Content-Type':'application/json'}}));}return window.originalMarketingFetch(url,options);};})()`);
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Marketing email').click()");
   await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
@@ -120,7 +120,19 @@ try{
   assert.equal(await evaluate("document.querySelector('.marketing-preview iframe').getAttribute('sandbox')"),'');
   assert.ok(await evaluate("document.querySelector('.marketing-preview iframe').srcdoc.includes('Vincent Teo')&&!document.querySelector('.marketing-preview iframe').srcdoc.includes('Max Yong')"),'Only selected team members appear in preview');
   assert.equal(await evaluate("window.marketingCalls.some(a=>a==='test'||a==='start')"),false,'Preview must not send emails');
-  for(const width of [390,320,1440]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Marketing preview overflow at ${width}`);}
+  for(const width of [390,320,1440]){
+    await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Marketing preview overflow at ${width}`);
+    const tree=await send('Page.getFrameTree');const frame=tree.frameTree.childFrames?.find(child=>child.frame.url==='about:srcdoc');
+    let contextId,sessionId;
+    if(frame){const world=await send('Page.createIsolatedWorld',{frameId:frame.frame.id,worldName:'email-layout-check'});contextId=world.executionContextId;}
+    else {const targets=await send('Target.getTargets');const iframe=targets.targetInfos.find(t=>t.type==='iframe'&&t.url==='about:srcdoc');assert.ok(iframe,'Sandboxed email preview target must load');sessionId=(await send('Target.attachToTarget',{targetId:iframe.targetId,flatten:true})).sessionId;}
+    const layout=await send('Runtime.evaluate',{...(contextId?{contextId}:{}),expression:'document.documentElement.scrollWidth <= document.documentElement.clientWidth',returnByValue:true},sessionId);
+    assert.equal(layout.result.value,true,`Email content overflow at ${width}`);
+    if(width===390)await screenshot('marketing-preview-mobile.png');
+    await send('Runtime.evaluate',{...(contextId?{contextId}:{}),expression:'document.querySelector(".signature-person").scrollIntoView({block:"center"})'},sessionId);
+    await screenshot(`marketing-signature-${width}.png`);
+    await send('Runtime.evaluate',{...(contextId?{contextId}:{}),expression:'window.scrollTo(0,0)'},sessionId);
+  }
   await screenshot('marketing-preview.png');
   await evaluate("document.querySelector('.marketing-preview header button').click()");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Save draft').click()");

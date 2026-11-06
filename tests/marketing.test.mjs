@@ -6,7 +6,26 @@ import {transform} from 'esbuild';
 import {pathToFileURL} from 'node:url';
 import {renderMarketing,validateCampaign} from '../supabase/functions/_shared/marketing.mjs';
 import {outreachEligible} from '../supabase/functions/_shared/outreach.mjs';
+import {signatureFromTeam} from '../src/admin/signature-data.mjs';
+import {validateEntity} from '../src/admin/validation.js';
+import {entityConfig} from '../src/admin/config.js';
 const signature={company:'MV Studio',logo_url:'https://studio.example/logo.png',portfolio:'https://studio.example',members:[{enabled:true,name:'Developer',email:'developer@example.com',phone:'+60123456789',portfolio:'https://portfolio.example'}]};
+test('signature uses saved team contacts, preserves choices and excludes inactive profiles',()=>{
+ const team=[{id:'one',name:'Saved Name',email:'database@example.com',phone:'+60123456789',website_url:'https://saved.example',active:true},{id:'hidden',active:false}];
+ const result=signatureFromTeam(team,{company:'MV Studio',members:[{team_member_id:'one',name:'Old Name',email:'old@example.com',enabled:false}]});
+ assert.equal(result.members.length,1);assert.equal(result.members[0].email,'database@example.com');assert.equal(result.members[0].phone,'+60123456789');assert.equal(result.members[0].enabled,false);assert.equal(result.members[0].portfolio,'https://saved.example');
+ assert.equal(signatureFromTeam(team).members[0].enabled,true);assert.deepEqual(signatureFromTeam([]).members,[]);
+ const errors=validateEntity({name:'Saved Name',email:'bad-email',phone:'123'},entityConfig.team_members);assert.ok(errors.email);assert.ok(errors.phone);
+});
+test('team work contacts migration is repeatable and validates stored addresses and numbers',async()=>{
+ const db=await database();try{
+ const sql=await readFile('supabase/migrations/20261108_team_contacts.sql','utf8');await db.exec(sql);await db.exec(sql);
+ const team=(await db.query("select id from team_members limit 1")).rows[0];
+ await db.query('update team_members set email=$1,phone=$2 where id=$3',['team@example.com','+60123456789',team.id]);
+ const saved=(await db.query('select email,phone from team_members where id=$1',[team.id])).rows[0];assert.equal(saved.email,'team@example.com');assert.equal(saved.phone,'+60123456789');
+ await assert.rejects(db.query("update team_members set email='not-an-email' where id=$1",[team.id]));await assert.rejects(db.query("update team_members set phone='123' where id=$1",[team.id]));
+ }finally{await db.close();}
+});
 test('email escapes untrusted text, restricts URLs, and provides personalized text fallback',()=>{
  const c={name:'Pilot',subject:'Hello {{first_name}}',headline:'<script>x</script>',body:'For {{company_name}}',sender_identity:'Studio',cta_url:'javascript:alert(1)',images:[{url:'javascript:alert(1)',alt:'x'}]};
  assert.ok(validateCampaign(c).cta_url);assert.ok(validateCampaign(c).images);
@@ -48,11 +67,14 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  const admin=client(db,user),originalRpc=admin.rpc;admin.auth.getUser=async token=>({data:{user:token==='admin-token'?{id:user,email:'owner@example.com'}:null},error:null});
  admin.rpc=async(name,args)=>name==='claim_marketing_send'?{data:(await db.query('select * from claim_marketing_send($1)',[args.p_limit])).rows,error:null}:name==='start_marketing_campaign'?{data:(await db.query('select start_marketing_campaign($1,$2,$3,$4)',[args.p_id,JSON.stringify(args.p_content),args.p_contacts,args.p_schedule])).rows,error:null}:originalRpc(name,args);
  const config={SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test',ALLOWED_ORIGIN:'https://studio.example',GMAIL_SMTP_USER:'owner@gmail.com',GMAIL_SMTP_APP_PASSWORD:'test-only',MARKETING_WORKER_SECRET:'worker-secret'};
+ const marketingRpc=admin.rpc;admin.rpc=async(name,args)=>name==='marketing_introduction_history'?{data:(await db.query('select * from marketing_introduction_history()')).rows,error:null}:marketingRpc(name,args);
  let handler;globalThis.__marketingTest={createClient:()=>admin,nodemailer:{createTransport:()=>({sendMail:async message=>{if(smtpError)throw smtpError;sent.push(message);return {accepted:[message.to],messageId:'test-message'};},close(){}})},Deno:{env:{get:key=>config[key]},serve:fn=>{handler=fn;}}};
  let source=await readFile('supabase/functions/marketing/index.ts','utf8');source=source.replace(/import \{createClient\}[^;]+;/,'const {createClient,nodemailer,Deno}=globalThis.__marketingTest;').replace(/import nodemailer[^;]+;/,'').replace(/from '(\.\.\/[^']+)'/g,(_,path)=>`from '${new URL(path,pathToFileURL(process.cwd()+'/supabase/functions/marketing/index.ts')).href}'`);
  const {code}=await transform(source,{loader:'ts',format:'esm'});await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
  const call=(body,token='admin-token')=>handler(new Request('https://project.supabase.co/functions/v1/marketing',{method:'POST',headers:{origin:'https://studio.example',authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify(body)}));
  assert.equal((await call({action:'list'},'bad-token')).status,401);
+ await db.query("update team_members set email='saved-team@example.com',phone='+60123456789'");
+ const loaded=await (await call({action:'list'})).json();assert.ok(loaded.team_members.length);assert.equal(loaded.team_members[0].email,'saved-team@example.com');assert.equal(loaded.team_members[0].phone,'+60123456789');
  const content={name:'Campaign',subject:'Hello {{first_name}}',headline:'A useful website',body:'For {{company_name}}',cta_url:'https://studio.example',signature,purpose:'introduction',images:[]};
  const campaign=(await (await call({action:'save',content})).json()).campaign;assert.ok(campaign.id);
  await call({action:'contact',contact:{email:'customer@example.com',relationship:'prospect',contact_source:'Direct business contact',outreach_note:'Requested information about a new website'}});
