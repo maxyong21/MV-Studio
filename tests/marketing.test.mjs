@@ -4,12 +4,24 @@ import {readFile} from 'node:fs/promises';
 import {database,client} from './helpers/database.mjs';
 import {transform} from 'esbuild';
 import {pathToFileURL} from 'node:url';
-import {renderMarketing,validateCampaign} from '../supabase/functions/_shared/marketing.mjs';
+import {renderMarketing,validateCampaign,validateSignature} from '../supabase/functions/_shared/marketing.mjs';
+import {emailPreviewHtml} from '../src/admin/email-preview.mjs';
 import {outreachEligible} from '../supabase/functions/_shared/outreach.mjs';
 import {signatureFromTeam} from '../src/admin/signature-data.mjs';
 import {validateEntity} from '../src/admin/validation.js';
 import {entityConfig} from '../src/admin/config.js';
 const signature={company:'MV Studio',logo_url:'https://studio.example/logo.png',portfolio:'https://studio.example',members:[{enabled:true,name:'Developer',email:'developer@example.com',phone:'+60123456789',portfolio:'https://portfolio.example'}]};
+test('signature errors identify fields; HTTP portfolio links work; preview cannot navigate',()=>{
+ const value={...signature,members:[{...signature.members[0],portfolio:'http://portfolio.example'}]};
+ assert.deepEqual(validateSignature(value),{});
+ const c={name:'Test',subject:'Hello',headline:'Hello',body:'Message',signature:value,cta_url:'https://studio.example'};
+ const sent=renderMarketing(c);assert.match(sent.html,/href="http:\/\/portfolio.example\//);assert.match(sent.html,/href="mailto:/);
+ const preview=emailPreviewHtml(c);assert.doesNotMatch(preview,/<a\b[^>]*\bhref=/i);assert.match(preview,/aria-disabled="true"/);
+ const errors=validateSignature({...signature,members:[{...signature.members[0],email:'bad',phone:'123',portfolio:'javascript:alert(1)'}]});
+ for(const key of ['email','phone','portfolio'])assert.ok(errors[`signature.members.0.${key}`]);
+ assert.ok(validateSignature({...signature,logo_url:'http://studio.example/logo.png'})['signature.logo_url']);
+ assert.deepEqual(validateSignature({...signature,members:[...signature.members,{enabled:false,email:'bad'}]}),{});
+});
 test('signature uses saved team contacts, preserves choices and excludes inactive profiles',()=>{
  const team=[{id:'one',name:'Saved Name',email:'database@example.com',phone:'+60123456789',website_url:'https://saved.example',active:true},{id:'hidden',active:false}];
  const result=signatureFromTeam(team,{company:'MV Studio',members:[{team_member_id:'one',name:'Old Name',email:'old@example.com',enabled:false}]});
@@ -96,6 +108,12 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  smtpError=Object.assign(new Error('Connection lost after DATA'),{code:'ECONNECTION'});await call({action:'process'});assert.equal((await db.query('select status from email_campaign_recipients')).rows[0].status,'uncertain');
  const unsub=await handler(new Request(`https://project.supabase.co/functions/v1/marketing/unsubscribe?token=${contact.unsubscribe_token}`,{method:'GET'}));assert.equal(unsub.status,200);assert.equal((await db.query('select suppressed from marketing_contacts')).rows[0].suppressed,false);
  const post=()=>handler(new Request(`https://project.supabase.co/functions/v1/marketing/unsubscribe?token=${contact.unsubscribe_token}`,{method:'POST'}));assert.equal((await post()).status,200);assert.equal((await post()).status,200);assert.equal((await db.query('select suppressed from marketing_contacts')).rows[0].suppressed,true);
+ smtpError=null;
+ const group=(await(await call({action:'save',content,envelope:{to:'new-to@example.com',cc:'copy@example.com',bcc:'secret@example.com'}})).json()).campaign;assert.ok(group.id);
+ await call({action:'test',id:group.id});assert.equal(sent.at(-1).to,'owner@example.com');assert.equal(sent.at(-1).cc,undefined);assert.equal(sent.at(-1).bcc,undefined);
+ const queued=await call({action:'send_email',id:group.id,envelope:{to:'new-to@example.com',cc:'copy@example.com',bcc:'secret@example.com'}});assert.equal(queued.status,200);
+ const pref=(await db.query('select preference_token from email_campaigns where id=$1',[group.id])).rows[0].preference_token;
+ const preference=await handler(new Request(`https://project.supabase.co/functions/v1/marketing/preferences?token=${pref}`,{method:'POST',body:new URLSearchParams({email:'secret@example.com'})}));assert.equal(preference.status,200);assert.equal((await db.query("select suppressed from marketing_contacts where email='secret@example.com'")).rows[0].suppressed,true);
  }finally{delete globalThis.__marketingTest;await db.close();}
 });
 test('marketing migration is repeatable, guards consent, freezes campaign, throttles queue and recovers stale claims',async()=>{

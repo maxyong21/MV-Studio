@@ -1,3 +1,23 @@
+# Current email composer workflow
+
+Apply `supabase/migrations/20261111_email_composer.sql` after the existing marketing, outreach and Team migrations. Redeploy `marketing` and the frontend. Existing Gmail secrets and the Cron worker remain valid.
+
+Open Admin → Marketing email → Compose. Type one or more To addresses, and optionally add Cc/Bcc. Commas, semicolons and new lines separate addresses; simple `Name <email@example.com>` entries are accepted. You do not need to create contacts first. Choose a template, edit its message, and reload the team signature if needed. Missing signature fields are identified individually. HTTP and HTTPS portfolio links are allowed; logo images still require HTTPS. Save a draft and send a test: only the signed-in administrator is emailed, never To/Cc/Bcc. Preview links are disabled intentionally; use the real test email to check mailto/tel/website links.
+
+Review the To/Cc/Bcc list before confirming. One SMTP message is sent to that entire group. To/Cc are visible to everyone receiving it; Bcc is excluded from the delivered MIME headers by Nodemailer. Do not use To or Cc for unrelated businesses whose addresses should remain confidential. Group messages use general placeholder fallbacks, not separate personalization for each recipient. Recipients are stored separately from reusable template content.
+
+The backend records entered addresses and sending history automatically without fabricating subscription consent. Repeat one-time introductions to To/Bcc addresses are blocked across messages. Cc copies may recur, so an internal team member can be copied on different customer emails. Do-not-contact requests apply to every role. Existing-customer updates require a specific reason. Record the correct relationship through the selected purpose; selecting it does not establish legal permission by itself.
+
+A group must fit the configured daily budget (50 recipients by default, configurable up to 200). Every To/Cc/Bcc address counts toward that budget. Cron claims the group atomically, so concurrent worker calls cannot create repeated Cc copies. A scheduled group waits until its date and sufficient budget. The existing manual Process next queued email button sends the next eligible group or legacy individual job. Old contact-based scheduled messages remain supported.
+
+The group email footer opens a preference form where the recipient enters their own email. A shared group message cannot contain a different one-click unsubscribe token per person, so this mode uses the form and does not claim RFC 8058 one-click support. No other recipients are shown; Bcc addresses are never listed there. Requests are rate limited, use generic responses, and immediately suppress matching addresses. Use a dedicated campaign provider and individual delivery when bulk mailing requirements demand recipient-specific unsubscribe headers and bounce/complaint automation.
+
+Reports show recipient roles and SMTP acceptance, not confirmed delivery. Explicit temporary SMTP rejections retry at most three times. After partial acceptance the rejected recipients are reported but the whole group is never resent automatically. Ambiguous failures become uncertain; check Gmail Sent before creating another message. The admin can mark an address Do not contact from its recipient report.
+
+## Original setup reference
+
+The setup reference below describes the earlier contact-selection UI. Follow the current workflow above for composing; its Gmail secrets, deployment, Vault and Cron instructions remain applicable.
+
 # Marketing email setup
 
 ## Team contact details for signatures
