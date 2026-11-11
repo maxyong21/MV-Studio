@@ -115,11 +115,20 @@ try{
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Marketing email').click()");
   await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
+  await fill('#email-recipient-to','Customer <client@example.com>');
+  await evaluate("[...document.querySelectorAll('.email-recipient-editor button')].find(el=>el.textContent==='Add Cc / Bcc').click()");
+  await fill('#email-recipient-cc','copy@example.com');await fill('#email-recipient-bcc','client@example.com');
+  await evaluate("document.querySelector('#email-recipient-bcc').focus();document.querySelector('#email-recipient-to').focus()");
+  await wait("document.querySelector('#email-recipient-bcc-error')?.textContent.includes('more than once')");
+  await fill('#email-recipient-bcc','private@example.com');await wait("!document.querySelector('#email-recipient-bcc-error')");
+  await viewport(1440);await evaluate('window.scrollTo(0,0)');await screenshot('email-composer-desktop.png');
+  await viewport(390);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'Email composer must fit mobile');await screenshot('email-composer-mobile.png');await viewport(1440);
   assert.equal(await evaluate("[...document.querySelectorAll('.marketing-signature-editor input[type=checkbox]')].filter(el=>el.checked).length"),2,'Both team signatures default on');
   await evaluate("document.querySelector('.marketing-signature-editor input[type=checkbox]').click()");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Preview email').click()");
   await wait("!!document.querySelector('.marketing-preview iframe')");
   assert.equal(await evaluate("document.querySelector('.marketing-preview iframe').getAttribute('sandbox')"),'');
+  assert.ok(await evaluate("!/<a\\b[^>]*\\bhref=/i.test(document.querySelector('.marketing-preview iframe').srcdoc)"),'Preview links must not launch external protocols');
   assert.ok(await evaluate("document.querySelector('.marketing-preview iframe').srcdoc.includes('Vincent Teo')&&!document.querySelector('.marketing-preview iframe').srcdoc.includes('Max Yong')"),'Only selected team members appear in preview');
   assert.equal(await evaluate("window.marketingCalls.some(a=>a==='test'||a==='start')"),false,'Preview must not send emails');
   for(const width of [390,320,1440]){
