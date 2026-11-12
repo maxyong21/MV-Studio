@@ -122,6 +122,8 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  assert.equal((await call({action:'send_email',id:solo.id,envelope:{to:'Kopi Lane <kopi@example.com>\nbare@example.com'}})).status,400,'Switching to a shared email needs a new save and test');
  assert.equal((await call({action:'send_email',id:solo.id,envelope:{to:'Kopi Lane <kopi@example.com>\nbare@example.com',separate:true}})).status,200);
  assert.equal((await db.query("select company_name from marketing_contacts where email='kopi@example.com'")).rows[0].company_name,'Kopi Lane');
+ // An older name saved on the contact must not replace the one typed for this email.
+ await db.query("update marketing_contacts set company_name='Stale Saved Name' where email='kopi@example.com'");
  const mark=sent.length;
  for(let i=0;i<4;i++){await db.exec("update marketing_send_slots set created_at=now()-interval '1 minute'");await call({action:'process'});}
  const personal=sent.slice(mark).filter(m=>['kopi@example.com','bare@example.com'].includes(m.to));
