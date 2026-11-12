@@ -1,16 +1,16 @@
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
-import {ArrowLeft,ArrowUpRight,Check,Mail,Moon,ShieldCheck,Sun} from 'lucide-react';
+import {ArrowLeft,ArrowUpRight,Check,Mail,ShieldCheck} from 'lucide-react';
 import {legalDocuments,legalUpdated,privacyMalay} from './content.mjs';
 import {normalizeContactList} from '../lib/site.js';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import './legal.css';
 
 export default function LegalPage({path,data}){
-  const [language,setLanguage]=useState('en'),[dark,setDark]=useState(false),[preferencesNotice,setPreferencesNotice]=useState('');
+  const [language,setLanguage]=useState('en'),[preferencesNotice,setPreferencesNotice]=useState('');
   const isMalay=path==='/privacy'&&language==='ms';
   const documentContent=path==='/privacy'&&language==='ms'?privacyMalay:legalDocuments[path];
   const emails=normalizeContactList(data?.site_content?.content?.contact_emails).filter(v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
-  useEffect(()=>{try{const enabled=localStorage.getItem('mv-theme')==='dark';setDark(enabled);document.documentElement.dataset.theme=enabled?'dark':'light';}catch{}},[]);
   useEffect(()=>{
     document.title=`${documentContent.title} | MV Studio`;
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,''),url=base+path;
@@ -21,10 +21,9 @@ export default function LegalPage({path,data}){
     let canonical=document.head.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical);}canonical.href=url;
     let structured=document.getElementById('mv-studio-jsonld');if(!structured){structured=document.createElement('script');structured.id='mv-studio-jsonld';structured.type='application/ld+json';document.head.appendChild(structured);}structured.textContent=JSON.stringify({'@context':'https://schema.org','@type':'WebPage',name:document.title,description:documentContent.description,url});
   },[documentContent,path]);
-  const toggleTheme=()=>{const next=!dark;setDark(next);document.documentElement.dataset.theme=next?'dark':'light';try{localStorage.setItem('mv-theme',next?'dark':'light');}catch{}};
   const preferences=()=>{if(window.mvAnalytics?.openPreferences)window.mvAnalytics.openPreferences();else setPreferencesNotice(isMalay?'Analitik tidak aktif pada laman web ini.':'Analytics are not active on this website.');};
   return <div className="legal-page"><a className="legal-skip" href="#legal-content">Skip to policy content</a>
-    <header className="legal-header"><div className="legal-header-inner"><Link className="brand" to="/" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><div><Link className="legal-home-link" to="/"><ArrowLeft size={16}/> Back to website</Link><button type="button" className="icon-button theme-button" aria-label="Toggle colour theme" onClick={toggleTheme}>{dark?<Sun size={19}/>:<Moon size={19}/>}</button></div></div></header>
+    <header className="legal-header"><div className="legal-header-inner"><Link className="brand" to="/" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><div><Link className="legal-home-link" to="/"><ArrowLeft size={16}/> Back to website</Link><ThemeToggle size={19}/></div></div></header>
     <main id="legal-content" className="legal-main" lang={isMalay?'ms':'en'}>
       <div className="legal-hero"><span className="legal-eyebrow"><ShieldCheck size={17}/>{documentContent.eyebrow}</span><h1>{documentContent.title}</h1><p>{documentContent.intro}</p><div className="legal-meta"><span>{isMalay?'Dikemas kini':'Last updated'}: <time dateTime={legalUpdated}>3 November 2026</time></span>{path==='/privacy'&&<div className="legal-language" role="group" aria-label="Policy language"><button type="button" lang="en" aria-pressed={language==='en'} onClick={()=>setLanguage('en')}>English</button><button type="button" lang="ms" aria-pressed={language==='ms'} onClick={()=>setLanguage('ms')}>Bahasa Melayu</button></div>}</div><ul className="legal-highlights">{documentContent.highlights.map(v=><li key={v}><Check size={16}/>{v}</li>)}</ul></div>
       <nav className="legal-documents" aria-label="Legal documents">{Object.entries(legalDocuments).map(([url,doc])=><Link key={url} to={url} aria-current={path===url?'page':undefined}>{doc.title}</Link>)}</nav>

@@ -1,0 +1,105 @@
+/* Motion and interaction layer. Loaded last.
+   Everything here animates transform, opacity, translate or clip-path only,
+   so nothing triggers layout while it runs. See docs/MOTION.md. */
+
+/* ---- Theme reveal: the new theme spreads out from the toggle ---- */
+html.theme-reveal::view-transition-old(root),
+html.theme-reveal::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html.theme-reveal::view-transition-new(root) { animation: theme-reveal .62s cubic-bezier(.45, 0, .15, 1) both; }
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--theme-x) var(--theme-y)); }
+  to { clip-path: circle(var(--theme-radius) at var(--theme-x) var(--theme-y)); }
+}
+
+.theme-icon { display: grid; place-items: center; }
+.theme-icon svg { transition: transform .3s cubic-bezier(.2, .75, .25, 1); }
+/* Only after a real toggle, so the icon does not spin on page load. */
+.icon-button[data-switched] .theme-icon { animation: theme-icon-in .5s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes theme-icon-in {
+  from { opacity: 0; transform: rotate(-80deg) scale(.5); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- Press feedback ---- */
+.icon-button { transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+.icon-button:active { transform: scale(.9); }
+.button:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
+
+/* ---- Small-screen menu drops in instead of popping ---- */
+@media (max-width: 760px) {
+  .nav-links.open { transform-origin: top; animation: menu-drop .24s cubic-bezier(.2, .75, .25, 1) both; }
+}
+@keyframes menu-drop {
+  from { opacity: 0; transform: translateY(-8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- FAQ answers ease in when opened ---- */
+.faq-item[open] .faq-answer { animation: faq-open .3s ease-out both; }
+@keyframes faq-open {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- Hover detail, for devices that can hover ---- */
+@media (hover: hover) {
+  .theme-button:hover, .admin-theme-toggle:hover { border-color: currentColor; }
+  .theme-button:hover .theme-icon svg, .admin-theme-toggle:hover .theme-icon svg { transform: rotate(22deg); }
+
+  /* Arrows lean the way they point. */
+  :is(a, button) > svg[class*="lucide-arrow"] { transition: transform .25s cubic-bezier(.2, .75, .25, 1); }
+  :is(a, button):hover > svg.lucide-arrow-up-right { transform: translate(2px, -2px); }
+  :is(a, button):hover > svg.lucide-arrow-right { transform: translateX(3px); }
+  :is(a, button):hover > svg.lucide-arrow-down { transform: translateY(3px); }
+}
+@media (hover: hover) and (min-width: 761px) {
+  .nav-links :is(a, .nav-offers) { position: relative; }
+  .nav-links :is(a, .nav-offers)::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -7px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: 100% 50%;
+    transition: transform .3s cubic-bezier(.2, .75, .25, 1);
+  }
+  .nav-links :is(a, .nav-offers):is(:hover, :focus-visible)::after { transform: scaleX(1); transform-origin: 0 50%; }
+}
+
+/* ---- Pointer-driven motion: mouse users who have not asked for less motion.
+   src/lib/motion.js writes --glow-* and --tilt-* on the hovered element. ---- */
+:root { --glow-tint: #f3b59147; }
+:root[data-theme=dark] { --glow-tint: #f3b59126; }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :is(.client-paths > a, .client-paths > button, .service-card, .testimonial-card) { position: relative; isolation: isolate; }
+  :is(.client-paths > a, .client-paths > button, .service-card, .testimonial-card)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(260px circle at var(--glow-x, 50%) var(--glow-y, 50%), var(--glow-tint), transparent 70%);
+    transition: opacity .35s ease;
+  }
+  :is(.client-paths > a, .client-paths > button, .service-card, .testimonial-card):hover::after { opacity: 1; }
+
+  .hero-art { --tilt-x: 0; --tilt-y: 0; }
+  .hero-art .art-window {
+    transform: perspective(1200px) rotateX(calc(var(--tilt-y) * -3.5deg)) rotateY(calc(var(--tilt-x) * 4.5deg)) rotate(-2deg);
+    transition: transform .6s cubic-bezier(.2, .75, .25, 1);
+  }
+  .hero-art :is(.art-note, .art-float) { transition: translate .6s cubic-bezier(.2, .75, .25, 1); }
+  .hero-art .art-note { translate: calc(var(--tilt-x) * -10px) calc(var(--tilt-y) * -8px); }
+  .hero-art .float-code { translate: calc(var(--tilt-x) * 14px) calc(var(--tilt-y) * 10px); }
+  .hero-art .float-spark { translate: calc(var(--tilt-x) * -16px) calc(var(--tilt-y) * -12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-links.open, .faq-item[open] .faq-answer, .icon-button[data-switched] .theme-icon { animation: none; }
+  .icon-button:active, .button:active { transform: none; }
+  :is(a, button):hover > svg[class*="lucide-arrow"], .theme-icon svg { transform: none !important; }
+}

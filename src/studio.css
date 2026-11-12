@@ -188,6 +188,8 @@
 :root[data-theme=dark] .enquiry-fields input, :root[data-theme=dark] .message-field textarea,
 :root[data-theme=dark] .meeting-time input { background: #1b261e; color: #f0f5ed; border-color: #73866f; }
 :root[data-theme=dark] #home :is(a, button, input, textarea):focus-visible { outline-color: #f3b591; }
+/* The light button kept its pale fill while its text turned pale too. */
+:root[data-theme=dark] .button-light { background: #2b372d; color: #f0f5ed; }
 
 @media (max-width: 760px) {
   .hero .hero-orbit { opacity: .5; }

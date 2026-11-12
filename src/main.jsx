@@ -6,6 +6,7 @@ import './footer.css';
 import './responsive.css';
 import './studio.css';
 import './refinements.css';
+import './motion.css';
 import App from './App.jsx';
 import {emptyPublicContent,recordDiagnostic} from './lib/availability.mjs';
 
