@@ -112,6 +112,23 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  const group=(await(await call({action:'save',content,envelope:{to:'new-to@example.com',cc:'copy@example.com',bcc:'secret@example.com'}})).json()).campaign;assert.ok(group.id);
  await call({action:'test',id:group.id});assert.equal(sent.at(-1).to,'owner@example.com');assert.equal(sent.at(-1).cc,undefined);assert.equal(sent.at(-1).bcc,undefined);
  const queued=await call({action:'send_email',id:group.id,envelope:{to:'new-to@example.com',cc:'copy@example.com',bcc:'secret@example.com'}});assert.equal(queued.status,200);
+ // Separate sends: each business gets its own message, its name fills {{company_name}}, and the opt-out header is present.
+ const note={name:'Note',subject:'Idea for {{company_name}}',body:'A note for {{company_name}}',layout:'plain',signature,purpose:'introduction',images:[]};
+ const solo=(await(await call({action:'save',content:note,envelope:{to:'Kopi Lane <kopi@example.com>\nbare@example.com',separate:true}})).json()).campaign;assert.equal(solo.envelope.separate,true);assert.deepEqual(solo.envelope.names,{'kopi@example.com':'Kopi Lane'});
+ assert.equal((await call({action:'save',content:note,envelope:{to:'kopi@example.com',cc:'copy2@example.com',separate:true}})).status,400);
+ assert.equal((await call({action:'test',id:solo.id,extra_to:'a@x.example, b@x.example, c@x.example'})).status,400);
+ const before=sent.length;assert.equal((await call({action:'test',id:solo.id,extra_to:'outlook-me@example.com; owner@example.com'})).status,200);
+ assert.deepEqual(sent.slice(before).map(m=>m.to),['owner@example.com','outlook-me@example.com']);assert.ok(sent.slice(before).every(m=>m.subject.startsWith('[TEST] ')));
+ assert.equal((await call({action:'send_email',id:solo.id,envelope:{to:'Kopi Lane <kopi@example.com>\nbare@example.com'}})).status,400,'Switching to a shared email needs a new save and test');
+ assert.equal((await call({action:'send_email',id:solo.id,envelope:{to:'Kopi Lane <kopi@example.com>\nbare@example.com',separate:true}})).status,200);
+ assert.equal((await db.query("select company_name from marketing_contacts where email='kopi@example.com'")).rows[0].company_name,'Kopi Lane');
+ const mark=sent.length;
+ for(let i=0;i<4;i++){await db.exec("update marketing_send_slots set created_at=now()-interval '1 minute'");await call({action:'process'});}
+ const personal=sent.slice(mark).filter(m=>['kopi@example.com','bare@example.com'].includes(m.to));
+ assert.deepEqual(personal.map(m=>m.to).sort(),['bare@example.com','kopi@example.com']);
+ assert.ok(personal.every(m=>m.cc===undefined&&m.bcc===undefined&&m.headers['List-Unsubscribe-Post']==='List-Unsubscribe=One-Click'&&/unsubscribe\?token=/.test(m.headers['List-Unsubscribe'])));
+ assert.equal(personal.find(m=>m.to==='kopi@example.com').subject,'Idea for Kopi Lane');assert.equal(personal.find(m=>m.to==='bare@example.com').subject,'Idea for your business');
+ assert.ok(personal.every(m=>!/<table|<h1/.test(m.html)));
  const pref=(await db.query('select preference_token from email_campaigns where id=$1',[group.id])).rows[0].preference_token;
  const preference=await handler(new Request(`https://project.supabase.co/functions/v1/marketing/preferences?token=${pref}`,{method:'POST',body:new URLSearchParams({email:'secret@example.com'})}));assert.equal(preference.status,200);assert.equal((await db.query("select suppressed from marketing_contacts where email='secret@example.com'")).rows[0].suppressed,true);
  }finally{delete globalThis.__marketingTest;await db.close();}
