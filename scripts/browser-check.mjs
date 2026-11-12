@@ -126,11 +126,17 @@ try{
   await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
   await fill('#email-recipient-to','Customer <client@example.com>');
+  // New emails start as separate, plain notes: no Cc/Bcc, heading and link optional.
+  assert.equal(await evaluate("document.querySelector('#email-recipient-separate').checked&&document.querySelector('#email-layout').value==='plain'&&![...document.querySelectorAll('.email-recipient-editor button')].some(el=>el.textContent==='Add Cc / Bcc')"),true);
+  await click('#email-recipient-separate');await wait("!document.querySelector('#email-recipient-separate').checked");
   await evaluate("[...document.querySelectorAll('.email-recipient-editor button')].find(el=>el.textContent==='Add Cc / Bcc').click()");
   await fill('#email-recipient-cc','copy@example.com');await fill('#email-recipient-bcc','client@example.com');
   await evaluate("document.querySelector('#email-recipient-bcc').focus();document.querySelector('#email-recipient-to').focus()");
   await wait("document.querySelector('#email-recipient-bcc-error')?.textContent.includes('more than once')");
   await fill('#email-recipient-bcc','private@example.com');await wait("!document.querySelector('#email-recipient-bcc-error')");
+  // Switching back to separate sending flags the Cc and Bcc that can no longer be used, instead of hiding them.
+  await click('#email-recipient-separate');await wait("document.querySelector('#email-recipient-cc-error')?.textContent.includes('Separate emails')");
+  await click('#email-recipient-separate');await wait("!document.querySelector('#email-recipient-cc-error')");
   await viewport(1440);await evaluate('window.scrollTo(0,0)');await screenshot('email-composer-desktop.png');
   await viewport(390);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'Email composer must fit mobile');await screenshot('email-composer-mobile.png');await viewport(1440);
   assert.equal(await evaluate("[...document.querySelectorAll('.marketing-signature-editor input[type=checkbox]')].filter(el=>el.checked).length"),2,'Both team signatures default on');

@@ -1,5 +1,5 @@
 import {contactReady} from '../_shared/outreach.mjs';
-import {parseRecipients} from '../_shared/email-recipients.mjs';
+import {buildEnvelope} from '../_shared/email-recipients.mjs';
 import {processEnvelope} from '../_shared/marketing-envelope.mjs';
 import {createClient} from 'npm:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@10.3.1';
@@ -15,7 +15,9 @@ async function processOne(admin:any){
  const rows=checked(await admin.rpc('claim_marketing_send',{p_limit:Number(env('MARKETING_DAILY_LIMIT')||50)}));
  if(!rows?.length)return {idle:true};const item=rows[0];
  const campaign=checked(await admin.from('email_campaigns').select('*').eq('id',item.campaign_id).single());
- if(campaign.envelope)return processEnvelope({admin,campaign,env,send});
+ // A "separate" envelope falls through to the per-recipient path below, which
+ // personalises each message and carries the one-click unsubscribe header.
+ if(campaign.envelope&&!campaign.envelope.separate)return processEnvelope({admin,campaign,env,send});
  const contact=checked(await admin.from('marketing_contacts').select('*').eq('id',item.contact_id).single());
  let state:any={status:'suppressed',error:'Contact is no longer eligible, or campaign was paused.'};
  const used=campaign.content.purpose!=='customer_update'&&checked(await admin.rpc('marketing_introduction_used',{p_contact:contact.id,p_exclude_campaign:campaign.id}));
@@ -91,28 +93,34 @@ Deno.serve(async request=>{
  }
  if(action==='save'){
   const errors=validateCampaign(input.content);if(Object.keys(errors).length)return reply({error:'Review the highlighted campaign and signature fields.',errors},400);
-  const parsed=input.envelope===undefined?null:parseRecipients(input.envelope);
+  const parsed=input.envelope===undefined?null:buildEnvelope(input.envelope);
   if(parsed){const errors={...parsed.errors};if(!parsed.count&&!String(input.envelope.to||'').trim())delete errors.to;if(Object.keys(errors).length)return reply({error:'Review the recipient addresses.',errors:Object.fromEntries(Object.entries(errors).map(([k,v])=>[`recipients.${k}`,v]))},400);}
-  const value={name:input.content.name,content:input.content,tested_hash:null,...(parsed?{envelope:parsed.recipients}:{})};
+  const value={name:input.content.name,content:input.content,tested_hash:null,...(parsed?{envelope:parsed.envelope}:{})};
   const result=input.id?checked(await admin.from('email_campaigns').update(value).eq('id',input.id).eq('status','draft').select().single()):checked(await admin.from('email_campaigns').insert(value).select().single());return reply({campaign:result});
  }
  const campaign=input.id?checked(await admin.from('email_campaigns').select('*').eq('id',input.id).single()):null;
  if(action==='send_email'){
   if(campaign?.status!=='draft'||campaign.tested_hash!==await digest(JSON.stringify(campaign.content)))fail('Save and test the current draft first.');
-  const parsed=parseRecipients(input.envelope);if(Object.keys(parsed.errors).length)return reply({error:'Review the recipient addresses.',errors:Object.fromEntries(Object.entries(parsed.errors).map(([k,v])=>[`recipients.${k}`,v]))},400);
+  const parsed=buildEnvelope(input.envelope);if(Object.keys(parsed.errors).length)return reply({error:'Review the recipient addresses.',errors:Object.fromEntries(Object.entries(parsed.errors).map(([k,v])=>[`recipients.${k}`,v]))},400);
   if(parsed.count>Math.min(200,Math.max(1,Number(env('MARKETING_DAILY_LIMIT')||50))))fail('This recipient group exceeds the configured daily marketing limit. Use a smaller group.');
-  if(['to','cc','bcc'].some(k=>JSON.stringify(parsed.recipients[k])!==JSON.stringify(campaign.envelope?.[k]||[])))fail('Recipients changed. Save and test the draft again.');
+  if(['to','cc','bcc'].some(k=>JSON.stringify(parsed.envelope[k])!==JSON.stringify(campaign.envelope?.[k]||[]))||!!parsed.envelope.separate!==!!campaign.envelope?.separate)fail('Recipients changed. Save and test the draft again.');
   const errors=validateCampaign(campaign.content);if(Object.keys(errors).length)return reply({error:'Review the highlighted email fields.',errors},400);
   const scheduled=input.scheduled_at?new Date(input.scheduled_at).toISOString():null;
-  checked(await admin.rpc('queue_marketing_email',{p_id:campaign.id,p_content:campaign.content,p_envelope:parsed.recipients,p_schedule:scheduled}),'queue_marketing_email');return reply({ok:true});
+  checked(await admin.rpc('queue_marketing_email',{p_id:campaign.id,p_content:campaign.content,p_envelope:parsed.envelope,p_schedule:scheduled}),'queue_marketing_email');
+  // Names typed as "Business <email>" fill {{company_name}}. A name already on record is never overwritten.
+  for(const [email,name] of Object.entries(parsed.envelope.names||{}))checked(await admin.from('marketing_contacts').update({company_name:name}).eq('email',email).eq('company_name',''),'recipient_names');
+  return reply({ok:true});
  }
  if(action==='test'){
   if(!campaign||campaign.status!=='draft')fail('Save a draft first.');
   const errors=validateCampaign(campaign.content);if(Object.keys(errors).length)return reply({error:'Complete the highlighted fields, save the draft, and test again.',errors},400);
   const rate=checked(await admin.rpc('consume_enquiry_rate_limit',{p_key:await digest(`marketing-test:${auth.data.user.id}`),p_max:5,p_window_seconds:3600}));if(!rate)fail('Test email limit reached. Try again in an hour.');
   const message=renderMarketing(campaign.content,campaign.envelope?{}:{first_name:'Team',company_name:'Preview company'},`${env('SUPABASE_URL')}/functions/v1/marketing/unsubscribe?token=00000000-0000-0000-0000-000000000000`);
-  const result=await send({...message,subject:`[TEST] ${message.subject}`,to:auth.data.user.email});if(!result.accepted?.length)fail('SMTP did not accept the test email.');
-  checked(await admin.from('email_campaigns').update({tested_hash:await digest(JSON.stringify(campaign.content))}).eq('id',campaign.id).eq('status','draft'));return reply({ok:true,message:'Gmail accepted the test. Check your inbox and Spam before sending.'});
+  // Up to two extra inboxes (for example Outlook and Yahoo) show where the email really lands. Each gets its own copy.
+  const extras=[...new Set(String(input.extra_to||'').split(/[,;\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean))].filter(value=>value!==String(auth.data.user.email).toLowerCase());
+  if(extras.length>2||extras.some(value=>!emailPattern.test(value)||value.length>254))return reply({error:'Enter up to two valid extra test addresses.',errors:{extra_to:'Enter up to two valid email addresses, separated by commas.'}},400);
+  for(const to of [auth.data.user.email,...extras]){const result=await send({...message,subject:`[TEST] ${message.subject}`,to});if(!result.accepted?.length)fail(`SMTP did not accept the test email for ${to}.`);}
+  checked(await admin.from('email_campaigns').update({tested_hash:await digest(JSON.stringify(campaign.content))}).eq('id',campaign.id).eq('status','draft'));return reply({ok:true,message:extras.length?`Gmail accepted ${extras.length+1} test emails. Check the inbox and Spam folder of each address before sending.`:'Gmail accepted the test. Check your inbox and Spam before sending.'});
  }
  if(action==='start'){
   if(campaign?.status!=='draft'||campaign.tested_hash!==await digest(JSON.stringify(campaign.content)))fail('Save and test the current draft first.');

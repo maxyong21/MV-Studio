@@ -1,3 +1,15 @@
+# Separate sends and the plain layout
+
+Apply `supabase/migrations/20261112_separate_send.sql` after `20261111_email_composer.sql`, then redeploy the `marketing` function and the frontend. Until the migration is applied, a separate send is still claimed as one shared group, so apply it before using the new option.
+
+**Send a separate email to each address** is ticked by default in Compose. Each To address gets its own message, sees no other recipient, and receives the one-click unsubscribe header that Gmail and Yahoo look for. Cc and Bcc are not available in this mode. Write one address per line as `Business Name <email>`: the name fills `{{company_name}}` for that business and is saved on the contact only when no company name is on record. `{{first_name}}` still falls back to "there". Messages leave one at a time, about a minute apart with the Cron worker, and each one uses one slot of the daily limit. Untick the box to send one shared To/Cc/Bcc email as before.
+
+**Email style** chooses the layout. *Plain personal note* is the default for new emails: no banner, logo, button, images or tables, and the heading and link are optional. Use it for first contact. *Designed* is the earlier branded layout and suits updates to existing customers. Drafts and templates saved before this change keep the designed layout.
+
+**Test addresses.** A test always goes to your admin login email. You can add up to two more addresses of your own, for example Outlook and Yahoo, to see where the email lands there. Each receives its own copy and each counts toward Gmail quota and the five-tests-per-hour limit as one test.
+
+Nothing here can guarantee inbox placement. The site still reports only that Gmail accepted a message, not where it landed.
+
 # Current email composer workflow
 
 Apply `supabase/migrations/20261111_email_composer.sql` after the existing marketing, outreach and Team migrations. Redeploy `marketing` and the frontend. Existing Gmail secrets and the Cron worker remain valid.
