@@ -59,6 +59,10 @@ if(!base)console.warn('Set VITE_SITE_URL to generate canonical URLs and configur
 let adminHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Studio Admin | MV Studio</title>');
 adminHtml=meta(adminHtml,'robots','noindex,nofollow','name');
 await mkdir('dist/admin',{recursive:true});await writeFile('dist/admin/index.html',adminHtml);
+// The widget library is unlisted: its own noindex shell, no sitemap entry, and no robots.txt line that would advertise it.
+let widgetsHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Widget Library | MV Studio</title>');
+widgetsHtml=meta(widgetsHtml,'robots','noindex,nofollow','name');
+await mkdir('dist/widgets',{recursive:true});await writeFile('dist/widgets/index.html',widgetsHtml);
 // Prerender the actual error artwork: it remains useful without JavaScript.
 let notFound=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Page not found | MV Studio</title>'),'robots','noindex,follow','name');
 notFound=notFound.replace('<div id="root"></div>',()=>`<div id="root">${renderPage(emptyPublicContent(),'/page-not-found')}</div>`);

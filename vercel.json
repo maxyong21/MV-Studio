@@ -11,12 +11,14 @@
       {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
       {"key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()"},
       {"key": "Cross-Origin-Opener-Policy", "value": "same-origin"}
-    ]}
+    ]},
+    {"source": "/widgets(.*)", "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}]}
   ],
   "routes": [
     {"src": "/sitemap.xml", "dest": "/api/sitemap"},
     {"src": "/projects/([^/]+)/?", "dest": "/api/project-page?id=$1"},
     {"src": "/admin/?", "dest": "/admin/index.html"},
+    {"src": "/widgets/?", "dest": "/widgets/index.html"},
     {"src": "/privacy/?", "dest": "/privacy/index.html"},
     {"src": "/terms/?", "dest": "/terms/index.html"},
     {"src": "/data-deletion/?", "dest": "/data-deletion/index.html"},

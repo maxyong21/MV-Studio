@@ -8,7 +8,7 @@ export function sitemapPaths(value) {
   const errors=[];
   const paths=[];
   for(const path of lines){
-    if(path.length>240||!/^\/(?:[a-zA-Z0-9._~-]+\/?)*(?:[a-zA-Z0-9._~-]+)?$/.test(path)||path.startsWith('//')||/(?:^|\/)\.{1,2}(?:\/|$)/.test(path)||/^\/(?:admin|api|assets|optimized|projects)(?:\/|$)/i.test(path)||/^\/(?:sitemap\.xml|robots\.txt)(?:\/|$)/i.test(path))errors.push(path);
+    if(path.length>240||!/^\/(?:[a-zA-Z0-9._~-]+\/?)*(?:[a-zA-Z0-9._~-]+)?$/.test(path)||path.startsWith('//')||/(?:^|\/)\.{1,2}(?:\/|$)/.test(path)||/^\/(?:admin|widgets|api|assets|optimized|projects)(?:\/|$)/i.test(path)||/^\/(?:sitemap\.xml|robots\.txt)(?:\/|$)/i.test(path))errors.push(path);
     else paths.push(path);
   }
   return {paths:[...new Set(paths)],errors};

@@ -35,6 +35,8 @@ try{
   await send('Runtime.enable');await send('Page.enable');await send('Network.enable');await viewport(1440);
   await navigate('http://127.0.0.1:4187/');
   await wait("!!document.querySelector('.theme-button')");
+  assert.ok(!requests.some(url=>/\/Widgets-[^/]+\.(js|css)/.test(url)),'Widget library must not be loaded by the homepage');
+  assert.equal(await evaluate("document.querySelectorAll('a[href*=widgets]').length"),0,'The homepage must not link to the unlisted widget library');
   assert.ok(!requests.some(url=>/\/Admin-[^/]+\.js/.test(url)),'Admin bundle must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/supabase-[^/]+\.js/.test(url)),'Admin authentication SDK must not be requested by the homepage');
   assert.ok(!requests.some(url=>/\/(ChatDialog|ChatPanel)-[^/]+\.js/.test(url)),'Chatbot bundles load only after opening the assistant');
@@ -319,9 +321,22 @@ try{
   assert.ok(!requests.slice(legalRequestStart).some(url=>/\/rest\/v1\/|\/functions\/v1\//.test(url)),'Legal pages must not depend on database or functions');
   const {renderPage}=await import('../.generated/browser-ssr/entry-server.js');const {emptyPublicContent}=await import('../src/lib/availability.mjs');
   for(const route of ['/privacy','/terms','/data-deletion']){const html=renderPage({...emptyPublicContent(),__availability:'maintenance'},route);assert.match(html,/legal-article/);assert.doesNotMatch(html,/availability-page/);}
+  // Unlisted widget library: every demo renders, is marked noindex, and the shortlist survives a reload.
+  await viewport(1440);await navigate('http://127.0.0.1:4188/widgets','.wg-card');
+  assert.equal(await evaluate("document.querySelectorAll('.wg-card').length"),115);
+  assert.equal(await evaluate("document.querySelector('meta[name=robots]').content"),'noindex,nofollow');
+  assert.equal(await evaluate("[...document.querySelectorAll('.wg-demo [role=alert]')].filter(node=>/could not be shown/.test(node.textContent)).length"),0,'No widget demo may fail to render');
+  await evaluate("document.querySelectorAll('.wg-readout .wg-btn').forEach(button=>button.click())");
+  assert.equal(await evaluate("[...document.querySelectorAll('.wg-svg *')].filter(node=>[...node.attributes].some(a=>/NaN|undefined|Infinity/.test(a.value))).length"),0,'Charts stay valid after shuffling');
+  await click('#pop-up-modal .wg-demo .wg-btn');await wait("document.querySelector('#pop-up-modal dialog').open");await evaluate("document.querySelector('#pop-up-modal dialog').close()");
+  await click('#toast-message .wg-demo .wg-btn');await wait("document.querySelector('.wg-toast')?.textContent.includes('Changes saved')");
+  await click('#donut-chart .wg-star');await navigate('http://127.0.0.1:4188/widgets?again','.wg-card');
+  assert.equal(await evaluate("document.querySelector('#donut-chart .wg-star').getAttribute('aria-pressed')"),'true');await evaluate("localStorage.removeItem('mv-widget-shortlist')");
+  for(const width of [320,768]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Widget library overflows at ${width}px`);}
+  await viewport(1440);await screenshot('widgets.png');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();
