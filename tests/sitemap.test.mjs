@@ -32,6 +32,7 @@ test('sitemap follows published project changes and admin managed site paths',as
 test('only local public paths enter the sitemap and invalid admin input is rejected',()=>{
   const invalid='https://other.example/demo\n/admin\n//other.example\n/projects/'+id+'\n/faq?sort=1';
   assert.equal(sitemapPaths(invalid).errors.length,5);
+  assert.deepEqual(sitemapPaths('/widgets\n/widgets/').errors,['/widgets','/widgets/'],'The unlisted widget library can never be added to the sitemap');
   assert.ok(validateContentField('sitemap_paths_text',invalid));
   const xml=sitemapXml('https://mv-aistudio.vercel.app',[{id,active:true,demo_url:'https://other.example/demo.html'},{id:'bad',active:true},{id:'seed-p1',active:false,demo_url:'/hidden.html'}],'/faq\n/faq\n/guides/a&amp;b');
   assert.equal((xml.match(/\/faq<\/loc>/g)||[]).length,1);

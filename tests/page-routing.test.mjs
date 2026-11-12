@@ -29,6 +29,8 @@ test('Vercel keeps admin, assets and sitemap routes and gives unknown paths a 40
  assert.ok(config.routes.some(r=>r.handle==='filesystem'));
  assert.equal(config.routes[0].dest,'/api/sitemap');
  assert.ok(config.routes.some(r=>r.src==='/admin/?'&&r.dest==='/admin/index.html'));
+ assert.ok(config.routes.some(r=>r.src==='/widgets/?'&&r.dest==='/widgets/index.html'));
+ assert.ok(config.headers.some(h=>h.source==='/widgets(.*)'&&h.headers.some(x=>x.key==='X-Robots-Tag'&&/noindex/.test(x.value))),'Widget library must be sent with noindex');
  assert.deepEqual(config.routes.at(-1),{src:'/.*',dest:'/404.html',status:404});
  assert.equal(config.routes[1].dest,'/api/project-page?id=$1');
  for(const path of ['privacy','terms','data-deletion'])assert.ok(config.routes.some(r=>r.src===`/${path}/?`&&r.dest===`/${path}/index.html`));

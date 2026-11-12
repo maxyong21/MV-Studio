@@ -20,6 +20,9 @@ import {emptyPublicContent,hasPublicContent} from './lib/availability.mjs';
 import LegalPage from './legal/LegalPage.jsx';
 import {legalPaths} from './legal/content.mjs';
 const Admin=lazy(()=>import('./admin/Admin.jsx'));
+// Unlisted: reachable by address or from the admin header only. See docs/WIDGETS.md.
+const Widgets=lazy(()=>import('./widgets/Widgets.jsx'));
+const standalone=path=>['/admin','/widgets'].includes(path.replace(/\/$/,''));
 
 function youtubeEmbed(url){try{const parsed=new URL(url);const host=parsed.hostname.replace(/^www\./,'');const isYoutube=host==='youtube.com'||host.endsWith('.youtube.com');const id=host==='youtu.be'?parsed.pathname.slice(1):isYoutube?(parsed.searchParams.get('v')||parsed.pathname.match(/\/(?:embed|shorts)\/([^/]+)/)?.[1]):null;return id?`https://www.youtube-nocookie.com/embed/${id}`:null;}catch{return null;}}
 function ProjectDemoVideo({url}){if(!url)return null;const embed=youtubeEmbed(url);return <figure className="project-demo-video">{embed?<iframe src={embed} title="Project video demo" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/>:<video src={url} controls preload="metadata">Your browser does not support video playback.</video>}</figure>;}
@@ -41,7 +44,7 @@ function useSiteData(initialData,enabled=true) {
   return {data,loading,error,reload,availability};
 }
 function App({initialData}){
-  const {pathname,hash,key:navigationKey}=useLocation(),site=useSiteData(initialData,pathname!=='/admin'&&!legalPaths.includes(pathname.replace(/\/$/,'')));
+  const {pathname,hash,key:navigationKey}=useLocation(),site=useSiteData(initialData,!standalone(pathname)&&!legalPaths.includes(pathname.replace(/\/$/,'')));
   useLayoutEffect(()=>{if(!hash)window.scrollTo({top:0,left:0,behavior:'instant'});},[pathname,hash,navigationKey]);
   useEffect(()=>{
     if(!hash||site.availability!=='ready')return;
@@ -50,7 +53,7 @@ function App({initialData}){
     return()=>cancelAnimationFrame(frame);
   },[pathname,hash,navigationKey,site.availability]);
   const publicPage=children=><PublicBoundary key={pathname}>{site.availability==='ready'?children:<Availability kind={site.availability} onRetry={site.availability==='maintenance'?site.reload:undefined} busy={site.loading}/>}</PublicBoundary>;
-  return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} />{legalPaths.map(path=><Route key={path} path={path} element={<LegalPage key={path} path={path} data={site.data}/>}/>)}<Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher whatsappNumber={site.data.site_content?.content?.whatsapp_number??fallbackContent.site_content.content.whatsapp_number}/>}</>;
+  return <><Analytics path={pathname} enabled={site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))}/><Routes><Route path="/" element={publicPage(<Home {...site}/>)} /><Route path="/projects/:id" element={publicPage(<ProjectDetails {...site}/>)} />{legalPaths.map(path=><Route key={path} path={path} element={<LegalPage key={path} path={path} data={site.data}/>}/>)}<Route path="/admin" element={<Suspense fallback={<div className="admin-loading" role="status">Opening studio workspace...</div>}><Admin /></Suspense>} /><Route path="/widgets" element={<Suspense fallback={<div className="admin-loading" role="status">Opening widget library...</div>}><Widgets /></Suspense>} /><Route path="*" element={<NotFoundPage/>} /></Routes>{site.availability==='ready'&&(pathname==='/'||(site.data.projects||[]).some(project=>pathname===`/projects/${project.id}`))&&<Launcher whatsappNumber={site.data.site_content?.content?.whatsapp_number??fallbackContent.site_content.content.whatsapp_number}/>}</>;
 }
 
 function NotFoundPage({project=false}){
