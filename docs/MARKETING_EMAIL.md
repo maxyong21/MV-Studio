@@ -12,7 +12,7 @@ Apply `supabase/migrations/20261112_separate_send.sql` after `20261111_email_com
 
 **Email style** chooses the layout. *Plain personal note* is the default for new emails: no banner, logo, button, images or tables, and the heading and link are optional. Use it for first contact. *Designed* is the earlier branded layout and suits updates to existing customers. Drafts and templates saved before this change keep the designed layout.
 
-**Test addresses.** A test always goes to your admin login email. You can add up to two more addresses of your own, for example Outlook and Yahoo, to see where the email lands there. Each receives its own copy and each counts toward Gmail quota and the five-tests-per-hour limit as one test.
+**Test addresses.** A test always goes to your admin login email. You can add up to two more addresses of your own, for example Outlook and Yahoo, to see where the email lands there. Each receives its own copy and uses Gmail quota. One press of the test button counts once toward the hourly test limit, which is 20 by default. Set the `MARKETING_TEST_HOURLY_LIMIT` function secret (1 to 100) to change it, then redeploy `marketing`.
 
 Nothing here can guarantee inbox placement. The site still reports only that Gmail accepted a message, not where it landed.
 

@@ -169,8 +169,42 @@ try{
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Save draft').click()");
   await wait("!!document.querySelector('.marketing-field-error')");
   assert.deepEqual(await evaluate('window.marketingCalls'),['list'],'Invalid content must not be saved or sent');
+  assert.equal(await evaluate("document.querySelectorAll('.send-checklist li').length"),3);
+  assert.equal(await evaluate("document.querySelectorAll('.send-checklist li.is-done').length"),1,'Only the recipient step is complete before saving');
+  assert.ok(await evaluate("document.querySelector('.send-checklist').textContent.includes('Press “Save draft”')"));
+  assert.equal(await evaluate("[...document.querySelectorAll('.marketing-workspace .form-error button')].map(el=>el.textContent).join()"),'Dismiss','Validation errors offer Dismiss, not Retry loading');
   await evaluate("window.fetch=window.originalMarketingFetch;[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");
-  await viewport(1440);await screenshot('admin-desktop.png');
+  await viewport(1440);
+  // Every section explains itself, the menu is grouped, and closing the guide is remembered.
+  await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Customers','Website content','Health']);
+  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),12);
+  assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'MV STUDIO / WEBSITE CONTENT');
+  assert.equal(await evaluate("document.querySelectorAll('.admin-guide ol li').length>=3&&!document.querySelector('.admin-status')"),true);
+  await screenshot('admin-desktop.png');
+  await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'");
+  assert.equal(await evaluate("localStorage.getItem('mv-admin-guides-closed')"),'["services"]');
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");await wait("document.querySelector('.admin-guide')?.textContent.includes('FAQ section')");
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'&&!!document.querySelector('.entity-row')");
+  await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='true'");
+  // Unsaved edits in a dialog are not thrown away by Escape; an untouched dialog still closes at once.
+  await click('.entity-toolbar-actions .button-dark');await wait("!!document.querySelector('#dialog-name')");
+  await evaluate("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))");await wait("!document.querySelector('.entity-dialog')");
+  await click('.entity-toolbar-actions .button-dark');await wait("!!document.querySelector('#dialog-name')");await fill('#dialog-name','Half-typed service');
+  await evaluate("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))");await wait("document.querySelector('.entity-dialog .inline-confirm')?.textContent.includes('Close without saving')");
+  await evaluate("[...document.querySelectorAll('.entity-dialog .inline-confirm button')].find(el=>el.textContent==='Keep editing').click()");
+  assert.equal(await evaluate("!document.querySelector('.entity-dialog .inline-confirm')&&document.querySelector('#dialog-name').value"),'Half-typed service');
+  await click('.entity-dialog .modal-close');await wait("!!document.querySelector('.entity-dialog .dialog-discard')");await click('.entity-dialog .dialog-discard');await wait("!document.querySelector('.entity-dialog')");
+  assert.equal((await servers.db.query("select count(*)::int n from services where name='Half-typed service'")).rows[0].n,0);
+  // Site content warns before unsaved edits are lost by switching section.
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Site content').click()");await wait("!!document.querySelector('#content-hero_title')");
+  assert.equal(await evaluate("!!document.querySelector('.unsaved-flag')"),false,'A freshly loaded form is not marked unsaved');
+  const savedTitle=await evaluate("document.querySelector('#content-hero_title').value");await fill('#content-hero_title',savedTitle+' edited');await wait("!!document.querySelector('.unsaved-flag')");
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");await wait("document.querySelector('.admin-workspace > .inline-confirm')?.textContent.includes('unsaved changes')");
+  assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent"),'Site content');
+  await evaluate("[...document.querySelectorAll('.admin-workspace > .inline-confirm button')].find(el=>el.textContent==='Leave without saving').click()");await wait("document.querySelector('.rail-item.selected').textContent==='FAQs'");
+  assert.equal((await servers.db.query('select content from site_content where id=1')).rows[0].content.hero_title,savedTitle,'Discarded edits are not saved');
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("!!document.querySelector('.entity-row')&&!document.querySelector('.entity-loading')");
   await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await click('.admin-theme-toggle');
   const initialFeatures=(await servers.db.query("select features from services where name='Landing Page'")).rows[0].features;
   await click('.entity-actions button');await wait("!!document.querySelector('#dialog-name')");
@@ -346,7 +380,7 @@ try{
   await viewport(1440);await screenshot('widgets.png');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','admin page guides, grouped menu and unsaved-change prompts','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();

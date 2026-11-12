@@ -23,7 +23,9 @@ async function processOne(admin:any){
  const used=campaign.content.purpose!=='customer_update'&&checked(await admin.rpc('marketing_introduction_used',{p_contact:contact.id,p_exclude_campaign:campaign.id}));
  if(['sending','scheduled'].includes(campaign.status)&&contactReady(contact)&&!used&&(campaign.content.purpose!=='customer_update'||contact.relationship==='customer')){
   try{
-   const url=unsubscribeUrl(contact.unsubscribe_token),message=renderMarketing(campaign.content,contact,url);
+   // A name typed beside the address for this email wins over an older company name saved on the contact.
+   const typedName=campaign.envelope?.names?.[contact.email];
+   const url=unsubscribeUrl(contact.unsubscribe_token),message=renderMarketing(campaign.content,typedName?{...contact,company_name:typedName}:contact,url);
    const result=await send({...message,to:contact.email,headers:{'List-Unsubscribe':`<${url}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'},messageId:`<marketing-${item.id}@${String(env('GMAIL_SMTP_USER')).split('@')[1]}>`});
    state=result.accepted?.length?{status:'accepted',message_id:result.messageId,error:''}:{status:'failed',error:'SMTP did not accept the recipient.'};
   }catch(error:any){const temporary=[421,450,451,452].includes(Number(error.responseCode));const permanent=Number(error.responseCode)>=500||['EAUTH','EMAIL_CONFIG'].includes(error.code);state={status:temporary&&item.attempts<3?'queued':permanent||temporary?'failed':'uncertain',error:`${error.code||'SMTP'}: ${String(error.response||error.message).slice(0,350)}`,next_attempt_at:new Date(Date.now()+60000*2**item.attempts).toISOString()};
@@ -114,7 +116,10 @@ Deno.serve(async request=>{
  if(action==='test'){
   if(!campaign||campaign.status!=='draft')fail('Save a draft first.');
   const errors=validateCampaign(campaign.content);if(Object.keys(errors).length)return reply({error:'Complete the highlighted fields, save the draft, and test again.',errors},400);
-  const rate=checked(await admin.rpc('consume_enquiry_rate_limit',{p_key:await digest(`marketing-test:${auth.data.user.id}`),p_max:5,p_window_seconds:3600}));if(!rate)fail('Test email limit reached. Try again in an hour.');
+  // Tests per admin per hour. Each press counts once, however many test inboxes it reaches.
+  // 20 by default; MARKETING_TEST_HOURLY_LIMIT can set 1 to 100. Tests still use Gmail's daily quota.
+  const testLimit=Math.min(100,Math.max(1,Math.floor(Number(env('MARKETING_TEST_HOURLY_LIMIT'))||20)));
+  const rate=checked(await admin.rpc('consume_enquiry_rate_limit',{p_key:await digest(`marketing-test:${auth.data.user.id}`),p_max:testLimit,p_window_seconds:3600}));if(!rate)fail(`Test email limit reached (${testLimit} an hour). Try again later, or raise MARKETING_TEST_HOURLY_LIMIT in the function secrets.`);
   const message=renderMarketing(campaign.content,campaign.envelope?{}:{first_name:'Team',company_name:'Preview company'},`${env('SUPABASE_URL')}/functions/v1/marketing/unsubscribe?token=00000000-0000-0000-0000-000000000000`);
   // Up to two extra inboxes (for example Outlook and Yahoo) show where the email really lands. Each gets its own copy.
   const extras=[...new Set(String(input.extra_to||'').split(/[,;\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean))].filter(value=>value!==String(auth.data.user.email).toLowerCase());
