@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Code2, Database, Github, Globe2, HeartHandshake, Home as HomeIcon, Layers3, Linkedin, Mail, Menu, Moon, Pencil, Plus, Search, ShieldCheck, Sparkles, Sun, Trash2, X, Zap } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUpRight, BadgeCheck, Check, Code2, Database, Github, Globe2, HeartHandshake, Home as HomeIcon, Layers3, Linkedin, Mail, Menu, Pencil, Plus, Search, ShieldCheck, Sparkles, Trash2, X, Zap } from 'lucide-react';
 import { fallbackContent } from './content.js';
 import { isSupabaseConfigured,loadPublicContent } from './public-api.js';
 import {sortRows,money,normalizeContactList,normalizeSiteContent,publicHref,whatsappHref} from './lib/site.js';
@@ -12,6 +12,8 @@ import Analytics from './components/Analytics.jsx';
 import Promotion from './components/Promotion.jsx';
 import Faq from './components/Faq.jsx';
 import HeroSlogans from './components/HeroSlogans.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
+import {usePointerMotion,useScrollProgress} from './lib/motion.js';
 import {eligiblePromotion} from './lib/promotions.mjs';
 import {trackEvent} from './lib/analytics.mjs';
 import {emptyPublicContent,hasPublicContent} from './lib/availability.mjs';
@@ -58,8 +60,8 @@ function NotFoundPage({project=false}){
 }
 
 function Home({data,loading,error}){
-  const [menuOpen,setMenuOpen]=useState(false),[dark,setDark]=useState(false),[toast,setToast]=useState(''),[offerRequest,setOfferRequest]=useState(0);
-  const offerTrigger=useRef(null);
+  const [menuOpen,setMenuOpen]=useState(false),[toast,setToast]=useState(''),[offerRequest,setOfferRequest]=useState(0);
+  const offerTrigger=useRef(null),progressBar=useRef(null),mainContent=useRef(null);
   const hasOffer=Boolean(eligiblePromotion(data.promotions));
   const openOffer=event=>{offerTrigger.current=event.currentTarget;setMenuOpen(false);setOfferRequest(value=>value+1);};
   const restoreOfferFocus=useCallback(()=>{const trigger=offerTrigger.current;offerTrigger.current=null;if(trigger)requestAnimationFrame(()=>{if(trigger.getClientRects().length)trigger.focus();else document.querySelector('.mobile-menu')?.focus();});},[]);
@@ -69,16 +71,15 @@ function Home({data,loading,error}){
   const whatsappNumber=content.whatsapp_number??fallbackContent.site_content.content.whatsapp_number;
   const whatsapp=whatsappHref(whatsappNumber);
   const services=sortRows(data.services),projects=sortRows(data.projects),team=sortRows(data.team_members);
-  useEffect(()=>{try{setDark(localStorage.getItem('mv-theme')==='dark');}catch{}},[]);
-  useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';try{localStorage.setItem('mv-theme',dark?'dark':'light');}catch{}},[dark]);
   useEffect(()=>{
-    const targets=document.querySelectorAll('.intro-section .value-item,.work-card,.service-card,.process-grid article,.care-strip,.team-card,.enquiry-form');
+    const targets=document.querySelectorAll('.intro-layout,.section-heading,.team-heading,.intro-section .value-item,.work-card,.service-card,.process-grid article,.care-strip,.team-card,.testimonial-card,.faq-item,.enquiry-form,.contact-card');
     if(!('IntersectionObserver' in window)||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:.12,rootMargin:'0px 0px -35px 0px'});
     targets.forEach((target,index)=>{target.classList.add('reveal-on-scroll');target.style.setProperty('--reveal-delay',`${(index%4)*65}ms`);observer.observe(target);});
     return()=>{observer.disconnect();targets.forEach(target=>target.classList.remove('reveal-on-scroll'));};
   },[data.projects,data.services,data.team_members]);
-  useEffect(()=>{const update=()=>{const max=document.documentElement.scrollHeight-window.innerHeight;document.documentElement.style.setProperty('--scroll-progress',max>0?`${window.scrollY/max}`:'0');};update();window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);return()=>{window.removeEventListener('scroll',update);window.removeEventListener('resize',update);};},[]);
+  useScrollProgress(progressBar);
+  usePointerMotion(mainContent);
   useEffect(()=>{
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,'');
     const title=content.seo_title||'Web Design & Development for Small Businesses | MV Studio';
@@ -104,12 +105,12 @@ function Home({data,loading,error}){
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(''),2200);};
   return <>
     <a className="skip-link" href="#home">Skip to main content</a>
-    <div className="scroll-progress" aria-hidden="true"/>
+    <div className="scroll-progress" ref={progressBar} aria-hidden="true"/>
     <header className="site-nav"><div className="nav-inner"><a className="brand" href="#home" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a>
       <nav className={menuOpen?'nav-links open':'nav-links'} id="site-navigation" aria-label="Main navigation">{[['Studio','#studio'],['Work','#work'],['Services','#services'],['Contact','#contact']].map(([label,href])=><a key={href} onClick={()=>setMenuOpen(false)} href={href}>{label}</a>)}{hasOffer&&<button type="button" className="nav-offers" aria-haspopup="dialog" onClick={openOffer}>Offers</button>}</nav>
-      <div className="nav-end"><button className="icon-button theme-button" onClick={()=>setDark(!dark)} aria-label="Toggle colour theme">{dark?<Sun size={17}/>:<Moon size={17}/>}</button><a className="button button-dark nav-cta" href="#enquiry">Start a project <ArrowRight size={15}/></a><button className="icon-button mobile-menu" onClick={()=>setMenuOpen(!menuOpen)} aria-label={menuOpen?'Close navigation':'Open navigation'} aria-expanded={menuOpen} aria-controls="site-navigation">{menuOpen?<X/>:<Menu/>}</button></div>
+      <div className="nav-end"><ThemeToggle/><a className="button button-dark nav-cta" href="#enquiry">Start a project <ArrowRight size={15}/></a><button className="icon-button mobile-menu" onClick={()=>setMenuOpen(!menuOpen)} aria-label={menuOpen?'Close navigation':'Open navigation'} aria-expanded={menuOpen} aria-controls="site-navigation">{menuOpen?<X/>:<Menu/>}</button></div>
     </div></header>
-    <main id="home" tabIndex={-1}>
+    <main id="home" tabIndex={-1} ref={mainContent}>
       <section className="hero hero-clear-offer"><div className="hero-orbit orbit-one"/><div className="hero-orbit orbit-two"/><div className="hero-inner"><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line"/>{content.hero_eyebrow}</div><h1>{content.hero_title}</h1><HeroSlogans first={content.hero_description} second={content.hero_slogan_2} third={content.hero_slogan_3}/><div className="hero-actions"><a className="button button-dark" href="#enquiry">{content.hero_cta} <ArrowUpRight size={16}/></a>{whatsapp?<a className="button button-light hero-whatsapp" href={whatsapp} target="_blank" rel="noreferrer">Chat on WhatsApp <ArrowUpRight size={16}/></a>:<a className="text-link" href="#work">Explore our work <ArrowDown size={15}/></a>}</div><div className="hero-proof"><div className="avatar-stack">{team.slice(0,2).map(member=><SmartImage key={member.id} record={member} alt="" sizes="36px" priority/>)}</div><span>Small team. Thoughtful work.<br/><strong>Built together with you.</strong></span></div></div>
       <div className="hero-art" aria-label="A glimpse at MV Studio work"><div className="art-note note-top"><span className="note-dot"/>Made with intention</div><div className="art-window"><div className="window-top"><span/><span/><span/><b>your-next-big-thing.my</b><i>↗</i></div><div className="window-body"><div className="window-brand">GOOD<span>FORM</span><div>MENU&nbsp; ☰</div></div><div className="window-copy"><small>MADE FOR THE EVERYDAY</small><strong>Make room<br/>for <em>better.</em></strong><span>Thoughtful design for the way you live.</span><button>Discover the collection&nbsp; ↗</button></div><div className="window-sticker">DESIGNED<br/>TO GROW <ArrowUpRight size={18}/></div><div className="window-shape shape-a"/><div className="window-shape shape-b"/></div></div><div className="art-float float-code"><Code2 size={17}/><span>Clean code<br/><b>Clear thinking</b></span></div><div className="art-float float-spark"><Sparkles size={19}/></div><div className="art-caption">A thoughtful first impression<br/><b>does a lot of heavy lifting.</b></div></div></div><div className="hero-bottom"><span>GOOD IDEAS DESERVE A GOOD HOME</span><div className="hero-tags"><span>Websites</span><i/> <span>Web apps</span><i/> <span>Digital systems</span></div></div></section>
       <section className="client-paths section-pad" aria-label="Choose how to get started"><a href="/#contact" onClick={()=>trackEvent("project_path_selected",{path:"advice"})}><span>01 / QUICK ADVICE</span><b>Talk to a person</b><small>Ask a question or request a short call. No full brief needed.</small><ArrowUpRight size={17}/></a><button type="button" onClick={()=>{trackEvent("project_path_selected",{path:"plan"});window.dispatchEvent(new CustomEvent("mv:open-project-assistant"));}}><span>02 / GUIDED PLAN</span><b>Shape your project</b><small>Answer a few prompts and review an early scope and catalogue estimate.</small><ArrowUpRight size={17}/></button><a href="#work" onClick={()=>trackEvent("project_path_selected",{path:"work"})}><span>03 / SEE EXAMPLES</span><b>Explore our projects</b><small>Browse real demonstrations before you decide what to build.</small><ArrowUpRight size={17}/></a></section>      <section className="intro-section section-pad" id="studio"><div className="section-overline"><span>01</span> WHY MV STUDIO</div><div className="intro-layout"><h2>{content.about_title}</h2><div><p>{content.about_text}</p><a className="inline-link" href="#contact">A little more about us <ArrowUpRight size={15}/></a></div></div><div className="value-row"><div className="value-item"><span className="value-icon"><HeartHandshake/></span><div><b>Good people, close by</b><p>Work directly with the developers on your project.</p></div></div><div className="value-item"><span className="value-icon"><BadgeCheck/></span><div><b>Clear from day one</b><p>Know the scope, price, and next step before we start.</p></div></div><div className="value-item"><span className="value-icon"><Zap/></span><div><b>Made to move you forward</b><p>Useful digital work built around your real goals.</p></div></div></div></section>

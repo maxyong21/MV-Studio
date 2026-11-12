@@ -79,8 +79,16 @@ try{
     if(width<=760)assert.equal(await evaluate("getComputedStyle(document.querySelector('.team-grid')).gridTemplateColumns.split(' ').length"),1);
   }
   await viewport(390);await click('.mobile-menu');await wait("document.querySelector('.mobile-menu').getAttribute('aria-expanded')==='true'");
-  await click('.mobile-menu');await click('.theme-button');await wait("document.documentElement.dataset.theme==='dark'");
+  await click('.mobile-menu');
+  // The theme spreads from the toggle where View Transitions exist, and always ends on the chosen theme.
+  const revealStarted=await evaluate("(()=>{document.querySelector('.theme-button').click();return document.documentElement.classList.contains('theme-reveal');})()");
+  assert.equal(revealStarted,await evaluate("typeof document.startViewTransition==='function'"),'Theme reveal starts only where the browser supports it');
+  await wait("document.documentElement.dataset.theme==='dark'");await wait("!document.documentElement.classList.contains('theme-reveal')");
+  assert.equal(await evaluate("localStorage.getItem('mv-theme')"),'dark');
+  assert.equal(await evaluate("document.querySelector('.theme-button').hasAttribute('data-switched')&&!!document.querySelector('.theme-button .lucide-sun')"),true);
   await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  // Reduced motion: the theme changes at once, with no reveal.
+  assert.deepEqual(await evaluate("(()=>{const root=document.documentElement,button=document.querySelector('.theme-button');button.click();const light=[root.dataset.theme,root.classList.contains('theme-reveal')];button.click();return [...light,root.dataset.theme,root.classList.contains('theme-reveal')];})()"),['light',false,'dark',false]);
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.float-code')).animationName"),'none');
   const sampleProjectId=(await servers.db.query("select id from projects where name='APMoodle'")).rows[0].id;
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");
