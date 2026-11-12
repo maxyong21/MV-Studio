@@ -10,3 +10,7 @@ body:has(.marketing-overlay){overflow:hidden}
 :root[data-theme=dark] .email-recipient-editor .email-separate{border-color:#4b5b50}
 :root[data-theme=dark] .email-separate input{accent-color:#f3b591}
 :root[data-theme=dark] .email-recipient-editor code{background:#ffffff14}
+
+.marketing-ideas button{max-width:100%;height:auto;white-space:normal;text-align:left;line-height:1.4;overflow-wrap:anywhere}
+.marketing-ideas button[aria-pressed=true]{border-color:#193e32;box-shadow:inset 0 0 0 1px #193e32}
+:root[data-theme=dark] .marketing-ideas button[aria-pressed=true]{border-color:#f3b591;box-shadow:inset 0 0 0 1px #f3b591}

@@ -125,6 +125,10 @@ try{
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Marketing email').click()");
   await wait("!!document.querySelector('.marketing-workspace')&&!document.querySelector('.marketing-workspace').getAttribute('aria-busy').includes('true')");
   await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
+  // Preview text ideas fill the field in one tap and follow the chosen language.
+  await evaluate("document.querySelector('.marketing-ideas button').click()");
+  assert.equal(await evaluate("[...document.querySelectorAll('.marketing-workspace label')].find(el=>el.textContent.startsWith('Inbox preview text')).querySelector('input').value"),'Hi, would you be interested in having your own website?');
+  assert.equal(await evaluate("document.querySelector('.marketing-ideas button').getAttribute('aria-pressed')"),'true');
   await fill('#email-recipient-to','Customer <client@example.com>');
   // New emails start as separate, plain notes: no Cc/Bcc, heading and link optional.
   assert.equal(await evaluate("document.querySelector('#email-recipient-separate').checked&&document.querySelector('#email-layout').value==='plain'&&![...document.querySelectorAll('.email-recipient-editor button')].some(el=>el.textContent==='Add Cc / Bcc')"),true);
