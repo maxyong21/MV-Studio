@@ -55,6 +55,24 @@ test('separate queue sends one personalised message per address with a one-click
  assert.equal((await claim()).length,1);assert.equal((await db.query("select count(*)::int n from email_campaign_recipients where campaign_id=$1 and status='sending'",[shared.id])).rows[0].n,2);
  }finally{await db.close();}
 });
+test('repeat introductions are allowed once the limit is lifted, and do-not-contact still blocks',async()=>{
+ const db=await database();
+ try{
+ for(const file of ['20261111_email_composer.sql','20261112_separate_send.sql']){await db.exec(await readFile('supabase/migrations/'+file,'utf8'));}
+ const content={name:'Intro',subject:'Idea',body:'Hello',layout:'plain',purpose:'introduction'};
+ const queue=async to=>{const c=(await db.query('insert into email_campaigns(name,content,tested_hash) values ($1,$2,$3) returning *',['Intro',JSON.stringify(content),'tested'])).rows[0];await db.query('select queue_marketing_email($1,$2,$3,$4)',[c.id,JSON.stringify(content),JSON.stringify({to,cc:[],bcc:[],separate:true,names:{}}),null]);return c.id;};
+ await queue(['again@example.com']);await db.exec("update email_campaign_recipients set status='accepted'");
+ // With the earlier migrations alone, a second introduction to the same address is refused.
+ await assert.rejects(queue(['again@example.com']));
+ const lift=await readFile('supabase/migrations/20261113_allow_repeat_introductions.sql','utf8');await db.exec(lift);await db.exec(lift);
+ const second=await queue(['again@example.com']);
+ assert.equal((await db.query("select count(*)::int n from email_campaign_recipients where campaign_id=$1 and status='queued'",[second])).rows[0].n,1);
+ assert.equal((await db.query('select count(*)::int n from marketing_introduction_history()')).rows[0].n,0);
+ // An opt-out is a different rule and is still enforced.
+ await db.exec("update email_campaign_recipients set status='accepted'");await db.query("update marketing_contacts set suppressed=true where email='again@example.com'");
+ await assert.rejects(queue(['again@example.com']),/no further outreach/);
+ }finally{await db.close();}
+});
 test('group queue sends one envelope, tracks each recipient, permits recurring CC and blocks unsafe retries',async()=>{
  const db=await database();const sends=[];const admin=client(db);let failure=null,partial=false;
  const env=k=>({SUPABASE_URL:'https://project.supabase.co',GMAIL_SMTP_USER:'owner@gmail.com'})[k];

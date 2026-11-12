@@ -1,3 +1,9 @@
+# Repeat introductions
+
+`supabase/migrations/20261113_allow_repeat_introductions.sql` removes the once-only limit on introductions. After it is applied, the same address can be sent an introduction again in a later email, and statements below about repeat introductions being blocked no longer apply. Do-not-contact requests are unchanged: an address that opted out, or that you suppressed, is still refused. No function redeploy is needed. Re-running `20261111_email_composer.sql` afterwards restores the limit, so run this migration again if you do that.
+
+Nothing now stops the same business being emailed twice by mistake. Check the Campaigns tab before re-sending to real prospects, because repeated cold emails are what recipients report as spam.
+
 # Separate sends and the plain layout
 
 Apply `supabase/migrations/20261112_separate_send.sql` after `20261111_email_composer.sql`, then redeploy the `marketing` function and the frontend. Until the migration is applied, a separate send is still claimed as one shared group, so apply it before using the new option.
