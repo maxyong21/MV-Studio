@@ -12,6 +12,10 @@ verify_jwt = false
 # JWT + admin membership are verified inside the handler.
 verify_jwt = false
 
+[functions.report-error]
+# Public: called by visitors' browsers. Origin, size and rate limits are enforced in the handler.
+verify_jwt = false
+
 [functions.marketing]
 # Admin JWT and worker secret verified in the handler. Unsubscribe is public.
 verify_jwt = false

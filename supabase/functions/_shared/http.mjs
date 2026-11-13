@@ -7,6 +7,14 @@ export const headersFor=(origin,env)=>({
   'Access-Control-Allow-Methods':'POST, OPTIONS','Cache-Control':'no-store','Vary':'Origin',
 });
 export const json=(body,status,origin,env)=>new Response(JSON.stringify(body),{status,headers:{...headersFor(origin,env),'Content-Type':'application/json'}});
+// Second-step sign-in. When an administrator has a verified authenticator app, a session that only
+// proved the password (assurance level aal1) is refused. The token's signature was already checked by
+// auth.getUser, so its payload can be read here. Anything unreadable counts as not verified.
+export function secondStepSatisfied(user,token){
+  if(!(user?.factors||[]).some(factor=>factor?.status==='verified'))return true;
+  try{return JSON.parse(atob(String(token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).aal==='aal2';}catch{return false;}
+}
+export const secondStepMessage='Enter the code from your authenticator app to continue. Sign in again if you are not asked for it.';
 export async function digest(value){
   const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(v=>v.toString(16).padStart(2,'0')).join('');

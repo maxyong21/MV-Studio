@@ -1,0 +1,34 @@
+/* Sign-in security page and the code screen after the password. */
+.second-step-page { display: grid; gap: 18px; max-width: 760px; }
+.second-step-status { display: flex; align-items: flex-start; gap: 16px; padding: 20px; border: 1px solid #e3b9a8; border-radius: 14px; background: #fff3ec; color: #5c2a17; }
+.second-step-status.is-on { border-color: #b9d3b8; background: #edf5ea; color: #1d4a2a; }
+.second-step-status svg { flex: none; width: 30px; height: 30px; margin-top: 2px; }
+.second-step-status h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -.03em; }
+.second-step-status p { margin: 0; font-size: 15px; line-height: 1.6; }
+.second-step-panel { display: grid; gap: 14px; padding: 20px; border: 1px solid #d9dfd4; border-radius: 14px; background: #fffdf8; }
+.second-step-panel h3 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.second-step-panel :is(ol, ul) { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 15px; line-height: 1.6; }
+.second-step-panel .button { justify-self: start; }
+.second-step-help { margin: 0; font-size: 13px; line-height: 1.55; color: #586258; }
+.second-step-setup { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.second-step-setup > div { flex: 1; min-width: 220px; display: grid; gap: 10px; }
+.second-step-setup p { margin: 0; font-size: 14px; line-height: 1.55; }
+/* A QR code must stay dark-on-white to scan, in either theme. */
+.second-step-qr { flex: none; width: 180px; height: 180px; padding: 10px; border: 1px solid #d9dfd4; border-radius: 12px; background: #fff; }
+.second-step-secret { display: block; padding: 10px 12px; border: 1px dashed #8a968b; border-radius: 9px; background: #f6f5ed; font-size: 15px; letter-spacing: .08em; overflow-wrap: anywhere; user-select: all; }
+.second-step-page label, .second-step-card label { display: grid; gap: 7px; font-size: 14px; font-weight: 600; }
+.second-step-code { width: 100%; max-width: 220px; padding: 12px 14px; border: 1px solid #c9d3c2; border-radius: 9px; background: #fff; color: #253129; font-size: 24px; font-variant-numeric: tabular-nums; letter-spacing: .3em; }
+.second-step-code[aria-invalid=true] { border-color: #a33e2b; }
+.second-step-error { color: #a33e2b; font-size: 13px; font-weight: 600; }
+.second-step-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.second-step-card .second-step-code { max-width: none; text-align: center; }
+.second-step-card .second-step-help { margin-top: 18px; }
+.second-step-out { width: 100%; border: 0; background: none; font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+:root[data-theme=dark] .second-step-status { background: #3a2a22; border-color: #7a5142; color: #fde3d6; }
+:root[data-theme=dark] .second-step-status.is-on { background: #23382a; border-color: #4f7254; color: #dcefd9; }
+:root[data-theme=dark] .second-step-panel { background: #252d27; border-color: #4b5b50; color: #eef4eb; }
+:root[data-theme=dark] .second-step-help { color: #c3d5c4; }
+:root[data-theme=dark] .second-step-secret { background: #1b261e; border-color: #73866f; color: #f0f5ed; }
+:root[data-theme=dark] .second-step-code { background: #1b261e; border-color: #73866f; color: #f0f5ed; }
+:root[data-theme=dark] .second-step-error { color: #ffb7a6; }
+@media (max-width: 520px) { .second-step-qr { margin: 0 auto; } .second-step-actions .button { flex: 1; } }

@@ -8,9 +8,10 @@
     "prebuild": "node scripts/optimize-images.mjs",
     "build": "vite build",
     "postbuild": "vite build --ssr src/entry-server.jsx --outDir .generated/ssr && node scripts/generate-seo.js",
-    "test": "node --test tests/enquiries.test.mjs tests/schema.test.mjs tests/seo.test.mjs tests/chatbot.test.mjs tests/analytics.test.mjs tests/promotions.test.mjs tests/sitemap.test.mjs tests/faqs.test.mjs tests/page-routing.test.mjs tests/chatbot-industries.test.mjs tests/assistant-intro.test.mjs tests/marketing.test.mjs tests/email-composer.test.mjs",
+    "test": "node --test tests/enquiries.test.mjs tests/schema.test.mjs tests/seo.test.mjs tests/chatbot.test.mjs tests/analytics.test.mjs tests/promotions.test.mjs tests/sitemap.test.mjs tests/faqs.test.mjs tests/page-routing.test.mjs tests/chatbot-industries.test.mjs tests/assistant-intro.test.mjs tests/marketing.test.mjs tests/email-composer.test.mjs tests/i18n.test.mjs tests/trash.test.mjs tests/error-report.test.mjs tests/second-step.test.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "test:promotion-preview": "node scripts/promotion-preview-check.mjs",
+    "test:browsers": "node scripts/cross-browser-check.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.11",
     "@vitejs/plugin-react": "^5.0.4",
+    "playwright": "^1.65.0",
     "sharp": "^0.35.5",
     "vite": "^7.1.7"
   }
