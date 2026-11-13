@@ -190,7 +190,24 @@ try{
   await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Customers','Website content','Health']);
   assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),12);
-  assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'MV STUDIO / WEBSITE CONTENT');
+  assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'Website content›Services & pricing');
+  // The tools never move: same place on a short page and a long one, at desktop, tablet and phone widths.
+  const toolSpot="(()=>{const b=document.querySelector('.admin-tools').getBoundingClientRect();return [Math.round(b.top),Math.round(innerWidth-b.right),Math.round(b.width)].join()})()";
+  const railGo=name=>evaluate(`[...document.querySelectorAll('.rail-item')].find(el=>el.textContent.startsWith(${JSON.stringify(name)})).click()`);
+  for(const width of [1440,1000,390,320]){
+    await viewport(width);await evaluate('window.scrollTo(0,0)');
+    assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Admin overflows at ${width}px`);
+    const onServices=await evaluate(toolSpot);
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('.admin-tools > *')].map(el=>el.getAttribute('aria-label')||el.title||el.textContent)"),['Toggle colour theme','Widget library (opens in a new tab)','View live site (opens in a new tab)','Sign out']);
+    assert.equal(await evaluate("(()=>{const b=document.querySelector('.admin-tools').getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=0&&[...document.querySelectorAll('.admin-tools > *')].every(el=>{const r=el.getBoundingClientRect();return r.width>=38&&r.height>=38;})})()"),true,`Tools fit and stay tappable at ${width}px`);
+    if(width<=760)assert.equal(await evaluate("(()=>{const tools=document.querySelector('.admin-tools').getBoundingClientRect(),brand=document.querySelector('.admin-rail .brand').getBoundingClientRect();return brand.right<=tools.left})()"),true,`Brand and tools do not overlap at ${width}px`);
+    await railGo('Marketing email');await wait("!!document.querySelector('.marketing-workspace')");assert.equal(await evaluate(toolSpot),onServices,`Tools moved between pages at ${width}px`);
+    await evaluate('window.scrollTo(0,600)');await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');assert.equal(await evaluate(toolSpot),onServices,`Tools moved on scroll at ${width}px`);
+    if(width===390){await evaluate('window.scrollTo(0,0)');await screenshot('admin-top-mobile.png');}
+    if(width===1000){await evaluate('window.scrollTo(0,0)');await screenshot('admin-tablet.png');}
+    await evaluate('window.scrollTo(0,0)');await railGo('Services & pricing');await wait("!!document.querySelector('.entity-row')&&!document.querySelector('.entity-loading')");
+  }
+  await viewport(1440);
   assert.equal(await evaluate("document.querySelectorAll('.admin-guide ol li').length>=3&&!document.querySelector('.admin-status')"),true);
   await screenshot('admin-desktop.png');
   await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'");
@@ -228,7 +245,7 @@ try{
   await evaluate("[...document.querySelectorAll('.admin-workspace > .inline-confirm button')].find(el=>el.textContent==='Leave without saving').click()");await wait("document.querySelector('.rail-item.selected').textContent==='FAQs'");
   assert.equal((await servers.db.query('select content from site_content where id=1')).rows[0].content.hero_title,savedTitle,'Discarded edits are not saved');
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("!!document.querySelector('.entity-row')&&!document.querySelector('.entity-loading')");
-  await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await click('.admin-theme-toggle');
+  await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await viewport(390);await screenshot('admin-dark-mobile.png');await viewport(1000);await screenshot('admin-dark-tablet.png');await viewport(1440);await click('.admin-theme-toggle');
   const initialFeatures=(await servers.db.query("select features from services where name='Landing Page'")).rows[0].features;
   await click('.entity-actions button');await wait("!!document.querySelector('#dialog-name')");
   await fill('#dialog-scope','One focused page for a new business.');await fill('#dialog-revisions','Revision scope agreed in the proposal.');

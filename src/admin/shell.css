@@ -1,0 +1,63 @@
+/* Admin shell. Loaded after admin.css and workspace.css.
+   One job per region, so nothing moves when the content changes:
+     rail     where am I, and where can I go
+     top bar  tools that are the same on every page, pinned to the right
+     header   what this page is
+     guide    how to use it
+     content  the work itself */
+.admin-workspace { --admin-pad: clamp(24px, 4vw, 66px); padding: 0 var(--admin-pad) 70px; }
+
+/* ---- Top bar: fixed height, sticky, tools always at the right edge ---- */
+.admin-topbar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; margin: 0 calc(var(--admin-pad) * -1) 30px; padding: 0 var(--admin-pad); background: #f6f5ed; border-bottom: 1px solid #d9dfd4; }
+.admin-crumbs { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 14px; font-weight: 500; letter-spacing: 0; color: #586258; white-space: nowrap; }
+.admin-crumbs i { font-style: normal; color: #9aa69b; }
+.admin-crumbs b { overflow: hidden; text-overflow: ellipsis; color: #253129; font-weight: 650; }
+.admin-tools { display: flex; align-items: center; flex: none; gap: 8px; }
+.admin-tool { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: none; min-width: 42px; height: 42px; min-height: 42px; padding: 0 14px; border: 1px solid #dce3dc; border-radius: 9px; background: #fffdf8; color: #354239; font: inherit; font-size: 13px; font-weight: 650; white-space: nowrap; text-decoration: none; cursor: pointer; transition: border-color .2s ease, background-color .2s ease; }
+.admin-tool:hover { border-color: #9fb3a1; }
+.admin-tool.admin-theme-toggle, .admin-tool.is-icon { width: 42px; padding: 0; }
+.admin-tool.is-quiet { background: none; border-color: transparent; }
+.admin-tool.is-quiet:hover { border-color: #dce3dc; }
+:root[data-theme=dark] .admin-topbar { background: #1e2520; border-color: #39443c; }
+:root[data-theme=dark] .admin-crumbs { color: #a3b0a5; }
+:root[data-theme=dark] .admin-crumbs b { color: #edf3ed; }
+:root[data-theme=dark] .admin-tool { border-color: #425046; background: #222b25; color: #e4ece4; }
+:root[data-theme=dark] .admin-tool.is-quiet { background: none; border-color: transparent; }
+:root[data-theme=dark] .admin-tool:hover { border-color: #73866f; }
+
+/* ---- Page header: identity only, no controls ---- */
+.admin-app .admin-header { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 16px; margin-bottom: 22px; padding: 0; border: 0; }
+.admin-title-icon { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: #e7ecdf; color: #385b3c; }
+.admin-app .admin-header h1 { margin: 0 0 3px; }
+:root[data-theme=dark] .admin-title-icon { background: #283c2b; color: #d5e7cc; }
+
+/* ---- Rail account ---- */
+.rail-bottom .rail-account { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rail-avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #284b3b; color: #fffdf8; font-size: 14px; font-weight: 700; text-transform: uppercase; }
+.rail-account > span:last-child { display: grid; min-width: 0; }
+.rail-account small { color: #9fb1a2; font-size: 11px; letter-spacing: .04em; }
+.rail-bottom .rail-account .admin-user-email { color: #e0e7df; font-size: 13px; }
+
+@media (max-width: 1180px) {
+  /* Labels give way before the tools ever wrap; each keeps its name as a tooltip and for screen readers. */
+  .admin-tool .tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-tool { width: 42px; padding: 0; }
+}
+@media (max-width: 900px) { .admin-workspace { --admin-pad: 24px; padding-bottom: 55px; } }
+
+/* ---- Phones: the tools sit in the brand row, same place on every page ---- */
+@media (max-width: 760px) {
+  .admin-workspace { --admin-pad: 20px; padding: 22px var(--admin-pad) 50px; }
+  .admin-topbar { position: static; height: 0; margin: 0; padding: 0; border: 0; }
+  .admin-crumbs { display: none; }
+  .admin-tools { position: fixed; top: 10px; right: 14px; z-index: 6; gap: 4px; }
+  .admin-tool, :root[data-theme=dark] .admin-tool { width: 38px; min-width: 38px; height: 38px; min-height: 38px; border-color: #ffffff2e; background: #142b24; color: #eef4eb; }
+  .admin-tool.is-quiet, :root[data-theme=dark] .admin-tool.is-quiet { border-color: #ffffff2e; background: #142b24; }
+  .admin-rail .brand { max-width: calc(100vw - 210px); overflow: hidden; }
+  .admin-rail .rail-bottom { display: none; }
+  .admin-app .admin-header { gap: 12px; margin-bottom: 18px; }
+  .admin-title-icon { width: 44px; height: 44px; border-radius: 12px; }
+}
+@media (max-width: 520px) { .admin-workspace { --admin-pad: 14px; padding-bottom: 42px; } }
+@media (max-width: 360px) { .admin-rail .brand-light { display: none; } }
+@media (prefers-reduced-motion: reduce) { .admin-tool { transition: none; } }
