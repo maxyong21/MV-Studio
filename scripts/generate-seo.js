@@ -5,6 +5,8 @@ import {emptyPublicContent,hasPublicContent} from '../src/lib/availability.mjs';
 import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
 import {legalDocuments,legalPaths} from '../src/legal/content.mjs';
 import {renderPage} from '../.generated/ssr/entry-server.js';
+import {servicePages,serviceForPage} from '../src/services/content.mjs';
+import {homeGraph,serviceGraph} from '../src/lib/structured-data.mjs';
 
 const env=loadEnv('production',process.cwd(),'VITE_');
 const base=siteUrl(process.env.VITE_SITE_URL||env.VITE_SITE_URL);
@@ -24,12 +26,12 @@ if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
 const published=hasPublicContent(data);
 const template=await readFile('dist/index.html','utf8');
 const content=data.site_content?.content||fallbackContent.site_content.content;
-async function page(route,project){
+async function page(route,project,service){
   const legal=legalDocuments[route];
   const renderData=legal?{...emptyPublicContent(),site_content:data.site_content}:data;
   const url=base?`${base}${route}`:'';
-  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design & Development | MV Studio');
-  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
+  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':service?service.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design Malaysia | Affordable Websites | MV Studio');
+  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':service?service.description:project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
   const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
   let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
   html=meta(html,'description',description,'name');
@@ -38,7 +40,7 @@ async function page(route,project){
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
-    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:{'@context':'https://schema.org','@type':'ProfessionalService',name:'MV Studio',description,url:`${base}/`,areaServed:{'@type':'Country',name:'Malaysia'},email:content.contact_emails?.[0]||undefined,telephone:content.contact_phones?.[0]||undefined};
+    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:service,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description});
     html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
   }
   const markup=renderPage(renderData,route);
@@ -48,6 +50,8 @@ async function page(route,project){
 }
 await page('/');
 for(const path of legalPaths)await page(path);
+// One page per service, so each can be found for its own search. See docs/SEO.md.
+for(const service of servicePages)await page(`/services/${service.slug}`,null,service);
 for(const project of data.projects||[]){
   if(!project.active||!/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i.test(project.id))continue;
   await page(`/projects/${project.id}`,project);
@@ -70,4 +74,4 @@ await writeFile('dist/404.html',notFound);
 let maintenance=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Under maintenance | MV Studio</title>'),'robots','noindex,follow','name');
 maintenance=maintenance.replace('<div id="root"></div>',()=>`<div id="root">${renderPage({...emptyPublicContent(),__availability:'maintenance'},'/')}</div>`);
 await writeFile('dist/maintenance.html',maintenance);
-console.log(`Prerendered homepage and ${(data.projects||[]).filter(p=>p.active).length} project pages${base?` for ${base}`:''}.`);
+console.log(`Prerendered homepage, ${servicePages.length} service pages and ${(data.projects||[]).filter(p=>p.active).length} project pages${base?` for ${base}`:''}.`);

@@ -1,5 +1,6 @@
 import {escapeHtml} from '../../scripts/seo.mjs';
 import {legalPaths} from '../legal/content.mjs';
+import {servicePaths} from '../services/content.mjs';
 
 export const projectIdPattern=/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i;
 
@@ -24,7 +25,7 @@ export function internalDemoPath(value,base) {
 }
 
 export function sitemapXml(base,projects=[],extraPaths='') {
-  const urls=new Set([`${base}/`,...legalPaths.map(path=>`${base}${path}`)]);
+  const urls=new Set([`${base}/`,...servicePaths.map(path=>`${base}${path}`),...legalPaths.map(path=>`${base}${path}`)]);
   for(const project of projects){
     if(project?.active===false||!projectIdPattern.test(String(project?.id||'')))continue;
     urls.add(`${base}/projects/${project.id}`);

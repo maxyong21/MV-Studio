@@ -81,4 +81,6 @@ export default {
   'Continue on WhatsApp':'Teruskan di WhatsApp','Use WhatsApp instead':'Guna WhatsApp sebagai ganti',
   'Your enquiry is saved. Review and send the same details in WhatsApp to continue with our team.':'Pertanyaan anda telah disimpan. Semak dan hantar butiran yang sama di WhatsApp untuk meneruskan dengan pasukan kami.',
   'Review and send your entered details in WhatsApp. This does not submit the website enquiry.':'Semak dan hantar butiran anda di WhatsApp. Ini tidak menghantar pertanyaan laman web.',
+  '← All services':'← Semua perkhidmatan','SERVICE':'PERKHIDMATAN','What’s included':'Apa yang disertakan','A good fit if':'Sesuai jika','Clear about costs':'Jelas tentang kos',
+  'Who builds it':'Siapa yang membinanya','Common questions':'Soalan lazim','Other services':'Perkhidmatan lain','Ready when you are.':'Kami sedia apabila anda sedia.','Learn more':'Ketahui lebih lanjut',
 };

@@ -19,6 +19,7 @@
     {"src": "/projects/([^/]+)/?", "dest": "/api/project-page?id=$1"},
     {"src": "/admin/?", "dest": "/admin/index.html"},
     {"src": "/widgets/?", "dest": "/widgets/index.html"},
+    {"src": "/services/(landing-page|company-website|ecommerce-website|custom-web-app)/?", "dest": "/services/$1/index.html"},
     {"src": "/privacy/?", "dest": "/privacy/index.html"},
     {"src": "/terms/?", "dest": "/terms/index.html"},
     {"src": "/data-deletion/?", "dest": "/data-deletion/index.html"},
