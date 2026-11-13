@@ -35,6 +35,43 @@ try{
   await send('Runtime.enable');await send('Page.enable');await send('Network.enable');await viewport(1440);
   await navigate('http://127.0.0.1:4187/');
   await wait("!!document.querySelector('.theme-button')");
+  // Fonts come from this site, not Google, and the theme is set before the page paints.
+  await evaluate('document.fonts.ready.then(()=>true)');
+  assert.ok(!requests.some(url=>/fonts\.(googleapis|gstatic)\.com/.test(url)),'No font request may leave the site');
+  assert.ok(requests.some(url=>/\/fonts\/dm-sans-latin-wght-normal\.woff2/.test(url))&&requests.some(url=>/\/fonts\/manrope-latin-wght-normal\.woff2/.test(url)),'Both site fonts load locally');
+  assert.equal(await evaluate("document.fonts.check('16px \"DM Sans\"')&&document.fonts.check('700 30px Manrope')"),true);
+  assert.equal(await evaluate("document.documentElement.dataset.theme+'|'+!!document.querySelector('head script[src=\"/theme-init.js\"]')"),'light|true');
+  // A first-time visitor whose device is in dark mode gets the dark theme, including the three start cards.
+  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]});
+  await navigate('http://127.0.0.1:4187/?dark-device');await wait("!!document.querySelector('.client-paths > a')");
+  assert.equal(await evaluate("document.documentElement.dataset.theme+'|'+localStorage.getItem('mv-theme')"),'dark|null','The device setting applies without being saved as a choice');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.client-paths > a')).backgroundColor"),'rgb(37, 45, 39)');
+  assert.equal(await evaluate("!!document.querySelector('.theme-button .lucide-sun')"),true,'The toggle shows the sun while dark');
+  await evaluate("localStorage.setItem('mv-theme','light')");await navigate('http://127.0.0.1:4187/?saved-light');await wait("!!document.querySelector('.theme-button')");
+  assert.equal(await evaluate('document.documentElement.dataset.theme'),'light','A saved choice beats the device setting');
+  await send('Emulation.setEmulatedMedia',{features:[]});await evaluate("localStorage.removeItem('mv-theme')");
+  await navigate('http://127.0.0.1:4187/');await wait("!!document.querySelector('.theme-button')&&!!document.querySelector('.service-card')");
+  // Language switch: interface text changes, admin-typed content stays, nothing overflows, and the choice is remembered.
+  assert.equal(await evaluate("document.documentElement.lang+'|'+document.querySelector('.nav-language button[aria-pressed=true]').textContent"),'en-MY|EN');
+  const serviceName=await evaluate("document.querySelector('.service-card h3').textContent");
+  for(const [code,htmlLang,navWord,cta] of [['ms','ms-MY','Perkhidmatan','Mulakan projek'],['zh','zh-Hans-MY','服务','开始项目']]){
+    await evaluate(`document.querySelector('.nav-language button[lang="${htmlLang}"]').click()`);
+    await wait(`document.documentElement.lang==='${htmlLang}'&&[...document.querySelectorAll('.nav-links a')].some(el=>el.textContent==='${navWord}')`);
+    assert.equal(await evaluate("document.querySelector('.nav-cta').textContent.trim()"),cta);
+    assert.equal(await evaluate("document.querySelector('.service-card h3').textContent"),serviceName,'Admin-typed content is not translated');
+    assert.equal(await evaluate("localStorage.getItem('mv-lang')"),code);
+    for(const width of [1440,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`${code} overflows at ${width}px`);}
+    // Longer words in this language must not push the menu into the brand or the buttons at any desktop or tablet width.
+    for(const width of [1440,1280,1101,1080,1079,1024,900,800,768]){await viewport(width);const nav=await evaluate("(()=>{const links=document.querySelector('.nav-links').getBoundingClientRect(),brand=document.querySelector('.site-nav .brand').getBoundingClientRect(),end=document.querySelector('.nav-end').getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,overlap:links.left<brand.right||links.right>end.left,shown:getComputedStyle(document.querySelector('.nav-end .nav-language')).display!=='none'}})()");assert.equal(nav.overflow,false,`${code} overflows at ${width}px`);assert.equal(nav.overlap,false,`${code} menu overlaps at ${width}px`);assert.equal(nav.shown,width>=1080,`${code} switch visibility at ${width}px`);}
+    await viewport(390);
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('.nav-end .nav-language')).display"),'none','On phones the switch lives in the menu');
+    await click('.mobile-menu');await wait("document.querySelector('.nav-links.open .nav-language-mobile')?.getBoundingClientRect().height>=44");await click('.mobile-menu');
+    if(code==='zh')await screenshot('customer-chinese-mobile.png');
+    await viewport(1440);
+  }
+  await navigate('http://127.0.0.1:4187/?remembered');await wait("document.documentElement.lang==='zh-Hans-MY'&&document.querySelector('.nav-cta')?.textContent.trim()==='开始项目'");
+  await evaluate("document.querySelector('.nav-language button[lang=\"en-MY\"]').click()");await wait("document.documentElement.lang==='en-MY'&&document.querySelector('.nav-cta').textContent.trim()==='Start a project'");
+  await evaluate("localStorage.removeItem('mv-lang')");
   assert.ok(!requests.some(url=>/\/Widgets-[^/]+\.(js|css)/.test(url)),'Widget library must not be loaded by the homepage');
   assert.equal(await evaluate("document.querySelectorAll('a[href*=widgets]').length"),0,'The homepage must not link to the unlisted widget library');
   assert.ok(!requests.some(url=>/\/Admin-[^/]+\.js/.test(url)),'Admin bundle must not be requested by the homepage');
@@ -106,7 +143,14 @@ try{
   assert.ok(await evaluate("document.querySelector('.project-detail-actions a').getAttribute('href').startsWith('/')"));
   await navigate('http://127.0.0.1:4188/admin','.login-card');
   await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
-  await wait("!!document.querySelector('.entity-row')");
+  // The admin opens on the Overview: counts, what needs attention, and the state of the website.
+  await wait("document.querySelectorAll('.overview-stat').length===4&&document.querySelector('.rail-item.selected')?.textContent==='Overview'");
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.overview-stat > span:not(.overview-stat-icon)')].map(el=>el.textContent)"),['New enquiries','Follow-ups due','In progress','Won this month']);
+  assert.ok(await evaluate("document.querySelector('.overview-clear')?.textContent.includes('Nothing is waiting on you')"),'With no enquiries the overview says so');
+  assert.equal(await evaluate("[...document.querySelectorAll('.overview-site button')].length"),4);
+  assert.ok(await evaluate("document.querySelector('.admin-guide')?.textContent.includes('Start here each day')"));
+  await evaluate("[...document.querySelectorAll('.overview-site button')].find(el=>el.textContent.startsWith('Services')).click()");
+  await wait("!!document.querySelector('.entity-row')&&document.querySelector('.rail-item.selected').textContent==='Services & pricing'");
   assert.equal(await evaluate("[...document.querySelectorAll('.rail-item')].some(el=>el.textContent==='WhatsApp inbox')"),false);
   assert.equal(await evaluate("document.querySelector('meta[name=robots]').content"),'noindex,nofollow');
   await send('Emulation.setDeviceMetricsOverride',{width:1440,height:540,deviceScaleFactor:1,mobile:false});
@@ -188,8 +232,8 @@ try{
   await viewport(1440);
   // Every section explains itself, the menu is grouped, and closing the guide is remembered.
   await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
-  assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Customers','Website content','Health']);
-  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),12);
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Today','Customers','Website content','Housekeeping']);
+  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),15);
   assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'Website content›Services & pricing');
   // The tools never move: same place on a short page and a long one, at desktop, tablet and phone widths.
   const toolSpot="(()=>{const b=document.querySelector('.admin-tools').getBoundingClientRect();return [Math.round(b.top),Math.round(innerWidth-b.right),Math.round(b.width)].join()})()";
@@ -211,7 +255,7 @@ try{
   assert.equal(await evaluate("document.querySelectorAll('.admin-guide ol li').length>=3&&!document.querySelector('.admin-status')"),true);
   await screenshot('admin-desktop.png');
   await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'");
-  assert.equal(await evaluate("localStorage.getItem('mv-admin-guides-closed')"),'["services"]');
+  assert.equal(await evaluate("localStorage.getItem('mv-admin-guides-closed')"),'["overview","services"]');
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");await wait("document.querySelector('.admin-guide')?.textContent.includes('FAQ section')");
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'&&!!document.querySelector('.entity-row')");
   await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='true'");
@@ -244,6 +288,23 @@ try{
   assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent"),'Site content');
   await evaluate("[...document.querySelectorAll('.admin-workspace > .inline-confirm button')].find(el=>el.textContent==='Leave without saving').click()");await wait("document.querySelector('.rail-item.selected').textContent==='FAQs'");
   assert.equal((await servers.db.query('select content from site_content where id=1')).rows[0].content.hero_title,savedTitle,'Discarded edits are not saved');
+  // Deleting moves an item to Recently deleted; it can be restored exactly, or removed for good after a confirmation.
+  const disposable=(await servers.db.query("insert into faqs(title,answer,active,sort_order) values('Disposable question','Disposable answer',true,99) returning *")).rows[0];
+  await wait("!!document.querySelector('.entity-row')&&!document.querySelector('.entity-loading')");
+  const openRail=name=>evaluate(`[...document.querySelectorAll('.rail-item')].find(el=>el.textContent.startsWith(${JSON.stringify(name)})).click()`);
+  const deleteDisposable=async()=>{await openRail('Services & pricing');await wait("document.querySelector('.rail-item.selected').textContent==='Services & pricing'&&!document.querySelector('.entity-loading')");await openRail('FAQs');await wait("[...document.querySelectorAll('.entity-row')].some(row=>row.textContent.includes('Disposable question'))");await evaluate("[...document.querySelectorAll('.entity-row')].find(row=>row.textContent.includes('Disposable question')).querySelector('.delete-action').click()");await wait("document.querySelector('.admin-toast-message')?.textContent.includes('moved to Recently deleted')&&![...document.querySelectorAll('.entity-row')].some(row=>row.textContent.includes('Disposable question'))");};
+  await deleteDisposable();
+  assert.equal((await servers.db.query('select count(*)::int n from faqs where id=$1',[disposable.id])).rows[0].n,0,'A deleted FAQ leaves the public table at once');
+  await openRail('Recently deleted');await wait("document.querySelector('.trash-row')?.textContent.includes('Disposable question')");
+  assert.ok(await evaluate("document.querySelector('.trash-row').textContent.includes('FAQ')&&document.querySelector('.trash-row').textContent.includes('30 days left to restore')"));
+  await click('.trash-row .trash-restore');await wait("!document.querySelector('.trash-row')&&document.querySelector('.trash-page .empty-state')?.textContent.includes('Nothing has been deleted')");
+  assert.deepEqual((await servers.db.query('select id,title,answer,active,sort_order from faqs where id=$1',[disposable.id])).rows[0],{id:disposable.id,title:'Disposable question',answer:'Disposable answer',active:true,sort_order:99});
+  await deleteDisposable();await openRail('Recently deleted');await wait("!!document.querySelector('.trash-row .trash-purge')");
+  await click('.trash-row .trash-purge');await wait("document.querySelector('.trash-row .inline-confirm')?.textContent.includes('cannot be undone')");
+  await evaluate("[...document.querySelectorAll('.trash-row .inline-confirm button')].find(el=>el.textContent==='Keep it').click()");await wait("!document.querySelector('.trash-row .inline-confirm')&&!!document.querySelector('.trash-row')");
+  await click('.trash-row .trash-purge');await wait("!!document.querySelector('.trash-purge-confirm')");await click('.trash-purge-confirm');await wait("!document.querySelector('.trash-row')");
+  assert.equal((await servers.db.query('select (select count(*) from faqs where id=$1)::int+(select count(*) from admin_trash)::int n',[disposable.id])).rows[0].n,0,'Deleted for good');
+  await viewport(390);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'Recently deleted overflows on a phone');await viewport(1440);
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("!!document.querySelector('.entity-row')&&!document.querySelector('.entity-loading')");
   await click('.admin-theme-toggle');await wait("document.documentElement.dataset.theme==='dark'");await screenshot('admin-dark.png');await viewport(390);await screenshot('admin-dark-mobile.png');await viewport(1000);await screenshot('admin-dark-tablet.png');await viewport(1440);await click('.admin-theme-toggle');
   const initialFeatures=(await servers.db.query("select features from services where name='Landing Page'")).rows[0].features;
@@ -369,7 +430,19 @@ try{
   await navigate('http://127.0.0.1:4188/admin','.admin-header');
   const newCount=(await servers.db.query("select count(*)::int n from enquiries where status='new'")).rows[0].n;assert.ok(newCount>0);
   await wait(`document.querySelector('.rail-badge')?.textContent===${JSON.stringify(newCount+' new')}`);
-  assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent"),'Services & pricing','The new-enquiry badge shows from other pages');
+  assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent"),'Overview','The new-enquiry badge shows from other pages');
+  // Follow-up reminders: an overdue follow-up is listed first and opens that enquiry directly.
+  await wait("document.querySelectorAll('.overview-stat').length===4");
+  assert.equal(await evaluate("document.querySelector('.overview-stat strong').textContent"),String(newCount));
+  const oldest=(await servers.db.query("update enquiries set follow_up_at=now()-interval '2 days' where id=(select id from enquiries order by created_at limit 1) returning id,name")).rows[0];
+  await evaluate("[...document.querySelectorAll('.overview-panel-head button')].find(el=>el.textContent.includes('Refresh')).click()");
+  await wait("document.querySelector('.overview-list .overview-tag')?.textContent==='Follow-up overdue'");
+  assert.ok(await evaluate(`document.querySelector('.overview-list button').textContent.includes(${JSON.stringify(oldest.name)})`));
+  assert.equal(await evaluate("document.querySelector('.overview-stat.is-urgent strong').textContent"),'1');
+  for(const width of [390,1440]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Overview overflows at ${width}px`);if(width===390)await screenshot('admin-overview-mobile.png');else await screenshot('admin-overview.png');}
+  await click('.overview-list button');
+  await wait(`document.querySelector('.rail-item.selected')?.textContent.startsWith('Enquiries')&&document.querySelector('.enquiry-workspace-card.is-expanded')?.id===${JSON.stringify('enquiry-'+oldest.id)}`);
+  await servers.db.query('update enquiries set follow_up_at=null where id=$1',[oldest.id]);
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent.startsWith('Enquiries')).click()");
   await wait("!!document.querySelector('.enquiry-workspace-card')");
   assert.equal(await evaluate("document.querySelectorAll('.enquiry-admin-row,.entity-toolbar,.entity-list').length"),0,'Only the sales workspace lists enquiries');
@@ -377,7 +450,7 @@ try{
   await evaluate("[...document.querySelectorAll('.enquiry-workspace .empty-state button')].find(el=>el.textContent==='Clear search').click()");await wait("!!document.querySelector('.enquiry-workspace-card')");
   const enquiryTotal=(await servers.db.query('select count(*)::int n from enquiries')).rows[0].n;
   await evaluate("document.querySelector('.enquiry-workspace-card .enquiry-card-actions button').click()");await wait("!!document.querySelector('.enquiry-delete')");
-  await click('.enquiry-delete');await wait("document.querySelector('.enquiry-private-panel .inline-confirm')?.textContent.includes('cannot be undone')");
+  await click('.enquiry-delete');await wait("document.querySelector('.enquiry-private-panel .inline-confirm')?.textContent.includes('restored for 30 days')");
   await evaluate("[...document.querySelectorAll('.enquiry-private-panel .inline-confirm button')].find(el=>el.textContent==='Keep it').click()");await wait("!document.querySelector('.enquiry-private-panel .inline-confirm')");
   assert.equal((await servers.db.query('select count(*)::int n from enquiries')).rows[0].n,enquiryTotal,'Cancelling a delete keeps the enquiry');
   await evaluate("document.querySelector('.enquiry-workspace-card .enquiry-card-actions button').click()");
@@ -431,9 +504,48 @@ try{
   assert.equal(await evaluate("document.querySelector('#donut-chart .wg-star').getAttribute('aria-pressed')"),'true');await evaluate("localStorage.removeItem('mv-widget-shortlist')");
   for(const width of [320,768]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Widget library overflows at ${width}px`);}
   await viewport(1440);await screenshot('widgets.png');
+  // Second sign-in step, against a simulated sign-in service whose valid code is 123456.
+  await navigate('http://127.0.0.1:4188/admin','.admin-header');
+  const securityRail=name=>evaluate(`[...document.querySelectorAll('.rail-item')].find(el=>el.textContent.startsWith(${JSON.stringify(name)})).click()`);
+  await securityRail('Sign-in security');await wait("document.querySelector('.second-step-status h2')?.textContent==='The second step is off'");
+  await evaluate("[...document.querySelectorAll('.second-step-panel button')].find(el=>el.textContent.includes('Set up authenticator app')).click()");
+  await wait("!!document.querySelector('.second-step-qr')&&document.querySelector('.second-step-secret')?.textContent==='JBSWY3DPEHPK3PXP'");
+  assert.equal(await evaluate("document.querySelector('.second-step-qr').naturalWidth>0"),true,'The square code image renders under the page security policy');
+  for(const width of [390,1440]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Sign-in security overflows at ${width}px`);}
+  await fill('#second-step-setup-code','12ab34');assert.equal(await evaluate("document.querySelector('#second-step-setup-code').value"),'1234','Only digits are accepted');
+  await evaluate("document.querySelector('.second-step-panel .button-dark').click()");await wait("document.querySelector('#second-step-setup-code-error')?.textContent.includes('all six digits')");
+  await fill('#second-step-setup-code','000000');await evaluate("document.querySelector('.second-step-panel .button-dark').click()");
+  await wait("document.querySelector('#second-step-setup-code-error')?.textContent.includes('That code is not right')");
+  assert.equal(await evaluate("document.querySelector('.second-step-status h2').textContent"),'The second step is off','A wrong code turns nothing on');
+  await fill('#second-step-setup-code','123456');await evaluate("document.querySelector('.second-step-panel .button-dark').click()");
+  await wait("document.querySelector('.second-step-status.is-on h2')?.textContent==='The second step is on'");
+  // Signing in again now stops at the code screen, and nothing private is requested until the code is right.
+  await evaluate("[...document.querySelectorAll('.admin-tools > *')].find(el=>el.title==='Sign out').click()");await wait("location.pathname==='/'");
+  await navigate('http://127.0.0.1:4188/admin','.login-card');const beforeGate=requests.length;
+  await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
+  await wait("document.querySelector('.second-step-card h1')?.textContent==='Enter your code.'&&!document.querySelector('#second-step-code').disabled");
+  assert.equal(await evaluate("!!document.querySelector('.admin-app')"),false,'The workspace stays closed at the code screen');
+  await viewport(390);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'Code screen overflows on a phone');await screenshot('admin-second-step-mobile.png');await viewport(1440);
+  await fill('#second-step-code','111111');await click('.second-step-card form button');await wait("document.querySelector('#second-step-code-error')?.textContent.includes('That code is not right')");
+  assert.ok(!requests.slice(beforeGate).some(url=>/\/rest\/v1\/(enquiries|services|site_content)|\/rest\/v1\/rpc\//.test(url)),'No private data is requested before the second step passes');
+  await fill('#second-step-code','123456');await click('.second-step-card form button');await wait("document.querySelectorAll('.overview-stat').length===4");
+  // Turning it off needs a confirmation and restores password-only sign-in.
+  await securityRail('Sign-in security');await wait("!!document.querySelector('.second-step-off')");await click('.second-step-off');
+  await wait("document.querySelector('.second-step-panel .inline-confirm')?.textContent.includes('Turn the second step off')");
+  await evaluate("[...document.querySelectorAll('.second-step-panel .inline-confirm button')].find(el=>el.textContent==='Keep it on').click()");await wait("!document.querySelector('.second-step-panel .inline-confirm')&&!!document.querySelector('.second-step-status.is-on')");
+  await click('.second-step-off');await wait("!!document.querySelector('.second-step-off-confirm')");await click('.second-step-off-confirm');
+  await wait("document.querySelector('.second-step-status h2')?.textContent==='The second step is off'");
+  // A script error on the customer site reaches the studio by email once, with personal details removed.
+  await navigate('http://127.0.0.1:4188/','.hero');const mailsBefore=servers.mails;
+  await evaluate("sessionStorage.removeItem('mv-error-reports');window.dispatchEvent(new ErrorEvent('error',{message:'Checkout button crashed for jane@example.com',filename:location.origin+'/assets/index.js',lineno:12,colno:3}))");
+  for(let i=0;i<50&&servers.mails===mailsBefore;i++)await new Promise(resolve=>setTimeout(resolve,100));
+  assert.equal(servers.mails,mailsBefore+1,'One problem report is emailed');
+  assert.match(servers.mailPayloads.at(-1).subject,/^Website problem · Checkout button crashed for \[email removed\]/);assert.doesNotMatch(servers.mailPayloads.at(-1).text,/jane@example\.com/);assert.match(servers.mailPayloads.at(-1).text,/Page: \//);
+  await evaluate("window.dispatchEvent(new ErrorEvent('error',{message:'Checkout button crashed for jane@example.com'}));window.dispatchEvent(new ErrorEvent('error',{message:'Script error.'}))");
+  await new Promise(resolve=>setTimeout(resolve,800));assert.equal(servers.mails,mailsBefore+1,'The same problem and browser noise are not reported again');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','admin page guides, grouped menu and unsaved-change prompts','admin search, load-failure fallback, enquiry badge and single enquiry list','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','admin page guides, grouped menu and unsaved-change prompts','admin search, load-failure fallback, enquiry badge and single enquiry list','admin overview with follow-up reminders, and recoverable deletes','customer fonts, dark default and languages','problem reports emailed once with details removed','second sign-in step: setup, code screen, wrong codes and turning off','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();

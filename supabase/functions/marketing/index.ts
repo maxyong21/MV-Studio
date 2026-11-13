@@ -5,7 +5,7 @@ import {createClient} from 'npm:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@10.3.1';
 import {createGmailSendMail} from '../_shared/notify.mjs';
 import {renderMarketing,validateCampaign,emailPattern} from '../_shared/marketing.mjs';
-import {originAllowed,headersFor,json,readInput,digest} from '../_shared/http.mjs';
+import {originAllowed,headersFor,json,readInput,digest,secondStepSatisfied,secondStepMessage} from '../_shared/http.mjs';
 const env=(key:string)=>Deno.env.get(key),send=createGmailSendMail(nodemailer,env);
 const db=()=>createClient(env('SUPABASE_URL')!,env('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
 const checked=(r:any,stage='')=>{if(r.error)throw Object.assign(new Error(r.error.message),{code:r.error.code,stage});return r.data;};
@@ -70,6 +70,7 @@ Deno.serve(async request=>{
  if(worker)return reply(await processOne(admin));
  if(!originAllowed(origin,env))return reply({error:'Origin is not allowed.'},403);
  const auth=await admin.auth.getUser(token);if(auth.error||!auth.data.user)return reply({error:'Sign in again.'},401);
+ if(!secondStepSatisfied(auth.data.user,token))return reply({error:secondStepMessage,code:'second_step_required'},401);
  const member=checked(await admin.from('admin_users').select('user_id').eq('user_id',auth.data.user.id).maybeSingle());if(!member)return reply({error:'Administrator access required.'},403);
  adminVerified=true;
  const input=await readInput(request),action=input.action;

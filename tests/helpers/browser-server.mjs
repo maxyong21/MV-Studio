@@ -4,6 +4,7 @@ import {resolve,join,sep,extname} from 'node:path';
 import {database,client} from './database.mjs';
 import {createSubmitHandler} from '../../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../../supabase/functions/_shared/retry-handler.mjs';
+import {createReportHandler} from '../../supabase/functions/_shared/report-handler.mjs';
 import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
 import {safeJson} from '../../scripts/seo.mjs';
 import {legalPaths} from '../../src/legal/content.mjs';
@@ -22,8 +23,11 @@ export async function browserServers({prerender=false}={}){
   const b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   const token=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.fixture`;
   const env=name=>({ALLOWED_ORIGIN:'http://127.0.0.1:4188,http://127.0.0.1:4187',TURNSTILE_REQUIRED:'false',SUPABASE_SERVICE_ROLE_KEY:'fixture',GMAIL_SMTP_USER:'studio@gmail.test',GMAIL_SMTP_APP_PASSWORD:'fixture-password',ENQUIRY_TO_EMAIL:'owner@example.test'})[name];
-  const deps={env,createAdmin:()=>client(db,adminId,token),sendMail:async message=>{mails++;mailPayloads.push(message);return {messageId:`<local-email-${mails}@gmail.test>`};}};
-  const submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
+  // A second session token that also carries the authenticator check, as issued after a correct code.
+  const token2=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,aal:'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)},{method:'totp',timestamp:Math.floor(Date.now()/1000)}]})}.fixture`;
+  const adminRequest=req=>[`Bearer ${token}`,`Bearer ${token2}`].includes(req.headers.authorization);
+  const deps={env,createAdmin:()=>client(db,adminId,[token,token2]),sendMail:async message=>{mails++;mailPayloads.push(message);return {messageId:`<local-email-${mails}@gmail.test>`};}};
+  const report=createReportHandler(deps),submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
   const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
@@ -38,7 +42,7 @@ export async function browserServers({prerender=false}={}){
     try{
       if(url.pathname.startsWith('/storage/v1/object/')){
         if(req.method==='POST'){
-          if(req.headers.authorization!==`Bearer ${token}`){send({message:'Not authorized'},403);return;}
+          if(!adminRequest(req)){send({message:'Not authorized'},403);return;}
           const chunks=[];for await(const chunk of req)chunks.push(chunk);
           let bytes=Buffer.concat(chunks),type=req.headers['content-type'];
           // Supabase's browser SDK wraps Blob/File uploads in multipart form data.
@@ -60,6 +64,17 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/auth/v1/')){
         if(url.pathname==='/auth/v1/logout'){send({});return;}
         if(url.pathname==='/auth/v1/user'){send(user);return;}
+        // Authenticator app (TOTP) endpoints. The accepted code is always 123456.
+        const factorPath=url.pathname.match(/^\/auth\/v1\/factors(?:\/([0-9a-f-]{36})(?:\/(challenge|verify))?)?$/);
+        if(factorPath){
+          const chunks=[];for await(const chunk of req)chunks.push(chunk);const body=JSON.parse(Buffer.concat(chunks).toString()||'{}');
+          const [,factorId,step]=factorPath,stamp=new Date().toISOString(),found=(user.factors||[]).find(item=>item.id===factorId);
+          if(!factorId&&req.method==='POST'){const factor={id:crypto.randomUUID(),friendly_name:body.friendly_name,factor_type:'totp',status:'unverified',created_at:stamp,updated_at:stamp};user.factors=[...(user.factors||[]),factor];send({id:factor.id,type:'totp',friendly_name:factor.friendly_name,totp:{qr_code:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21"><rect width="21" height="21" fill="white"/><rect x="2" y="2" width="7" height="7"/><rect x="12" y="2" width="7" height="7"/><rect x="2" y="12" width="7" height="7"/></svg>',secret:'JBSWY3DPEHPK3PXP',uri:'otpauth://totp/MV%20Studio:admin?secret=JBSWY3DPEHPK3PXP'}});return;}
+          if(!found){send({code:404,error_code:'mfa_factor_not_found',msg:'Factor not found'},404);return;}
+          if(step==='challenge'){send({id:crypto.randomUUID(),type:'totp',expires_at:Math.floor(Date.now()/1000)+300});return;}
+          if(step==='verify'){if(body.code!=='123456'){send({code:422,error_code:'mfa_verification_failed',msg:'Invalid TOTP code entered'},422);return;}found.status='verified';send({access_token:token2,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user});return;}
+          if(req.method==='DELETE'){user.factors=user.factors.filter(item=>item.id!==factorId);send({id:factorId});return;}
+        }
         if(url.pathname==='/auth/v1/token'){
           send({access_token:token,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user});return;
         }
@@ -67,14 +82,26 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/functions/v1/')){
         const bytes=[];for await(const chunk of req)bytes.push(chunk);
         const request=new Request(url,{method:req.method,headers:req.headers,body:Buffer.concat(bytes)});
-        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin};
+        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin,'report-error':report};
         const handler=handlers[url.pathname.split('/').at(-1)];if(!handler){send({error:'Unknown function'},404);return;}
         const result=await handler(request);
         res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
       }
+      // Database functions (PostgREST /rpc). Runs as the fixture administrator so is_admin() checks pass or fail as they would live.
+      if(url.pathname.startsWith('/rest/v1/rpc/')){
+        const name=url.pathname.split('/').at(-1);if(!/^admin_trash_(delete|list|restore|purge)$/.test(name)){send({message:'Could not find the function',code:'PGRST202'},404);return;}
+        const chunks=[];for await(const chunk of req)chunks.push(chunk);const args=JSON.parse(Buffer.concat(chunks).toString()||'{}');
+        const keys=Object.keys(args);if(keys.some(key=>!/^[a-z_]+$/.test(key))){send({message:'Invalid argument'},400);return;}
+        const isAdmin=adminRequest(req);
+        await db.query("select set_config('request.jwt.claim.sub',$1,false)",[isAdmin?adminId:'']);
+        try{const result=await db.query(`select * from public.${name}(${keys.map((key,i)=>`${key} => $${i+1}`).join(',')})`,keys.map(key=>args[key]));send(name==='admin_trash_list'?result.rows:null);}
+        catch(error){send({message:error.message,code:error.code},400);}
+        finally{await db.query("select set_config('request.jwt.claim.sub','',false)");}
+        return;
+      }
       if(url.pathname.startsWith('/rest/v1/')){
         const table=url.pathname.split('/').at(-1);if(!tables.has(table)){send({message:'Unknown table'},404);return;}
-        const isAdmin=req.headers.authorization===`Bearer ${token}`;
+        const isAdmin=adminRequest(req);
         if(!isAdmin&&(req.method!=='GET'||['enquiries','admin_users'].includes(table))){send({message:'Not authorized'},403);return;}
         const values=[];const param=value=>{values.push(value!==null&&typeof value==='object'?JSON.stringify(value):value);return `$${values.length}`;};
         const clauses=[];

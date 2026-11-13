@@ -188,6 +188,11 @@
 :root[data-theme=dark] .enquiry-fields input, :root[data-theme=dark] .message-field textarea,
 :root[data-theme=dark] .meeting-time input { background: #1b261e; color: #f0f5ed; border-color: #73866f; }
 :root[data-theme=dark] #home :is(a, button, input, textarea):focus-visible { outline-color: #f3b591; }
+/* The three start cards kept their cream fill in dark mode. */
+:root[data-theme=dark] .client-paths > :is(a,button) { background: #252d27; border-color: #4b5b50; color: #eef4eb; }
+:root[data-theme=dark] .client-paths > :is(a,button):hover { border-color: #8ba385; box-shadow: 0 12px 25px #00000040; }
+:root[data-theme=dark] .client-paths > :is(a,button) > span { color: #f3b591; }
+:root[data-theme=dark] .client-paths > :is(a,button) > small { color: #bbc9bc; }
 /* The light button kept its pale fill while its text turned pale too. */
 :root[data-theme=dark] .button-light { background: #2b372d; color: #f0f5ed; }
 

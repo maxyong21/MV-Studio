@@ -5,6 +5,8 @@
      header   what this page is
      guide    how to use it
      content  the work itself */
+/* Keep room for the scrollbar even on a short page, so the tools do not shift sideways between pages. */
+html:has(.admin-app) { scrollbar-gutter: stable; }
 .admin-workspace { --admin-pad: clamp(24px, 4vw, 66px); padding: 0 var(--admin-pad) 70px; }
 
 /* ---- Top bar: fixed height, sticky, tools always at the right edge ---- */

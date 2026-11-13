@@ -2,19 +2,38 @@
 // result shows up, how to use it, and what to watch out for. Edit the wording
 // here; AdminGuide.jsx only lays it out.
 export const navGroups=[
+  ['Today',['overview']],
   ['Customers',['enquiries','marketing','chatbot']],
   ['Website content',['services','feature_options','projects','team_members','promotions','testimonials','faqs','site_content']],
-  ['Health',['system_status']],
+  ['Housekeeping',['trash','security','system_status']],
 ];
 export const groupOf=key=>navGroups.find(([,keys])=>keys.includes(key))?.[0]||'Workspace';
 
 const liveNote='Saved changes show on the live website straight away. Search-engine previews update after the next site deploy.';
 export const guides={
+  overview:{
+    purpose:'Start here each day. It shows which customers are waiting on you and whether your website is fully filled in.',
+    where:'Private. It reads your enquiries and published content; it changes nothing.',
+    steps:['Check “Follow-ups due” and “New enquiries” at the top.','Open each item under “Needs your attention” and deal with it.','Glance at “Your website at a glance” for any section with nothing published.'],
+    notes:['An enquiry appears here when its follow-up date arrives, or when it is new and a day old with no follow-up set.','It leaves the list when you move the follow-up date or mark the enquiry won or closed.'],
+  },
+  security:{
+    purpose:'Protect the admin with a second step. After your password, you type a 6-digit code from an app on your phone.',
+    where:'Your own sign-in only. Other administrators choose for themselves.',
+    steps:['Install an authenticator app on your phone.','Press “Set up authenticator app” and scan the square code.','Type the code the app shows, then press “Confirm and turn on”.'],
+    notes:['Once it is on, your password alone is refused everywhere: this page, the database and email sending.','If you lose your phone, the authenticator must be removed in the Supabase dashboard before you can sign in.','Nothing changes until you confirm a code.'],
+  },
+  trash:{
+    purpose:'A safety net. Anything you delete in the admin waits here for 30 days before it is gone for good.',
+    where:'Private. A deleted item is removed from the website immediately.',
+    steps:['Find the item. The line under its name says how many days are left.','Press “Restore” to put it back exactly as it was.','Press “Delete for good” only when you are sure.'],
+    notes:['Restoring a project that was shown in the footer fails if four footer projects are already chosen. Free a slot first.','After 30 days an item is removed permanently and cannot be recovered.'],
+  },
   enquiries:{
     purpose:'See every request customers send from the website form or the project assistant, and follow each one through to a result.',
     where:'Private. Customers only see their own confirmation message.',
     steps:['Open an enquiry to read what the customer asked for and their estimate.','Assign it, set a follow-up date and add internal notes so nothing is forgotten.','Reply by WhatsApp or email, then prepare a quotation if they want to go ahead.','Change the status as it moves from new to contacted, qualified, won or closed.'],
-    notes:['“Retry enquiry email” resends only the notification to your team, never anything to the customer.','Deleting an enquiry cannot be undone.'],
+    notes:['“Retry enquiry email” resends only the notification to your team, never anything to the customer.','A deleted enquiry goes to Recently deleted and can be restored for 30 days.'],
   },
   marketing:{
     purpose:'Write an email and send it to businesses you want to introduce the studio to, or to existing customers.',

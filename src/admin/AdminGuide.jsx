@@ -19,7 +19,8 @@ export default function AdminGuide({section}){
     update();query.addEventListener('change',update);return()=>query.removeEventListener('change',update);
   },[]);
   if(!guide)return null;
-  const closed=saved||(narrow?Object.keys(guides):[]);
+  // The Overview is opened every day, so its guide starts closed to keep the numbers at the top.
+  const closed=saved||(narrow?Object.keys(guides):['overview']);
   const open=!closed.includes(section);
   const toggle=()=>{const next=open?[...closed,section]:closed.filter(key=>key!==section);setSaved(next);try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}};
   return <section className={`admin-guide ${open?'is-open':''}`} aria-label="How this page works">

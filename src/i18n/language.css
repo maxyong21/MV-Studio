@@ -1,0 +1,24 @@
+/* Language switch: EN | BM | 中文. In the top bar on wide screens, inside the
+   menu on phones (the bar has no room there), and again in the footer. */
+.language-switch { display: inline-flex; flex: none; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 99px; }
+.language-switch button { min-width: 38px; height: 30px; padding: 0 9px; border: 0; border-radius: 99px; background: none; color: inherit; font: inherit; font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.language-switch button[aria-pressed=true] { background: #193e32; color: #fffdf8; }
+.language-switch button:focus-visible { outline: 3px solid #a7472a; outline-offset: 2px; }
+:root[data-theme=dark] .language-switch button[aria-pressed=true] { background: #f3b591; color: #2a1a10; }
+:root[data-theme=dark] .language-switch button:focus-visible { outline-color: #f3b591; }
+.nav-links .nav-language-mobile { display: none; }
+.site-footer-bottom .footer-language { border-color: #56705c; color: #f0f5ed; }
+.site-footer-bottom .footer-language button[aria-pressed=true], :root[data-theme=dark] .site-footer-bottom .footer-language button[aria-pressed=true] { background: #f3b591; color: #2a1a10; }
+.site-footer-bottom .footer-language button:focus-visible { outline-color: #f3b591; }
+/* Chinese has no italics or tight tracking; headings read better at normal spacing. */
+:root:lang(zh) :is(h1, h2, h3) { letter-spacing: -.01em; }
+/* The top bar only has room for the switch on wide screens, in any of the three languages.
+   Narrower than this it is in the phone menu and in the footer. */
+@media (max-width: 1079px) { .nav-end .nav-language { display: none; } }
+@media (min-width: 761px) { .nav-links { gap: clamp(16px, 2.2vw, 42px); margin-left: clamp(16px, 4vw, 85px); } }
+@media (max-width: 760px) {
+  .nav-links .nav-language-mobile { display: inline-flex; align-self: flex-start; margin: 8px 14px 6px; }
+  .language-switch button { min-width: 48px; height: 44px; font-size: 14px; }
+  .site-footer-bottom .footer-language button { height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .language-switch button { transition: none; } }

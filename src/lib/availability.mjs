@@ -1,3 +1,4 @@
+import {reportProblem} from './error-report.mjs';
 export const emptyPublicContent=()=>({site_content:null,services:[],projects:[],team_members:[],promotions:[],feature_options:[],testimonials:[],faqs:[]});
 export function hasPublicContent(data){
   if(!data||typeof data!=='object')return false;
@@ -11,6 +12,10 @@ export function recordDiagnostic(target,error){
   if(typeof window==='undefined')return;
   const detail=String(error?.diagnostic||error?.message||error||'Unexpected response').slice(0,1800).replace(/Bearer\s+\S+/gi,'Bearer [removed]').replace(/\b(?:sb_secret_|re_)[A-Za-z0-9_-]+/g,'[key removed]');
   const entry={target,time:new Date().toISOString(),status:error?.status||null,detail};
+  // Tell the studio about genuine faults only. A visitor's own mistake (a form to review, a rate
+  // limit) and a dropped connection on their side (status 0) are not something the team can fix.
+  const service=error instanceof PublicServiceError,status=Number(error?.status)||0;
+  if(service?error.kind==='maintenance'&&status>0:true)reportProblem(service?'service':'interface',service?`${target} failed (HTTP ${status})`:String(error?.message||error||'Display error').slice(0,300),{area:target,detail});
   try{sessionStorage.setItem(storageKey,JSON.stringify([entry,...readDiagnostics().filter(row=>row.target!==target)].slice(0,20)));window.dispatchEvent(new Event('mv-diagnostics'));}catch{}
 }
 export function clearDiagnostics(target){try{sessionStorage.setItem(storageKey,JSON.stringify(target?readDiagnostics().filter(row=>row.target!==target):[]));window.dispatchEvent(new Event('mv-diagnostics'));}catch{}}

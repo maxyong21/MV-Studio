@@ -5,6 +5,7 @@ import {money,localDateTime} from '../lib/site.js';
 import InlineFieldError from '../components/InlineFieldError.jsx';
 import {useDialogFocus} from './useDialogFocus.js';
 import {hasPricedSelection} from '../../supabase/functions/_shared/enquiry.mjs';
+import {moveToTrash} from './trash.js';
 
 const statuses=['new','contacted','qualified','won','closed'];
 const quoteStatuses=['draft','shared','accepted','declined','expired'];
@@ -21,12 +22,14 @@ function summaryText(row){
 }
 function useNotice(notify){return (message,error)=>notify(error?`${message}: ${error.message||error}`:message,error?'error':'success');}
 
-export default function EnquiryWorkspace({rows,loading,loadError='',onRefresh,notify,busy,retryNotification}){
+export default function EnquiryWorkspace({rows,loading,loadError='',onRefresh,notify,busy,retryNotification,focusId='',onFocused}){
   const [open,setOpen]=useState('');
   const [search,setSearch]=useState('');
   // Search what is on the card, not internal ids or tokens.
   const filtered=useMemo(()=>{const needle=search.trim().toLowerCase();if(!needle)return rows;return rows.filter(row=>[row.name,row.company_name,row.email,row.phone,row.message,row.status,row.assigned_to,...(row.selected_features||[]).map(item=>item.name)].some(value=>String(value??'').toLowerCase().includes(needle)));},[rows,search]);
   const show=useNotice(notify);
+  // Arriving from the Overview: open that enquiry and bring it into view.
+  useEffect(()=>{if(!focusId||loading||!rows.some(row=>row.id===focusId))return;setSearch('');setOpen(focusId);const frame=requestAnimationFrame(()=>document.getElementById(`enquiry-${focusId}`)?.scrollIntoView({block:'start'}));onFocused?.();return()=>cancelAnimationFrame(frame);},[focusId,loading,rows,onFocused]);
   const total=rows.length;
   return <section className="enquiry-workspace" aria-label="Customer enquiry workspace">
     <header className="enquiry-workspace-toolbar"><div><span className="section-overline">SALES WORKSPACE</span><h2>{total} {total===1?'enquiry':'enquiries'}</h2><p>Assign an owner, record private notes, set a follow-up, and prepare a reviewed quotation.</p></div><div className="enquiry-workspace-actions"><label className="admin-search"><Search size={17}/><input type="search" aria-label="Search enquiries" placeholder="Search name, company, email…" value={search} onChange={event=>setSearch(event.target.value)}/></label><button type="button" className="button button-light" onClick={onRefresh} disabled={loading}><RefreshCw size={15}/> Refresh</button></div></header>
@@ -48,7 +51,11 @@ function EnquiryCard({row,expanded,onToggle,notify,busy,retryNotification,onRefr
   const [loadingDetail,setLoadingDetail]=useState(false);
   const [quoteEditor,setQuoteEditor]=useState(false);
   const [confirmDelete,setConfirmDelete]=useState(false),[deleting,setDeleting]=useState(false);
-  const remove=async()=>{setDeleting(true);try{const {error}=await supabase.from('enquiries').delete().eq('id',row.id);if(error)throw error;notify('Enquiry deleted.');await onRefresh();}catch(error){notify('The enquiry could not be deleted',error);setDeleting(false);setConfirmDelete(false);}};
+  const remove=async()=>{setDeleting(true);try{
+    // Goes to Recently deleted; only if that is not installed yet does it delete outright.
+    if(await moveToTrash('enquiries',row.id)==='unavailable'){const {error}=await supabase.from('enquiries').delete().eq('id',row.id);if(error)throw error;notify('Enquiry deleted.');}
+    else notify('Enquiry moved to Recently deleted. You can restore it for 30 days.');
+    await onRefresh();}catch(error){notify('The enquiry could not be deleted',error);setDeleting(false);setConfirmDelete(false);}};
   const [copyState,setCopyState]=useState('Copy enquiry summary');
   const [reload,setReload]=useState(0);
   useEffect(()=>{setOwner(row.assigned_to||'');setNotes(row.internal_notes||'');setFollowUp(localValue(row.follow_up_at));},[row.assigned_to,row.internal_notes,row.follow_up_at]);
@@ -82,7 +89,7 @@ function EnquiryCard({row,expanded,onToggle,notify,busy,retryNotification,onRefr
   const waUrl=customerWhatsApp.length>=7?`https://wa.me/${customerWhatsApp}?text=${encodeURIComponent(replyText)}`:'';
   const source=row.chatbot_estimate_id||row.chatbot_answers?'Project assistant':'Website form';
   const hasPriced=hasPricedSelection(row.selected_features||[]);
-  return <article className={`enquiry-workspace-card ${expanded?'is-expanded':''}`}>
+  return <article id={`enquiry-${row.id}`} className={`enquiry-workspace-card ${expanded?'is-expanded':''}`}>
     <div className="enquiry-card-top"><div><div className="enquiry-tags"><span className={`enquiry-status-tag status-${row.status}`}>{row.status}</span><span className="enquiry-source-tag">{source}</span>{row.meeting_requested&&<span className="enquiry-source-tag">Meeting requested</span>}</div><h3>{row.name} <span>· {row.company_name}</span></h3><div className="enquiry-contact-links"><a href={`mailto:${encodeURIComponent(row.email)}`}>{row.email}</a><a href={`tel:${row.phone.replace(/[^+\d]/g,'')}`}>{row.phone}</a><time>{displayDate(row.created_at)}</time></div></div><div className="enquiry-card-actions"><select aria-label={`Status for ${row.name}`} value={row.status} onChange={event=>changeStatus(event.target.value)}>{statuses.map(status=><option key={status} value={status}>{status[0].toUpperCase()+status.slice(1)}</option>)}</select><button type="button" className="button button-light" aria-expanded={expanded} onClick={onToggle}>{expanded?'Close details':'Open workspace'}</button></div></div>
     <p className="enquiry-brief">{row.message||'The customer did not add a message.'}</p>
     {(row.selected_features||[]).length>0&&<div className="admin-feature-tags">{row.selected_features.map((feature,index)=><span key={`${feature.name}-${index}`}>{feature.name}</span>)}</div>}
@@ -93,7 +100,7 @@ function EnquiryCard({row,expanded,onToggle,notify,busy,retryNotification,onRefr
     {row.preferred_meeting_at&&<p className="enquiry-meeting">Requested meeting time: <b>{displayDate(row.preferred_meeting_at)}</b> (customer's local time; confirm with them).</p>}
     {expanded&&<div className="enquiry-detail-grid">
       <section className="enquiry-private-panel"><div><span className="section-overline">TEAM ONLY</span><h4>Ownership & next step</h4><p>Private notes never appear on the customer site or in the customer’s WhatsApp draft.</p></div><label>Assigned to<input maxLength={160} placeholder="Team member name or email" value={owner} onChange={event=>setOwner(event.target.value)}/></label><label>Follow-up date and time<input type="datetime-local" value={followUp} onChange={event=>setFollowUp(event.target.value)}/></label><label>Internal notes<textarea maxLength={5000} rows={4} placeholder="Call notes, questions to confirm, or next action…" value={notes} onChange={event=>setNotes(event.target.value)}/></label><button className="button button-dark" type="button" disabled={saving} onClick={savePrivate}><Save size={15}/>{saving?'Saving…':'Save team notes'}</button>
-        {confirmDelete?<div className="inline-confirm" role="alertdialog" aria-label="Confirm delete"><span><b>Delete this enquiry from {row.name}?</b> Its notes, history and quotations go with it. This cannot be undone.</span><button type="button" className="button button-dark" autoFocus disabled={deleting} onClick={()=>setConfirmDelete(false)}>Keep it</button><button type="button" className="button button-light enquiry-delete-confirm" disabled={deleting} onClick={remove}>{deleting?'Deleting…':'Delete enquiry'}</button></div>:<button type="button" className="enquiry-delete" onClick={()=>setConfirmDelete(true)}><Trash2 size={15}/> Delete this enquiry</button>}</section>
+        {confirmDelete?<div className="inline-confirm" role="alertdialog" aria-label="Confirm delete"><span><b>Delete this enquiry from {row.name}?</b> It moves to Recently deleted with its notes, history and quotations, and can be restored for 30 days.</span><button type="button" className="button button-dark" autoFocus disabled={deleting} onClick={()=>setConfirmDelete(false)}>Keep it</button><button type="button" className="button button-light enquiry-delete-confirm" disabled={deleting} onClick={remove}>{deleting?'Deleting…':'Delete enquiry'}</button></div>:<button type="button" className="enquiry-delete" onClick={()=>setConfirmDelete(true)}><Trash2 size={15}/> Delete this enquiry</button>}</section>
       <section className="enquiry-history-panel"><div><span className="section-overline">FOLLOW-UP</span><h4>Activity & quotations</h4></div>{loadingDetail&&<p role="status">Loading history and quotes…</p>}{loadError&&<div className="enquiry-db-error" role="alert">{loadError}<button className="button button-light" type="button" onClick={()=>setReload(value=>value+1)}><RefreshCw size={14}/> Retry</button></div>}{!loadingDetail&&!loadError&&<><ol className="enquiry-history">{history.map(item=><li key={item.id}><span>{item.old_status?`${item.old_status} → ${item.new_status}`:`Enquiry received · ${item.new_status}`}</span><time>{displayDate(item.changed_at)}</time></li>)}{row.follow_up_at&&<li><span>Follow-up scheduled</span><time>{displayDate(row.follow_up_at)}</time></li>}</ol><div className="enquiry-quotes-head"><h5>Proposal versions</h5><button type="button" className="button button-light" onClick={()=>setQuoteEditor(true)}><Plus size={15}/> New quote</button></div><p className="enquiry-help">This workspace does not send a quote. Mark it Shared only after you send it to the customer yourself.</p>{quotes.map(quote=><QuoteSummary key={quote.id} quote={quote} notify={notify} onUpdate={async(status)=>{const {error}=await supabase.from('enquiry_quotes').update({status,updated_at:new Date().toISOString()}).eq('id',quote.id);if(error){notify('Could not update quotation',error);return false;}setQuotes(current=>current.map(item=>item.id===quote.id?{...item,status}:item));return true;}}/>)}{!quotes.length&&<p className="enquiry-help">No proposal yet. A draft stays private until your team marks it shared.</p>}</>}</section>
     </div>}
     {quoteEditor&&<QuoteEditor row={row} existing={quotes} onClose={()=>setQuoteEditor(false)} onSaved={quote=>{setQuotes(current=>[quote,...current]);setQuoteEditor(false);notify('Quote draft saved. Review it before sharing.');}} notify={notify}/>}

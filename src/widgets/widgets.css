@@ -253,6 +253,9 @@
 .wg-tip { position: relative; padding: 6px 10px; border: 1px dashed var(--wg-muted); border-radius: 8px; background: none; font-size: 14px; cursor: help; }
 .wg-tip [role=tooltip] { position: absolute; z-index: 6; left: 0; bottom: calc(100% + 8px); width: max-content; max-width: 220px; padding: 7px 10px; border-radius: 8px; background: var(--wg-ink); color: var(--wg-bg); font-size: 12px; text-align: left; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
 .wg-tip:is(:hover, :focus-visible) [role=tooltip] { opacity: 1; transform: none; }
+/* Later buttons open their bubble leftwards, so it cannot push past the right edge of a narrow screen. */
+.wg-tip:not(:first-child) [role=tooltip] { left: auto; right: 0; }
+.wg-tip [role=tooltip] { max-width: min(220px, 62vw); }
 .wg-loadbox { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 76px; width: 100%; border: 1px dashed var(--wg-line); border-radius: 12px; font-size: 14px; }
 .wg-spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--wg-line); border-top-color: var(--c1); border-radius: 50%; animation: wg-spin .8s linear infinite; }
 .wg-spinner.wg-small { width: 13px; height: 13px; border-width: 2px; vertical-align: -2px; }

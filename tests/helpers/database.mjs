@@ -6,6 +6,8 @@ export async function database(){
     create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+    create table auth.mfa_factors(id uuid primary key default gen_random_uuid(),user_id uuid,status text not null default 'unverified',factor_type text not null default 'totp');
+    create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
     grant usage on schema auth to anon,authenticated;
     create schema storage;
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
@@ -21,7 +23,7 @@ export async function database(){
 export function client(db,user=null,adminToken='admin-token'){
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid SQL identifier');return `"${value}"`;};
   return {
-    auth:{getUser:async token=>({data:{user:token===adminToken?{id:user}:token==='user-token'?{id:'11111111-1111-4111-8111-111111111111'}:null},error:null})},
+    auth:{getUser:async token=>({data:{user:[].concat(adminToken).includes(token)?{id:user}:token==='user-token'?{id:'11111111-1111-4111-8111-111111111111'}:null},error:null})},
     rpc:async(name,p)=>{try{const entries=Object.entries(p),params=entries.map(([,v])=>v!==null&&typeof v==='object'?JSON.stringify(v):v);return {data:(await db.query(`select public.${identifier(name)}(${entries.map(([key],i)=>`${identifier(key)} => $${i+1}`).join(',')}) as result`,params)).rows[0].result,error:null};}catch(error){return {data:null,error};}},
     from(table){
       let op='select',payload=null,columns='*',ordering='',maximum='';const filters=[];

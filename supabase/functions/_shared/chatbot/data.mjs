@@ -1,3 +1,4 @@
+import {secondStepSatisfied,secondStepMessage} from '../http.mjs';
 import {uuidPattern} from '../enquiry.mjs';
 import {providerConfig,providerHash,embedTexts} from './providers.mjs';
 import {chunkDocuments} from './retrieval.mjs';
@@ -11,6 +12,7 @@ export async function requireAdmin(request,admin){
   if(!token)throw new ChatError('Sign in to the administrator workspace.',401);
   const result=await admin.auth.getUser(token);
   if(result.error||!result.data?.user)throw new ChatError('Your session expired. Sign in again.',401);
+  if(!secondStepSatisfied(result.data.user,token))throw new ChatError(secondStepMessage,401);
   const membership=await admin.from('admin_users').select('user_id').eq('user_id',result.data.user.id).maybeSingle();
   if(membership.error||!membership.data)throw new ChatError('Administrator access is required.',403);
   return result.data.user.id;

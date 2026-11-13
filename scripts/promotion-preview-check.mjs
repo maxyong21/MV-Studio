@@ -33,7 +33,7 @@ try{
   await send('Runtime.enable');await send('Page.enable');await send('Network.enable');await viewport(1440);
   await navigate('http://127.0.0.1:4188/admin','.login-card');
   await fill('.login-card input[type=email]','admin@example.test');await fill('.login-card input[type=password]','test-password');await click('.login-card form button');
-  await wait("!!document.querySelector('.entity-row')");
+  await wait("document.querySelectorAll('.overview-stat').length===4");
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Promotions').click()");
   await wait("document.querySelector('.admin-header h1')?.textContent==='Promotions'");
   await click('.entity-toolbar-actions .button-dark');await wait("!!document.querySelector('#dialog-title')");

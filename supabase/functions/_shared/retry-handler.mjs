@@ -1,3 +1,4 @@
+import {secondStepSatisfied,secondStepMessage} from './http.mjs';
 import {originAllowed,headersFor,json,readInput} from './http.mjs';
 import {uuidPattern} from './enquiry.mjs';
 import {notifyEnquiry} from './notify.mjs';
@@ -12,6 +13,7 @@ export function createRetryHandler({env,createAdmin,sendMail}){
       if(!token)return reply({error:'Sign in as an administrator.'},401);
       const admin=createAdmin();const {data:auth,error:authError}=await admin.auth.getUser(token);
       if(authError||!auth.user)return reply({error:'Your session has expired. Sign in again.'},401);
+      if(!secondStepSatisfied(auth.user,token))return reply({error:secondStepMessage},401);
       const membership=await admin.from('admin_users').select('user_id').eq('user_id',auth.user.id).maybeSingle();
       if(membership.error||!membership.data)return reply({error:'Administrator access required.'},403);
       let input;try{input=await readInput(request);}catch{return reply({error:'Send a valid enquiry reference.'},400);}
