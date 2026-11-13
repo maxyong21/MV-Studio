@@ -8,6 +8,7 @@ import {createReportHandler} from '../../supabase/functions/_shared/report-handl
 import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
 import {safeJson} from '../../scripts/seo.mjs';
 import {legalPaths} from '../../src/legal/content.mjs';
+import {servicePaths} from '../../src/services/content.mjs';
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.xml':'application/xml','.txt':'text/plain'};
 export async function staticFile(req,res,folder){
   const root=resolve(folder),url=new URL(req.url,'http://localhost');
@@ -134,7 +135,7 @@ export async function browserServers({prerender=false}={}){
   const production=createServer(async(req,res)=>{
     if(!prerender){await staticFile(req,res,'dist');return;}
     const path=new URL(req.url,'http://127.0.0.1:4187').pathname;
-    if(path==='/'||legalPaths.includes(path)||/^\/projects\/(?:seed-p\d+|[0-9a-f-]{36})$/i.test(path)){
+    if(path==='/'||legalPaths.includes(path)||servicePaths.includes(path)||/^\/projects\/(?:seed-p\d+|[0-9a-f-]{36})$/i.test(path)){
       try{
         const data={};
         for(const table of ['site_content','services','projects','team_members','promotions','feature_options','testimonials','faqs']){

@@ -53,6 +53,19 @@ try{
         await page.click('.work-card h3 a');await page.waitForSelector('.project-detail h1');
         assert.equal(await overflow(page),false,'Project page overflows');
       });
+      await step('service pages',async()=>{
+        await page.goto(site+'/');await page.click('.service-card h3 a');await page.waitForSelector('.service-page h1');
+        await page.waitForFunction(()=>/Malaysia \| MV Studio$/.test(document.title));
+        const graph=JSON.parse(await page.evaluate(()=>document.getElementById('mv-studio-jsonld').textContent));
+        for(const type of ['Service','BreadcrumbList','FAQPage','ProfessionalService'])assert.ok(graph['@graph'].some(node=>node['@type']===type),type+' is missing from the service page');
+        assert.ok(await page.evaluate(()=>document.querySelector('link[rel=canonical]').href.includes('/services/')));
+        await page.goto(site+'/services/ecommerce-website');await page.waitForSelector('.service-page h1');
+        await page.click('.service-page .faq-item summary');assert.equal(await page.evaluate(()=>document.querySelector('.service-page .faq-item').open),true);
+        for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:800});assert.equal(await overflow(page),false,'Service page overflows at '+width+'px');}
+        await page.setViewportSize({width:1440,height:900});
+        await page.click('.service-others a');await page.waitForFunction(()=>!location.pathname.endsWith('ecommerce-website')&&document.querySelector('.service-page h1'));
+        await page.goto(app+'/services/no-such-service');await page.waitForSelector('.not-found-page h1');
+      });
       await step('legal page and custom 404',async()=>{
         await page.goto(site+'/privacy');await page.waitForSelector('.legal-hero h1');
         await page.goto(app+'/no-such-page');await page.waitForSelector('.not-found-page h1');

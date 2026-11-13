@@ -81,4 +81,6 @@ export default {
   'Continue on WhatsApp':'在 WhatsApp 继续','Use WhatsApp instead':'改用 WhatsApp',
   'Your enquiry is saved. Review and send the same details in WhatsApp to continue with our team.':'您的咨询已保存。请在 WhatsApp 中检查并发送相同内容，以便与我们的团队继续沟通。',
   'Review and send your entered details in WhatsApp. This does not submit the website enquiry.':'在 WhatsApp 中检查并发送您填写的内容。这不会提交网站咨询。',
+  '← All services':'← 全部服务','SERVICE':'服务','What’s included':'包含内容','A good fit if':'适合以下情况','Clear about costs':'费用清楚透明',
+  'Who builds it':'由谁开发','Common questions':'常见问题','Other services':'其他服务','Ready when you are.':'您准备好了，我们随时开始。','Learn more':'了解更多',
 };

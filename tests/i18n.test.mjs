@@ -6,7 +6,7 @@ import zh from '../src/i18n/zh.js';
 
 // Text passed to t() as a literal in the translated components. Strings that reach
 // t() through a variable (menu labels, process steps, detail labels) are listed below.
-const files=['src/App.jsx','src/components/Faq.jsx','src/components/EnquiryForm.jsx'];
+const files=['src/App.jsx','src/components/Faq.jsx','src/components/EnquiryForm.jsx','src/services/ServicePage.jsx'];
 const dynamic=['Studio','Work','Services','Contact','Scope','Revisions','Third-party costs','Maintenance','After-launch support','Payment','Listen first','Shape the idea','Build with you','Launch & support','We get to know your business, the people you serve, and what success looks like.','We map the right scope and share a clear proposal before development begins.','You see progress along the way and help guide the details that matter.','We launch together, then stay available for the next improvements.','The challenge','Our approach','The outcome','starting price','tailored to you','Annual services','Monthly services','Sending enquiry…','Send project enquiry','Continue on WhatsApp','Use WhatsApp instead','Your enquiry is saved. Review and send the same details in WhatsApp to continue with our team.','Review and send your entered details in WhatsApp. This does not submit the website enquiry.'];
 
 test('every translated string exists in Bahasa Malaysia and Chinese',async()=>{
