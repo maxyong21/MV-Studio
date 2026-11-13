@@ -1,3 +1,7 @@
+# Blocking and unblocking an address
+
+"Do not contact" in a campaign's recipient report blocks an address after a confirmation. A block made this way shows as "Blocked: by you" with an **Allow contact again** button. Addresses that unsubscribed, opted out through the preference form, or bounced show the reason and have no button: the `unsuppress` action refuses them on the server as well. Redeploy the `marketing` function to enable the button.
+
 # Repeat introductions
 
 `supabase/migrations/20261113_allow_repeat_introductions.sql` removes the once-only limit on introductions. After it is applied, the same address can be sent an introduction again in a later email, and statements below about repeat introductions being blocked no longer apply. Do-not-contact requests are unchanged: an address that opted out, or that you suppressed, is still refused. No function redeploy is needed. Re-running `20261111_email_composer.sql` afterwards restores the limit, so run this migration again if you do that.
