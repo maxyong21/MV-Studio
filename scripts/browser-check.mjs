@@ -173,7 +173,18 @@ try{
   assert.equal(await evaluate("document.querySelectorAll('.send-checklist li.is-done').length"),1,'Only the recipient step is complete before saving');
   assert.ok(await evaluate("document.querySelector('.send-checklist').textContent.includes('Press “Save draft”')"));
   assert.equal(await evaluate("[...document.querySelectorAll('.marketing-workspace .form-error button')].map(el=>el.textContent).join()"),'Dismiss','Validation errors offer Dismiss, not Retry loading');
+  // Leaving the composer with an unsaved email asks first, and replacing the message asks too.
+  assert.equal(await evaluate("!!document.querySelector('.marketing-workspace .unsaved-flag')"),true);
+  await evaluate("[...document.querySelectorAll('.marketing-workspace button')].find(el=>el.textContent==='Use introduction starter').click()");
+  await wait("document.querySelector('.marketing-workspace .inline-confirm')?.textContent.includes('Replace the email you are writing')");
+  await evaluate("[...document.querySelectorAll('.marketing-workspace .inline-confirm button')].find(el=>el.textContent==='Keep my email').click()");await wait("!document.querySelector('.marketing-workspace .inline-confirm')");
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");
+  await wait("document.querySelector('.admin-workspace > .inline-confirm')?.textContent.includes('unsaved changes in your email')");
+  await evaluate("[...document.querySelectorAll('.admin-workspace > .inline-confirm button')].find(el=>el.textContent==='Stay and keep editing').click()");
+  assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent+'|'+document.querySelector('#email-recipient-to').value"),'Marketing email|Customer <client@example.com>');
   await evaluate("window.fetch=window.originalMarketingFetch;[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");
+  await wait("!!document.querySelector('.admin-workspace > .inline-confirm')");await evaluate("[...document.querySelectorAll('.admin-workspace > .inline-confirm button')].find(el=>el.textContent==='Leave without saving').click()");
+  await wait("document.querySelector('.rail-item.selected').textContent==='Services & pricing'");
   await viewport(1440);
   // Every section explains itself, the menu is grouped, and closing the guide is remembered.
   await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
@@ -187,6 +198,18 @@ try{
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");await wait("document.querySelector('.admin-guide')?.textContent.includes('FAQ section')");
   await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='false'&&!!document.querySelector('.entity-row')");
   await click('.admin-guide-toggle');await wait("document.querySelector('.admin-guide-toggle').getAttribute('aria-expanded')==='true'");
+  // Search looks only at what the list shows: an internal id finds nothing, and the empty result explains itself.
+  const serviceId=(await servers.db.query("select id from services where name='Landing Page'")).rows[0].id;
+  await fill('.entity-toolbar .admin-search input',String(serviceId));await wait("document.querySelector('.entity-list .empty-state h3')?.textContent.includes('No services match')");
+  assert.equal(await evaluate("document.querySelectorAll('.entity-row').length"),0);
+  await evaluate("[...document.querySelectorAll('.entity-list .empty-state button')].find(el=>el.textContent==='Clear search').click()");await wait("document.querySelectorAll('.entity-row').length>=4");
+  await fill('.entity-toolbar .admin-search input','landing');await wait("document.querySelectorAll('.entity-row').length===1&&document.querySelector('.entity-toolbar').textContent.includes('1 of ')");await fill('.entity-toolbar .admin-search input','');
+  // A failed load says so and offers Retry; it must not claim the section is empty.
+  await evaluate("window.realFetch=window.fetch;window.fetch=(url,options)=>String(url).includes('/rest/v1/faqs')?Promise.resolve(new Response(JSON.stringify({message:'connection lost'}),{status:500,headers:{'Content-Type':'application/json'}})):window.realFetch(url,options)");
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='FAQs').click()");await wait("document.querySelector('.entity-list .enquiry-db-error')?.textContent.includes('could not be loaded')");
+  assert.equal(await evaluate("!!document.querySelector('.entity-list .empty-state')"),false,'A load failure is not an empty section');
+  await evaluate("window.fetch=window.realFetch");await click('.entity-list .enquiry-db-error button');await wait("!document.querySelector('.enquiry-db-error')&&!document.querySelector('.entity-loading')");
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Services & pricing').click()");await wait("document.querySelectorAll('.entity-row').length>=4&&!document.querySelector('.entity-loading')");
   // Unsaved edits in a dialog are not thrown away by Escape; an untouched dialog still closes at once.
   await click('.entity-toolbar-actions .button-dark');await wait("!!document.querySelector('#dialog-name')");
   await evaluate("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))");await wait("!document.querySelector('.entity-dialog')");
@@ -327,7 +350,20 @@ try{
   assert.match(servers.mailPayloads.at(-1).html,/Manual quotation required/);assert.doesNotMatch(servers.mailPayloads.at(-1).html,/RM 0\.00/);assert.doesNotMatch(servers.mailPayloads.at(-1).text,/One-time estimate: RM 0/);
   await click('.chat-close');await wait("!document.querySelector('.chat-dialog')");
   await navigate('http://127.0.0.1:4188/admin','.admin-header');
-  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent==='Enquiries').click()");
+  const newCount=(await servers.db.query("select count(*)::int n from enquiries where status='new'")).rows[0].n;assert.ok(newCount>0);
+  await wait(`document.querySelector('.rail-badge')?.textContent===${JSON.stringify(newCount+' new')}`);
+  assert.equal(await evaluate("document.querySelector('.rail-item.selected').textContent"),'Services & pricing','The new-enquiry badge shows from other pages');
+  await evaluate("[...document.querySelectorAll('.rail-item')].find(el=>el.textContent.startsWith('Enquiries')).click()");
+  await wait("!!document.querySelector('.enquiry-workspace-card')");
+  assert.equal(await evaluate("document.querySelectorAll('.enquiry-admin-row,.entity-toolbar,.entity-list').length"),0,'Only the sales workspace lists enquiries');
+  await fill('.enquiry-workspace .admin-search input','zzz-no-such-customer');await wait("document.querySelector('.enquiry-workspace .empty-state h3')?.textContent.includes('No enquiries match')");
+  await evaluate("[...document.querySelectorAll('.enquiry-workspace .empty-state button')].find(el=>el.textContent==='Clear search').click()");await wait("!!document.querySelector('.enquiry-workspace-card')");
+  const enquiryTotal=(await servers.db.query('select count(*)::int n from enquiries')).rows[0].n;
+  await evaluate("document.querySelector('.enquiry-workspace-card .enquiry-card-actions button').click()");await wait("!!document.querySelector('.enquiry-delete')");
+  await click('.enquiry-delete');await wait("document.querySelector('.enquiry-private-panel .inline-confirm')?.textContent.includes('cannot be undone')");
+  await evaluate("[...document.querySelectorAll('.enquiry-private-panel .inline-confirm button')].find(el=>el.textContent==='Keep it').click()");await wait("!document.querySelector('.enquiry-private-panel .inline-confirm')");
+  assert.equal((await servers.db.query('select count(*)::int n from enquiries')).rows[0].n,enquiryTotal,'Cancelling a delete keeps the enquiry');
+  await evaluate("document.querySelector('.enquiry-workspace-card .enquiry-card-actions button').click()");
   await wait("[...document.querySelectorAll('.enquiry-workspace-card')].some(row=>row.textContent.includes('Learning Centre')&&row.textContent.includes('No catalogue price'))");
   const adminReply=await evaluate("Array.from(Array.from(document.querySelectorAll('.enquiry-workspace-card')).find(row=>row.textContent.includes('Learning Centre')).querySelectorAll('a')).find(link=>link.href.includes('wa.me')).href");
   assert.ok(adminReply.startsWith('https://wa.me/60123456789?text='),'Admin reply draft opens the customer’s WhatsApp number');
@@ -380,7 +416,7 @@ try{
   await viewport(1440);await screenshot('widgets.png');
   await navigate('http://127.0.0.1:4188/unknown-page');await wait("document.querySelector('meta[name=robots]')?.content==='noindex,follow'");await wait("location.pathname==='/'&&!!document.querySelector('.hero')");
   assert.deepEqual(errors,[],'Browser runtime and hydration errors');
-  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','admin page guides, grouped menu and unsaved-change prompts','unknown route and automatic redirect'],screenshots:folder},null,2));
+  console.log(JSON.stringify({passed:true,checks:['marketing sandbox preview, validation and responsive dialog','prerendered HTML and hydration','public bundle excludes admin and auth SDK','chatbot loads on demand','six responsive widths','mobile menu and reduced motion','project deep links and editable case studies','admin login and metadata','service edits preserve features','responsive WebP upload and storage variants','testimonial publication permission','multiple contact fields','WhatsApp URL','enquiry validation, storage, email notification and meeting','chatbot draft CRUD, private preview and quote test capture','chatbot test, review and publication','mobile chatbot cards, edit answers and itemized annual pricing','chatbot contact validation, confirmed DB enquiry, notification and focus restoration','unlisted widget library: 115 demos, noindex, shortlist','admin page guides, grouped menu and unsaved-change prompts','admin search, load-failure fallback, enquiry badge and single enquiry list','unknown route and automatic redirect'],screenshots:folder},null,2));
 }finally{
   if(send)try{await send('Browser.close');}catch{}
   socket?.close();browser.kill();await servers.close();

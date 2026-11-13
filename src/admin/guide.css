@@ -63,3 +63,9 @@
 .entity-dialog > .inline-confirm { margin-bottom: 18px; }
 
 .admin-rail > .rail-label { display: none; }
+
+.enquiry-delete { display: inline-flex; align-items: center; gap: 8px; justify-self: start; margin-top: 6px; padding: 8px 2px; border: 0; background: none; color: #a33e2b; font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+:root[data-theme=dark] .enquiry-delete { color: #ffb7a6; }
+.contact-blocked { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: 8px; font-size: 13px; }
+.contact-blocked small { opacity: .85; }
+.empty-state .button { margin-top: 12px; }

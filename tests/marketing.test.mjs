@@ -131,6 +131,14 @@ test('admin send flow requires auth and current test; worker honors opt-out and 
  assert.ok(personal.every(m=>m.cc===undefined&&m.bcc===undefined&&m.headers['List-Unsubscribe-Post']==='List-Unsubscribe=One-Click'&&/unsubscribe\?token=/.test(m.headers['List-Unsubscribe'])));
  assert.equal(personal.find(m=>m.to==='kopi@example.com').subject,'Idea for Kopi Lane');assert.equal(personal.find(m=>m.to==='bare@example.com').subject,'Idea for your business');
  assert.ok(personal.every(m=>!/<table|<h1/.test(m.html)));
+ // "Allow contact again" lifts only a block the administrator made; a recipient's opt-out stays.
+ const mine=(await db.query("select id from marketing_contacts where email='bare@example.com'")).rows[0].id;
+ assert.equal((await call({action:'unsuppress',id:mine})).status,400,'An address that is not blocked cannot be unblocked');
+ assert.equal((await call({action:'suppress',id:mine})).status,200);assert.equal((await db.query('select suppressed from marketing_contacts where id=$1',[mine])).rows[0].suppressed,true);
+ assert.equal((await call({action:'unsuppress',id:mine})).status,200);assert.deepEqual((await db.query('select suppressed,suppression_reason from marketing_contacts where id=$1',[mine])).rows[0],{suppressed:false,suppression_reason:''});
+ const optedOut=await call({action:'unsuppress',id:contact.id});assert.equal(optedOut.status,400);assert.match((await optedOut.json()).error,/opted out/);
+ assert.deepEqual((await db.query('select suppressed,suppression_reason from marketing_contacts where id=$1',[contact.id])).rows[0],{suppressed:true,suppression_reason:'Unsubscribed'});
+ assert.equal((await call({action:'unsuppress',id:mine},'bad-token')).status,401);
  const pref=(await db.query('select preference_token from email_campaigns where id=$1',[group.id])).rows[0].preference_token;
  const preference=await handler(new Request(`https://project.supabase.co/functions/v1/marketing/preferences?token=${pref}`,{method:'POST',body:new URLSearchParams({email:'secret@example.com'})}));assert.equal(preference.status,200);assert.equal((await db.query("select suppressed from marketing_contacts where email='secret@example.com'")).rows[0].suppressed,true);
  }finally{delete globalThis.__marketingTest;await db.close();}

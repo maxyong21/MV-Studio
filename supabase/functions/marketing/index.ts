@@ -87,6 +87,13 @@ Deno.serve(async request=>{
   const value={relationship:c.relationship==='customer'?'customer':'prospect',contact_source:String(c.contact_source||'').slice(0,1000),outreach_note:String(c.outreach_note||'').slice(0,2000),email,first_name:String(c.first_name||'').slice(0,100),company_name:String(c.company_name||'').slice(0,200),industry:String(c.industry||'general').slice(0,80),language:String(c.language||'en').slice(0,10),consent_at:consent?new Date(c.consent_at).toISOString():null,consent_source:String(c.consent_source||'').slice(0,1000),consent_notice:String(c.consent_notice||'').slice(0,2000)};
   if(c.id){const previous=checked(await admin.from('marketing_contacts').select('email').eq('id',c.id).single());if(previous.email!==email)fail('Add a new contact for a different email address and record its source and relevance separately.');checked(await admin.from('marketing_contacts').update(value).eq('id',c.id));}else checked(await admin.from('marketing_contacts').insert(value));return reply({ok:true});
  }
+ // Lifts only a block an administrator made by hand. An opt-out, an unsubscribe or a
+ // bounce is the recipient's side of the record and is never cleared from here.
+ if(action==='unsuppress'){
+  const restored=checked(await admin.from('marketing_contacts').update({suppressed:false,suppression_reason:''}).eq('id',input.id).eq('suppressed',true).eq('suppression_reason','Suppressed by administrator').select('id'));
+  if(!restored?.length)fail('Only an address you blocked yourself can be allowed again. This one opted out, bounced, or is not blocked.');
+  return reply({ok:true});
+ }
  if(action==='suppress'){checked(await admin.from('marketing_contacts').update({suppressed:true,suppression_reason:'Suppressed by administrator'}).eq('id',input.id));return reply({ok:true});}
  if(action==='template'){
   const t=input.template;if(!t.name?.trim())fail('Give the template a name.');

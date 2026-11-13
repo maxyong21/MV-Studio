@@ -20,7 +20,7 @@ export const guides={
     purpose:'Write an email and send it to businesses you want to introduce the studio to, or to existing customers.',
     where:'In the recipient’s inbox. Nothing here changes the website.',
     steps:['Add recipients. Keep “Send a separate email to each address” ticked for first contact.','Write the subject and message, or start from “Use introduction starter”.','Save the draft, then send a test and read it in your own inbox.','Press “Review email”, check the list, and confirm. Progress appears under Campaigns.'],
-    notes:['The send button unlocks only after a test of the exact current content. Any edit needs a new test.','“Do not contact” permanently blocks an address. Use it when someone asks you to stop.','Emails leave one at a time, within the daily limit.'],
+    notes:['The send button unlocks only after a test of the exact current content. Any edit needs a new test.','“Do not contact” blocks an address. A block you made can be lifted with “Allow contact again”; a recipient’s own opt-out cannot.','Emails leave one at a time, within the daily limit.'],
   },
   chatbot:{
     purpose:'Control what the “Plan your project” assistant on the website says, asks and estimates.',
