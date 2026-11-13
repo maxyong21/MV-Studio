@@ -4,7 +4,6 @@
 .admin-rail .brand-light, .admin-rail .rail-label, .rail-bottom .admin-user-email { color: #c3d5c4; }
 .admin-rail .rail-item.selected { background: #284b3b; border-color: #6b8a77; box-shadow: inset 3px 0 #f3b591; }
 .admin-header { border-color: #d9dfd4; }
-.admin-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .entity-toolbar .entity-toolbar-actions { display: flex; flex-direction: row; align-items: center; gap: 10px; }
 .admin-app .button, .login-page .button, .entity-dialog .button { border-radius: 9px; min-height: 46px; font-size: 14px; }
 .admin-app .button-dark, .login-page .button-dark, .entity-dialog .button-dark { background: #193e32; color: #fffdf8; }
@@ -33,7 +32,6 @@
 .entity-dialog .dialog-head .modal-close { width: 44px; height: 44px; }
 .entity-dialog .dialog-actions { flex-wrap: wrap; }
 .entity-dialog .promotion-preview-button { margin-right: auto; }
-.admin-workspace:has(.enquiry-workspace) > :not(.admin-header):not(.enquiry-workspace) { display: none !important; }
 .enquiry-workspace { display:grid; gap:18px; }
 .enquiry-workspace-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding:22px 24px; border:1px solid #d9dfd4; border-radius:14px; background:#fffdf8; }
 .enquiry-workspace-toolbar h2 { margin:5px 0; color:#193e32; font-size:24px; }
@@ -116,8 +114,6 @@
   .dialog-fields textarea, .dialog-fields select, .login-card input, .admin-search input { font-size: 16px; }
 }
 @media(max-width:520px) {
-  .admin-header-actions { width: 100%; }
-  .admin-header-actions .admin-preview { flex: 1; justify-content: center; }
   .admin-nav-list { scroll-snap-type: x proximity; }
   .admin-nav-list .rail-item { scroll-snap-align: start; }
   .entity-toolbar .entity-toolbar-actions { align-items: stretch; flex-direction: column; }
