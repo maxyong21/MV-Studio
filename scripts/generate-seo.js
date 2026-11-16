@@ -67,6 +67,10 @@ await mkdir('dist/admin',{recursive:true});await writeFile('dist/admin/index.htm
 let widgetsHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Widget Library | MV Studio</title>');
 widgetsHtml=meta(widgetsHtml,'robots','noindex,nofollow','name');
 await mkdir('dist/widgets',{recursive:true});await writeFile('dist/widgets/index.html',widgetsHtml);
+// The business details form is sent to customers by link. It is not indexed and not in the sitemap.
+let formHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Google Business Profile details | MV Studio</title>');
+formHtml=meta(formHtml,'robots','noindex,follow','name');
+await mkdir('dist/business-profile-form',{recursive:true});await writeFile('dist/business-profile-form/index.html',formHtml);
 // Prerender the actual error artwork: it remains useful without JavaScript.
 let notFound=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Page not found | MV Studio</title>'),'robots','noindex,follow','name');
 notFound=notFound.replace('<div id="root"></div>',()=>`<div id="root">${renderPage(emptyPublicContent(),'/page-not-found')}</div>`);

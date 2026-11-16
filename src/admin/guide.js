@@ -3,7 +3,7 @@
 // here; AdminGuide.jsx only lays it out.
 export const navGroups=[
   ['Today',['overview']],
-  ['Customers',['enquiries','marketing','chatbot']],
+  ['Customers',['enquiries','profile_requests','marketing','chatbot']],
   ['Website content',['services','feature_options','projects','team_members','promotions','testimonials','faqs','site_content']],
   ['Housekeeping',['trash','security','system_status']],
 ];
@@ -34,6 +34,12 @@ export const guides={
     where:'Private. Customers only see their own confirmation message.',
     steps:['Open an enquiry to read what the customer asked for and their estimate.','Assign it, set a follow-up date and add internal notes so nothing is forgotten.','Reply by WhatsApp or email, then prepare a quotation if they want to go ahead.','Change the status as it moves from new to contacted, qualified, won or closed.'],
     notes:['“Retry enquiry email” resends only the notification to your team, never anything to the customer.','A deleted enquiry goes to Recently deleted and can be restored for 30 days.'],
+  },
+  profile_requests:{
+    purpose:'Track each Google Business Profile setup. Customers send their business details through a form, and they arrive here.',
+    where:'Private. The customer fills in the form at /business-profile-form. Send them that link after they agree to the service.',
+    steps:['Open a request to read the business details. “Copy all details” puts them on your clipboard.','Ask the customer for their logo and photos on WhatsApp.','Change the status as you go: in progress, waiting for Google verification, then done.','Keep private notes, such as the date the verification video was sent.'],
+    notes:['A request stays “New” until you change its status.','Deleting a request erases the customer’s details for good. It does not go to Recently deleted.','If the database cannot be reached when a customer submits, their details are emailed to you instead and do not appear here.'],
   },
   marketing:{
     purpose:'Write an email and send it to businesses you want to introduce the studio to, or to existing customers.',

@@ -9,6 +9,7 @@ What the website does to be found on Google, and what still has to be done outsi
   - `/services/company-website`
   - `/services/ecommerce-website`
   - `/services/custom-web-app`
+  - `/services/google-business-profile`
 - **Live prices.** The price, timeline and feature list on a service page come from the matching service in the admin. No price is typed in the code.
 - **Structured data.** The homepage tells search engines about the studio, its services and prices, the team, the projects and the published FAQs. Each service page describes the service, its price, a breadcrumb and its questions.
 - **Sitemap.** `/sitemap.xml` lists the homepage, service pages, legal pages and published projects.
@@ -24,6 +25,7 @@ Admin services have no address field. A card is linked by its name:
 | company, corporate | `/services/company-website` |
 | commerce, online store | `/services/ecommerce-website` |
 | custom, web app, system | `/services/custom-web-app` |
+| google, business profile | `/services/google-business-profile` |
 
 If a service is renamed so that it fits none or more than one, the card shows no link and the page shows "Let's talk" in place of a price. The page itself stays online.
 

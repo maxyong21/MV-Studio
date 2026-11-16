@@ -66,6 +66,37 @@ try{
         await page.click('.service-others a');await page.waitForFunction(()=>!location.pathname.endsWith('ecommerce-website')&&document.querySelector('.service-page h1'));
         await page.goto(app+'/services/no-such-service');await page.waitForSelector('.not-found-page h1');
       });
+      await step('business details form: validation, kept answers, failed-save fallback and success',async()=>{
+        await page.goto(site+'/services/google-business-profile');await page.click('.service-form-link a');await page.waitForSelector('.pf-form');
+        assert.equal(await page.evaluate(()=>document.querySelector('meta[name=robots]').content),'noindex,follow');
+        await page.click('.pf-form button[type=submit]');await page.waitForSelector('.pf-summary');
+        assert.match(await page.textContent('.pf-summary'),/9/);
+        assert.equal(await page.evaluate(()=>document.activeElement.id),'profile-contact_name','The first unanswered field takes focus');
+        const answers={contact_name:'Aisyah Rahman',contact_phone:'012-345 6789',business_name:'Pusat Tuisyen Cemerlang '+name,business_category:'Tuition centre',address:'12, Jalan Bakawali 3, 83000 Batu Pahat, Johor',business_phone:'07-431 2345',owner_email:'owner@example.com',opening_hours:'Mon to Fri 2pm to 9pm',website_url:'example.com.my'};
+        for(const [key,value] of Object.entries(answers))await page.fill('#profile-'+key,value);
+        await page.fill('#profile-owner_email','not-an-email');await page.locator('#profile-owner_email').blur();
+        await page.waitForSelector('#profile-owner_email-error');await page.fill('#profile-owner_email',answers.owner_email);
+        await page.waitForSelector('#profile-owner_email-error',{state:'detached'});
+        for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:800});assert.equal(await overflow(page),false,'Business details form overflows at '+width+'px');}
+        await page.setViewportSize({width:1440,height:900});
+        // A refresh must not cost the customer their typing.
+        await page.reload();await page.waitForSelector('.pf-notice');
+        assert.equal(await page.inputValue('#profile-business_name'),answers.business_name);
+        await page.check('#profile-authorised');
+        // The server cannot save: the answers stay, and the customer is told what to do.
+        const before=problems.length,cors={'access-control-allow-origin':site,'access-control-allow-headers':'authorization, apikey, content-type, x-client-info','access-control-allow-methods':'POST, OPTIONS'};
+        await page.route('**/functions/v1/submit-profile-request',route=>route.request().method()==='OPTIONS'?route.fulfill({status:204,headers:cors}):route.fulfill({status:503,headers:cors,contentType:'application/json',body:'{"error":"down"}'}));
+        await page.click('.pf-form button[type=submit]');await page.waitForSelector('.pf-problem');
+        assert.equal(await page.inputValue('#profile-business_name'),answers.business_name,'Answers were lost after a failed save');
+        assert.equal((await servers.db.query('select count(*)::int as n from public.profile_requests where business_name=$1',[answers.business_name])).rows[0].n,0);
+        await page.unroute('**/functions/v1/submit-profile-request');await page.waitForTimeout(300);problems.length=before;
+        await page.click('.pf-form button[type=submit]');await page.waitForSelector('.pf-done h1');
+        const saved=(await servers.db.query('select * from public.profile_requests where business_name=$1',[answers.business_name])).rows;
+        assert.equal(saved.length,1);assert.equal(saved[0].status,'new');assert.equal(saved[0].website_url,'https://example.com.my');assert.equal(saved[0].address,answers.address);
+        assert.ok((await page.textContent('.pf-reference')).includes(saved[0].id));
+        assert.equal(await page.evaluate(()=>localStorage.getItem('mv-profile-form-draft')),null,'The kept answers were not cleared after sending');
+        assert.equal(await overflow(page),false);
+      });
       await step('legal page and custom 404',async()=>{
         await page.goto(site+'/privacy');await page.waitForSelector('.legal-hero h1');
         await page.goto(app+'/no-such-page');await page.waitForSelector('.not-found-page h1');
@@ -96,6 +127,22 @@ try{
         await page.click('.entity-dialog .dialog-discard');await page.waitForSelector('.entity-dialog',{state:'detached'});
         await page.click('.rail-item:has-text("Recently deleted")');await page.waitForSelector('.trash-page .empty-state');
         await page.click('.rail-item:has-text("Sign-in security")');await page.waitForFunction(()=>document.querySelector('.second-step-status h2')?.textContent==='The second step is off');
+      });
+      await step('profile setups in the admin: read, change status, save notes and delete',async()=>{
+        await page.click('.rail-item:has-text("Profile setups")');await page.waitForSelector('.profile-card');
+        assert.ok(await page.evaluate(()=>!!document.querySelector('.rail-item[aria-current=page] .rail-badge')),'New requests are counted in the menu');
+        await page.click('.profile-card-head');await page.waitForSelector('.profile-card-body');
+        assert.match(await page.textContent('.profile-details'),/Jalan Bakawali/);
+        await page.selectOption('.profile-manage select','waiting_verification');
+        await page.waitForFunction(()=>document.querySelector('.profile-chip')?.textContent==='Waiting for Google verification');
+        await page.fill('.profile-notes textarea','Video sent '+name);await page.waitForSelector('.profile-manage-actions .unsaved-flag');
+        await page.click('.profile-manage-actions .button-dark');await page.waitForSelector('.profile-manage-actions .unsaved-flag',{state:'detached'});
+        const tracked=(await servers.db.query('select status from public.profile_requests where admin_notes=$1',['Video sent '+name])).rows;
+        assert.equal(tracked.length,1);assert.equal(tracked[0].status,'waiting_verification');
+        for(const width of [390,1440]){await page.setViewportSize({width,height:900});assert.equal(await overflow(page),false,'Profile setups overflow at '+width+'px');}
+        await page.click('.profile-delete');await page.click('.profile-delete-confirm');
+        await page.waitForFunction(()=>!document.querySelector('.profile-card'));
+        assert.equal((await servers.db.query('select count(*)::int as n from public.profile_requests where admin_notes=$1',['Video sent '+name])).rows[0].n,0);
       });
       assert.deepEqual(problems,[],'No script or console errors');
       results[name]={passed:true,version:browser.version(),checks:done};

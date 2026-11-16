@@ -34,6 +34,13 @@ export async function submitEnquiry(body){
   if(result?.ok!==true){const error=new PublicServiceError('maintenance',200,'Enquiry endpoint returned an invalid confirmation.');recordDiagnostic('Enquiry submission',error);throw error;}
   return result;
 }
+// Business details for a Google Business Profile setup. A reply with saved:false means the database
+// was unreachable and the details were emailed to the studio instead; that is still a success.
+export async function submitProfileRequest(body){
+  const result=await publicJSON('/functions/v1/submit-profile-request',{method:'POST',body,timeout:25000,target:'Business profile details',service:true});
+  if(result?.ok!==true){const error=new PublicServiceError('maintenance',200,'Profile details endpoint returned an invalid confirmation.');recordDiagnostic('Business profile details',error);throw error;}
+  return result;
+}
 export async function chatbotRequest(body){
   if(!isSupabaseConfigured)throw new PublicServiceError('coming-soon',0,'Supabase frontend environment variables are not configured.');
   const result=await publicJSON('/functions/v1/chatbot',{method:'POST',body,timeout:45000,target:'Project assistant',service:true});
