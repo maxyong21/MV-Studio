@@ -233,7 +233,7 @@ try{
   // Every section explains itself, the menu is grouped, and closing the guide is remembered.
   await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Today','Customers','Website content','Housekeeping']);
-  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),15);
+  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),16);
   assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'Website content›Services & pricing');
   // The tools never move: same place on a short page and a long one, at desktop, tablet and phone widths.
   const toolSpot="(()=>{const b=document.querySelector('.admin-tools').getBoundingClientRect();return [Math.round(b.top),Math.round(innerWidth-b.right),Math.round(b.width)].join()})()";

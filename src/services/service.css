@@ -38,6 +38,9 @@
 .service-cta h2 { margin-bottom: 6px; }
 .service-cta p { max-width: 520px; margin: 0; font-size: 16px; line-height: 1.65; }
 :root[data-theme=dark] .service-cta { background: #30372e; color: var(--ink); }
+/* Link from the Google Business Profile page to its details form. */
+.service-form-link { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+.service-form-link a { color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 /* Link from each service card on the homepage to its page. */
 .service-more { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: auto 0 14px; padding-top: 12px; align-self: flex-start; font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 .service-more + .service-bottom { margin-top: 0; }

@@ -78,6 +78,28 @@ export const servicePages=[
     ms:'Kami membangunkan aplikasi web tersuai untuk perniagaan di Malaysia, seperti sistem tempahan dan sistem pengurusan, mengikut cara kerja pasukan anda.',
     zh:'我们为马来西亚企业开发定制网页应用，例如预约系统和管理系统，并按照您团队的工作方式设计。',
   },
+  {
+    slug:'google-business-profile',
+    // Customers who have agreed to start send their business details here.
+    formPath:'/business-profile-form',
+    match:/google|business profile|\bGBP\b|maps listing/i,
+    name:'Google Business Profile setup',
+    heading:'Google Business Profile setup for Malaysian businesses',
+    title:'Google Business Profile Setup Malaysia | MV Studio',
+    description:'We set up your Google Business Profile so customers find you on Google Search and Maps, with your details, photos and a review link with QR code.',
+    intro:'A Google Business Profile is the panel that shows your business on Google Search and Google Maps, with your address, opening hours, photos and reviews. We set it up properly, and you stay the owner.',
+    includes:['A new profile, or a claim on a listing that already exists','Your category, address or service area, phone number, opening hours and description','Your logo and photos uploaded','A review link and a printable QR code for your counter','Your website linked to the profile'],
+    suits:['Customers cannot find your shop, clinic or centre on Google Maps','A listing for your business exists but shows wrong details, or nobody manages it','You want more customer reviews and need an easy way to ask for them'],
+    faqs:[
+      ['Is a Google Business Profile free?','Yes. Google does not charge for the profile. Our fee covers the work of setting it up correctly. Anyone asking for payment to "activate" or "keep" a Google listing is not from Google.'],
+      ['Who owns the profile?','You do. It is created under your own Google account, and you add us as a manager. We never ask for your Google password, and you can remove our access at any time.'],
+      ['What do I need to prepare?','Your business name as shown on your signboard, address, phone number, opening hours, a Google account, and a few photos such as your logo and shopfront. We send you a short checklist.'],
+      ['How does verification work, and how long does it take?','Google chooses the method. It is often a short video of your premises, and sometimes a phone call, message or postcard. You complete this step yourself because Google needs to confirm you run the business. It can take from a few minutes to a couple of weeks.'],
+      ['Will this put my business at the top of Google Maps?','A complete, verified profile is needed to appear at all, and reviews and accurate details help. The position depends on distance, competition and reviews, so we do not promise a ranking.'],
+    ],
+    ms:'Kami menyediakan Google Business Profile untuk perniagaan di Malaysia supaya pelanggan menemui anda di Carian Google dan Google Maps, lengkap dengan butiran, gambar dan pautan ulasan berserta kod QR.',
+    zh:'我们为马来西亚商家设置 Google 商家资料（Google Business Profile），让顾客在 Google 搜索和 Google 地图上找到您，并附上商家资料、照片以及评价链接和二维码。',
+  },
 ];
 
 export const servicePaths=servicePages.map(page=>`/services/${page.slug}`);

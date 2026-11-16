@@ -38,6 +38,7 @@ export default function ServicePage({page,data,footer}){
       <nav className="project-breadcrumb" aria-label="Breadcrumb"><Link to="/">{t('Home')}</Link><span aria-hidden="true">/</span><Link to="/#services">{t('Services')}</Link><span aria-hidden="true">/</span><span aria-current="page">{page.name}</span></nav>
       <div className="project-detail-head service-head"><span className="section-overline">{service?.category||t('SERVICE')}</span><h1>{page.heading}</h1><p>{page.intro}</p>
         <div className="service-offer"><div className="service-offer-price"><strong>{price===null?t('Let’s talk'):money(price,service.currency)}</strong><small>{t(price===null?'tailored to you':'starting price')}</small>{service?.timeline&&<span>{service.timeline}</span>}</div><div className="service-offer-actions"><Link className="button button-dark" to="/#enquiry">{t('Start a project')} <ArrowUpRight size={15}/></Link>{whatsapp&&<a className="button button-light" href={whatsapp} target="_blank" rel="noreferrer">{t('Chat on WhatsApp')} <ArrowUpRight size={15}/></a>}</div></div>
+        {page.formPath&&<p className="service-form-link">{t('Already agreed to start?')} <Link to={page.formPath}>{t('Send your business details')}</Link></p>}
       </div>
       <div className="service-columns">
         <section aria-labelledby="service-included"><h2 id="service-included">{t('What’s included')}</h2><ul className="service-list">{included.map(item=><li key={item}><Check size={16} aria-hidden="true"/>{item}</li>)}</ul></section>

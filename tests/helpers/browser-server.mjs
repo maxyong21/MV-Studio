@@ -5,6 +5,7 @@ import {database,client} from './database.mjs';
 import {createSubmitHandler} from '../../supabase/functions/_shared/submit-handler.mjs';
 import {createRetryHandler} from '../../supabase/functions/_shared/retry-handler.mjs';
 import {createReportHandler} from '../../supabase/functions/_shared/report-handler.mjs';
+import {createProfileHandler} from '../../supabase/functions/_shared/profile-handler.mjs';
 import {createChatbotHandler,createChatbotAdminHandler} from '../../supabase/functions/_shared/chatbot/handler.mjs';
 import {safeJson} from '../../scripts/seo.mjs';
 import {legalPaths} from '../../src/legal/content.mjs';
@@ -28,8 +29,8 @@ export async function browserServers({prerender=false}={}){
   const token2=`${b64({alg:'HS256',typ:'JWT'})}.${b64({sub:adminId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,aal:'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)},{method:'totp',timestamp:Math.floor(Date.now()/1000)}]})}.fixture`;
   const adminRequest=req=>[`Bearer ${token}`,`Bearer ${token2}`].includes(req.headers.authorization);
   const deps={env,createAdmin:()=>client(db,adminId,[token,token2]),sendMail:async message=>{mails++;mailPayloads.push(message);return {messageId:`<local-email-${mails}@gmail.test>`};}};
-  const report=createReportHandler(deps),submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
-  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs']);
+  const profile=createProfileHandler(deps),report=createReportHandler(deps),submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
+  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs','profile_requests']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
     if(['http://127.0.0.1:4187','http://127.0.0.1:4188'].includes(req.headers.origin)){
@@ -83,7 +84,7 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/functions/v1/')){
         const bytes=[];for await(const chunk of req)bytes.push(chunk);
         const request=new Request(url,{method:req.method,headers:req.headers,body:Buffer.concat(bytes)});
-        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin,'report-error':report};
+        const handlers={'submit-enquiry':submit,'retry-enquiry':retry,'chatbot':chatbot,'chatbot-admin':chatbotAdmin,'report-error':report,'submit-profile-request':profile};
         const handler=handlers[url.pathname.split('/').at(-1)];if(!handler){send({error:'Unknown function'},404);return;}
         const result=await handler(request);
         res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
@@ -103,7 +104,7 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/rest/v1/')){
         const table=url.pathname.split('/').at(-1);if(!tables.has(table)){send({message:'Unknown table'},404);return;}
         const isAdmin=adminRequest(req);
-        if(!isAdmin&&(req.method!=='GET'||['enquiries','admin_users'].includes(table))){send({message:'Not authorized'},403);return;}
+        if(!isAdmin&&(req.method!=='GET'||['enquiries','admin_users','profile_requests'].includes(table))){send({message:'Not authorized'},403);return;}
         const values=[];const param=value=>{values.push(value!==null&&typeof value==='object'?JSON.stringify(value):value);return `$${values.length}`;};
         const clauses=[];
         for(const [key,value] of url.searchParams){
