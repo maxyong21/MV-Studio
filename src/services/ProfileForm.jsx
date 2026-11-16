@@ -88,11 +88,11 @@ export default function ProfileForm({data,footer}){
         <form className="pf-form" id="profile-form" tabIndex={-1} onSubmit={submit} noValidate aria-describedby="profile-required-note">
           <p className="pf-required" id="profile-required-note">{t('* Required')}</p>
           {errorCount>0&&<div className="pf-summary" role="alert">{errorCount===1?t('1 answer needs your attention.'):t('{count} answers need your attention.',{count:errorCount})}</div>}
-          <fieldset><legend>{t('1. Who should we contact?')}</legend><div className="pf-grid">
+          <div className="pf-group" role="group" aria-labelledby="profile-group-contact"><h2 id="profile-group-contact">{t('1. Who should we contact?')}</h2><div className="pf-grid">
             <label>{t('Your name *')}<input {...field('contact_name')} autoComplete="name" aria-required="true"/>{error('contact_name')}</label>
             <label>{t('Your WhatsApp number *')}<input {...field('contact_phone')} type="tel" inputMode="tel" autoComplete="tel" aria-required="true"/>{error('contact_phone')}</label>
-          </div></fieldset>
-          <fieldset><legend>{t('2. Your business')}</legend><div className="pf-grid">
+          </div></div>
+          <div className="pf-group" role="group" aria-labelledby="profile-group-business"><h2 id="profile-group-business">{t('2. Your business')}</h2><div className="pf-grid">
             <label>{t('Business name *')}<input {...field('business_name',true)} autoComplete="organization" aria-required="true"/><small id="profile-business_name-hint">{t('Exactly as shown on your signboard.')}</small>{error('business_name')}</label>
             <label>{t('Type of business *')}<input {...field('business_category',true)} aria-required="true"/><small id="profile-business_category-hint">{t('For example: tuition centre, pharmacy, clinic.')}</small>{error('business_category')}</label>
           </div>
@@ -108,8 +108,8 @@ export default function ProfileForm({data,footer}){
               <label>{t('Google account email *')}<input {...field('owner_email',true)} type="email" inputMode="email" autoComplete="email" aria-required="true"/><small id="profile-owner_email-hint">{t('The Google account that will own the profile.')}</small>{error('owner_email')}</label>
             </div>
             <label>{t('Opening hours *')}<textarea {...field('opening_hours',true)} rows="4" aria-required="true" placeholder={t('Mon–Fri 9am–6pm, Sat 9am–1pm, Sun closed')}/><small id="profile-opening_hours-hint">{t('Include public holidays if they differ.')}</small>{error('opening_hours')}</label>
-          </fieldset>
-          <fieldset><legend>{t('3. More about your business')} {optional}</legend>
+          </div>
+          <div className="pf-group" role="group" aria-labelledby="profile-group-more"><h2 id="profile-group-more">{t('3. More about your business')} {optional}</h2>
             <label>{t('Short description')}<textarea {...field('description',true)} rows="4"/><small id="profile-description-hint">{t('{count} of 750 characters',{count:values.description.length})}</small>{error('description')}</label>
             <label>{t('Services or products, with prices if you want them shown')}<textarea {...field('services')} rows="4"/>{error('services')}</label>
             <div className="pf-grid">
@@ -117,7 +117,7 @@ export default function ProfileForm({data,footer}){
               <label>{t('Facebook or Instagram links')}<input {...field('social_links')}/>{error('social_links')}</label>
             </div>
             <label>{t('Anything else we should know?')}<textarea {...field('notes')} rows="3"/>{error('notes')}</label>
-          </fieldset>
+          </div>
           <p className="pf-photos">{t('Photos are sent on WhatsApp after this form: your logo, your shopfront with the signboard, and the interior.')}</p>
           <label className="pf-check"><input id="profile-authorised" type="checkbox" checked={values.authorised} aria-required="true" aria-invalid={Boolean(shown('authorised'))} aria-describedby={shown('authorised')?'profile-authorised-error':undefined} onChange={event=>{setTouched(current=>({...current,authorised:true}));change('authorised',event.target.checked);}}/><span>{t('I own this business or have permission to share these details. *')}</span></label>{error('authorised')}
           <input className="honeypot" name="fax" tabIndex="-1" autoComplete="off" aria-hidden="true" value={trap} onChange={event=>setTrap(event.target.value)}/>
