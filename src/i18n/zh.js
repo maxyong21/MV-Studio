@@ -173,4 +173,8 @@ export default {
   '/mo':'/月',
   'Quoted separately: {items}.':'另行报价：{items}。',
   'Complete the human verification before sending your enquiry.':'请先完成真人验证，再提交咨询。',
+  'Example design':'设计示例',
+  'Example design: a sample of the kind of site we build':'设计示例：我们所制作网站类型的样本',
+  'Who we are':'关于我们',
+  'We’re two independent developers, building our first client projects. Your project gets our full attention.':'我们是两位独立开发者，正在制作首批客户项目。您的项目将得到我们全心全意的关注。',
 };

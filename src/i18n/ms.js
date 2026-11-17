@@ -173,4 +173,8 @@ export default {
   '/mo':'/bln',
   'Quoted separately: {items}.':'Sebut harga berasingan: {items}.',
   'Complete the human verification before sending your enquiry.':'Lengkapkan pengesahan manusia sebelum menghantar pertanyaan anda.',
+  'Example design':'Contoh reka bentuk',
+  'Example design: a sample of the kind of site we build':'Contoh reka bentuk: sampel jenis laman web yang kami bina',
+  'Who we are':'Siapa kami',
+  'We’re two independent developers, building our first client projects. Your project gets our full attention.':'Kami dua pembangun bebas yang sedang membina projek pelanggan pertama kami. Projek anda mendapat perhatian penuh kami.',
 };
