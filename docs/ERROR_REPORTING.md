@@ -44,3 +44,7 @@ It does not contain form contents. Email addresses, phone numbers, tokens and ke
 - `src/lib/error-report.mjs`: sends reports from the browser.
 - `supabase/functions/_shared/report-handler.mjs`: limits, redaction and the email.
 - `tests/error-report.test.mjs`: covers the limits, redaction and failure handling.
+
+## A page left open during a release
+
+If someone keeps a tab open while a new version is deployed, the old page asks for script files that the release replaced, and the browser reports "Importing a module script failed". This is not a fault in the site. The page now reloads itself once to fetch the new files and sends no report. If the reload does not help within a minute (a real outage), it does not reload again and the problem is reported as usual. Before this was added, such a report arrived by email for an admin tab opened across a release.

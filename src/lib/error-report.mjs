@@ -9,8 +9,25 @@ const sent=()=>{try{return JSON.parse(sessionStorage.getItem(KEY)||'[]');}catch{
 // the opaque "Script error." that browsers give for other origins' scripts.
 const ignorable=/^(Script error\.?|ResizeObserver loop|Non-Error promise rejection|AbortError|The user aborted|Load failed$|NetworkError when attempting|Failed to fetch$)|chrome-extension:|moz-extension:|safari-extension:/i;
 
+// A page that stays open across a new release asks for script files that the release replaced, and the
+// browser reports "Importing a module script failed". It is not a fault in the site: loading the page again
+// fetches the new files. So reload once (never twice within a minute, so a real outage cannot loop) instead
+// of emailing the studio.
+export const staleVersionError=/Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module|Unable to preload CSS|Loading (CSS )?chunk \d+ failed/i;
+const RELOAD_KEY='mv-reloaded-for-update';
+export function reloadForNewVersion({now=Date.now,storage,reload}={}){
+  try{
+    const store=storage||sessionStorage,last=Number(store.getItem(RELOAD_KEY)||0);
+    if(last&&now()-last<60000)return false;
+    store.setItem(RELOAD_KEY,String(now()));
+    (reload||(()=>window.location.reload()))();
+    return true;
+  }catch{return false;}
+}
+
 export function reportProblem(kind,message,{area='',detail=''}={}){
   try{
+    if(typeof window!=='undefined'&&staleVersionError.test(String(message||''))&&reloadForNewVersion())return false;
     if(typeof window==='undefined'||!env.VITE_SUPABASE_URL||!env.VITE_SUPABASE_ANON_KEY)return false;
     const text=String(message||'').slice(0,400).trim();
     if(!text||ignorable.test(text)||ignorable.test(String(detail)))return false;
@@ -26,6 +43,8 @@ export function reportProblem(kind,message,{area='',detail=''}={}){
 export function installErrorReporting(){
   if(typeof window==='undefined'||window.__mvErrorReporting)return;
   window.__mvErrorReporting=true;
+  // Vite raises this when a lazily loaded file is gone after a release. Reload to get the new files.
+  window.addEventListener('vite:preloadError',event=>{if(reloadForNewVersion())event.preventDefault();});
   window.addEventListener('error',event=>{
     // Resource load failures (an image, a font) arrive here too, with no message: skip them.
     if(!event.message)return;

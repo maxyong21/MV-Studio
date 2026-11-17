@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {database,client} from './helpers/database.mjs';
 import {createReportHandler,redact} from '../supabase/functions/_shared/report-handler.mjs';
+import {reloadForNewVersion,staleVersionError} from '../src/lib/error-report.mjs';
 
 const origin='https://studio.example';
 const env=overrides=>name=>({ALLOWED_ORIGIN:origin,ENQUIRY_TO_EMAIL:'owner@example.test',...overrides})[name];
@@ -52,4 +53,17 @@ test('problem reports are emailed once, limited, redacted, and never fail the vi
     assert.equal((await post(createReportHandler({...deps,env:env({ENQUIRY_TO_EMAIL:''})}),{kind:'error',message:'No recipient configured'},{ip:'192.0.2.201'})).status,202);
     assert.equal(mails.length,20);
   }finally{await db.close();}
+});
+
+test('a page left open across a release reloads once instead of reporting an error',()=>{
+  for(const message of ['TypeError: Importing a module script failed.','Failed to fetch dynamically imported module: https://x.test/assets/Admin-abc.js','error loading dynamically imported module','Unable to preload CSS for /assets/x.css','Loading chunk 12 failed.'])assert.match(message,staleVersionError,message);
+  for(const message of ['Cannot read properties of undefined','NetworkError when attempting to fetch resource.','Script error.'])assert.doesNotMatch(message,staleVersionError,message);
+  const memory=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};};
+  const storage=memory();let reloads=0,time=1_000_000;
+  const attempt=()=>reloadForNewVersion({storage,now:()=>time,reload:()=>{reloads++;}});
+  assert.equal(attempt(),true);assert.equal(reloads,1,'first stale page reloads');
+  time+=5_000;assert.equal(attempt(),false);assert.equal(reloads,1,'a second failure within a minute does not loop');
+  time+=70_000;assert.equal(attempt(),true);assert.equal(reloads,2,'a later release can reload again');
+  assert.equal(reloadForNewVersion({storage:{getItem(){throw new Error('blocked');},setItem(){}},reload:()=>{reloads++;}}),false,'no storage, no reload: it could loop');
+  assert.equal(reloads,2);
 });

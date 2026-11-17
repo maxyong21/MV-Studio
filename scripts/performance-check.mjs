@@ -19,14 +19,17 @@ await build({mode:'test',build:{ssr:'src/entry-server.jsx',outDir:'.generated/br
 const servers=await browserServers({prerender:true});
 const browser=await chromium.launch({executablePath:executable});
 try{
-  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,reducedMotion:'reduce'});
+  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true});
   const page=await context.newPage();const errors=[],cloudflare=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(/challenges\.cloudflare\.com/.test(request.url()))cloudflare.push(request.url());});
   await page.route('https://challenges.cloudflare.com/**',route=>route.fulfill({status:200,contentType:'text/javascript',body:'window.turnstile={render:(element,options)=>{setTimeout(()=>options.callback("test-token"),50);return 1;},remove(){},reset(){}};'}));
-  await page.addInitScript(()=>{window.__cls=0;new PerformanceObserver(list=>{for(const entry of list.getEntries())if(!entry.hadRecentInput)window.__cls+=entry.value;}).observe({type:'layout-shift',buffered:true});});
+  await page.addInitScript(()=>{window.__cls=0;window.__lcp=0;new PerformanceObserver(list=>{for(const entry of list.getEntries())if(!entry.hadRecentInput)window.__cls+=entry.value;}).observe({type:'layout-shift',buffered:true});new PerformanceObserver(list=>{for(const entry of list.getEntries())window.__lcp=entry.startTime;}).observe({type:'largest-contentful-paint',buffered:true});});
   await page.goto('http://127.0.0.1:4187/',{waitUntil:'load'});
-  await page.waitForTimeout(3000);
+  // Long enough for the slogans to rotate if they were going to on their own (they used to, after 5 seconds).
+  await page.waitForTimeout(8000);
+  const lcp=await page.evaluate(()=>window.__lcp);
+  assert.ok(lcp>0&&lcp<4500,`The largest paint of an untouched page should come with the first screen, not later: got ${Math.round(lcp)} ms`);
   assert.equal(cloudflare.length,0,`The human check must not load with the first screen, but requested: ${cloudflare.join(', ')}`);
   const cls=await page.evaluate(()=>window.__cls);
   assert.ok(cls<0.1,`Layout shift on load should stay under 0.1, got ${cls.toFixed(3)}`);
@@ -35,6 +38,6 @@ try{
   await page.waitForFunction(()=>!document.querySelector('.enquiry-form button[type=submit]').disabled,null,{timeout:10000});
   assert.ok(cloudflare.some(url=>/turnstile\/v0\/api\.js/.test(url)),'The human check should load once the enquiry form is near');
   assert.deepEqual(errors,[],`Page errors: ${errors.join('; ')}`);
-  console.log(JSON.stringify({passed:true,checks:['human check not requested on first load','human check loads near the form and the form becomes usable','layout shift under 0.1',`cls ${cls.toFixed(3)}`]},null,2));
+  console.log(JSON.stringify({passed:true,checks:['human check not requested on first load','human check loads near the form and the form becomes usable','largest paint is not a late slogan swap',`lcp ${Math.round(lcp)} ms`,'layout shift under 0.1',`cls ${cls.toFixed(3)}`]},null,2));
 }finally{await browser.close();await servers.close();}
 process.exit(0);
