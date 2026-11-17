@@ -11,6 +11,7 @@ import {entityConfig} from '../src/admin/config.js';
 import {legalDocuments} from '../src/legal/content.mjs';
 import {studioOwners} from '../src/lib/site.js';
 import {fallbackContent} from '../src/content.js';
+import {groupFaqs} from '../src/lib/faq-groups.mjs';
 
 test('project label: client name only shows for client projects, and unknown types show nothing',()=>{
   assert.deepEqual(projectBadge({project_type:'client_project',client_name:' Acme Bakery '}),{type:'client_project',label:'Client project',client:'Acme Bakery'});
@@ -106,4 +107,33 @@ test('hero artwork is labelled as an example, and the "who we are" note is prese
   for(const key of ['Example design','Who we are','We’re two independent developers, building our first client projects. Your project gets our full attention.']){
     assert.ok(ms[key]&&ms[key]!==key,`BM: ${key}`);assert.ok(zh[key]&&zh[key]!==key,`ZH: ${key}`);
   }
+});
+
+test('FAQs are grouped only when every published question has a group',()=>{
+  const row=(id,category,extra={})=>({id,title:`Question ${id}?`,answer:'An answer long enough.',category,active:true,sort_order:Number(id),...extra});
+  const grouped=groupFaqs([row(1,'support'),row(2,'costs'),row(3,'costs'),row(4,'process')]);
+  assert.deepEqual(grouped.groups.map(group=>[group.key,group.items.length]),[['costs',2],['process',1],['support',1]]);
+  assert.equal(groupFaqs([row(1,'costs'),row(2,undefined)]).groups,null,'a database without groups keeps the flat list');
+  assert.equal(groupFaqs([row(1,'costs'),row(2,'general')]).groups,null);
+  assert.equal(groupFaqs([row(1,'costs'),row(2,'costs',{active:false})]).published.length,1,'hidden questions are not shown');
+  assert.equal(groupFaqs([]).published.length,0);
+  assert.ok(fallbackContent.faqs.every(faq=>faq.category),'fallback FAQs are grouped');
+});
+
+test('FAQ group migration groups the defaults, keeps your own group choices and reruns safely',async()=>{
+  const db=await database();
+  try{
+    await db.exec(await readFile('supabase/migrations/20261024_growth_and_reliability.sql','utf8'));
+    await db.exec((await readFile('supabase/schema.sql','utf8')).replace('create extension if not exists pgcrypto;',''));
+    const migration=await readFile('supabase/migrations/20261118_faq_groups.sql','utf8');
+    await db.query("update faqs set category='general'");
+    await db.query("update faqs set category='support' where key='hosting-costs'");
+    await db.exec(migration);await db.exec(migration);
+    const group=async key=>(await db.query('select category from faqs where key=$1',[key])).rows[0].category;
+    assert.equal(await group('hosting-costs'),'support','an admin choice is not overwritten');
+    assert.equal(await group('payment-and-refunds'),'costs');assert.equal(await group('revisions'),'process');assert.equal(await group('after-launch-support'),'support');
+    assert.equal((await db.query("select count(*)::int as n from faqs where key='free-call-and-quote'")).rows[0].n,1);
+    assert.equal((await db.query("select count(*)::int as n from faqs where category='general'")).rows[0].n,0);
+    await assert.rejects(db.query("update faqs set category='other' where key='revisions'"),error=>error.code==='23514');
+  }finally{await db.close();}
 });

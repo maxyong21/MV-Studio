@@ -1,0 +1,28 @@
+/* Accessibility: text contrast of at least 4.5:1 (WCAG 2.2 AA) in both themes.
+   Checked with `npm run test:a11y`. Loaded last so it wins over older, hard-coded greys. */
+:root{--muted:#5d6057;--orange-text:#b7410e}
+:root[data-theme=dark]{--muted:#a8a99f;--orange-text:#f4895f}
+
+/* Light theme: secondary text and small orange text that was too pale on cream. */
+:root:not([data-theme=dark]) :is(
+  .project-breadcrumb a,.project-breadcrumb span,.project-detail-head>p,.project-detail-lower p,
+  .service-lead,.service-note p,.service-block p,.service-offer-price>span,.service-team span,.service-steps p,
+  .faq-contact,.faq-group>h3,.pf-optional,.pf-privacy,.pf-privacy a,[id$="-hint"],#profile-required-note,
+  .work-labels-note,.work-footnote,.terms-head p,.terms-steps p,.next-steps p,.who-note b,
+  .form-heading .section-overline,p[lang]){color:var(--muted)}
+:root:not([data-theme=dark]) :is(.package-disclosure a,.terms-more a,.service-note a,.service-steps li>span,.project-card-links a){color:var(--orange-text)}
+/* Only where the logo sits on a light header; the footer logo is on dark green. */
+:root:not([data-theme=dark]) :is(.site-nav,.legal-header,.not-found-page) .brand-light{color:#6b6e65}
+.package-compare thead th{color:var(--muted)}
+
+/* Dark theme: links and text that were dark on dark. */
+:root[data-theme=dark] .admin-link{color:#a8a99f}
+:root[data-theme=dark] .work-footnote a,:root[data-theme=dark] .work-footnote{color:#d8d8cf}
+/* The not-found page had a fixed light background, which made its light text unreadable in dark mode. */
+:root[data-theme=dark] .not-found-page{background:#181a17}
+
+/* Dark theme: secondary text that was a fixed grey on near-black. */
+:root[data-theme=dark] :is(.project-detail-head>p,.project-detail-lower p,.service-lead,.service-block p,.service-note p,.service-offer-price>span,.project-breadcrumb a,.project-breadcrumb span){color:var(--muted)}
+/* The not-found page, both themes. */
+.not-found-page p,.not-found-page small{color:var(--muted)}
+.not-found-page small{font-size:12px}

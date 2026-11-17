@@ -27,7 +27,7 @@ export function renderEnquiryEmail(enquiry){
   ].map(([label,value])=>`<tr><td style="padding:8px 10px 8px 0;color:#304733;font-size:13px;line-height:1.5;">${escape(label)}</td><td width="115" align="right" valign="top" style="padding:8px 0;color:#203c2b;font-size:16px;line-height:1.5;font-weight:700;white-space:nowrap;">${escape(currency(value))}</td></tr>`).join('')):'<p style="margin:0;color:#304733;font-size:14px;line-height:1.7;"><strong>Manual quotation required.</strong> Scope and pricing are to be discussed with the customer.</p>';
   const contact=table([
     detailRow('Name',escape(enquiry.name)),
-    detailRow('Company',escape(enquiry.company_name)),
+    detailRow('Company',escape(enquiry.company_name||'Not provided')),
     detailRow('Email',`<a href="${escape(mailto(enquiry.email))}" style="color:#285b45;text-decoration:underline;">${escape(enquiry.email)}</a>`),
     detailRow('Phone',`<a href="tel:${escape(String(enquiry.phone||'').replace(/[^+\d]/g,''))}" style="color:#285b45;text-decoration:underline;">${escape(enquiry.phone)}</a>`),
     detailRow('Meeting',enquiry.meeting_requested?'Requested — please confirm availability':'Not requested'),
@@ -39,7 +39,7 @@ export function renderEnquiryEmail(enquiry){
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New project enquiry | MV Studio</title>
 <style>@media only screen and (max-width:600px){.email-outer{padding:12px 8px!important}.email-padding{padding:24px 20px!important}.email-title{font-size:29px!important}}</style></head>
 <body style="margin:0;padding:0;background-color:#f3f3ec;color:#26352c;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
-<div style="display:none;font-size:1px;line-height:1px;color:#f3f3ec;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">A new enquiry from ${escape(enquiry.company_name)} is ready for your review.</div>
+<div style="display:none;font-size:1px;line-height:1px;color:#f3f3ec;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">A new enquiry from ${escape(enquiry.company_name||enquiry.name)} is ready for your review.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f3ec"><tr><td class="email-outer" align="center" style="padding:36px 16px;">
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fdfdf9" style="width:100%;max-width:600px;border:1px solid #e1e5da;border-radius:18px;border-spacing:0;">
@@ -47,7 +47,7 @@ export function renderEnquiryEmail(enquiry){
 <p style="margin:0 0 28px;color:#fff;font-size:19px;font-weight:700;letter-spacing:-0.5px;"><span style="color:#f8a07c;">mv</span>&nbsp; MV Studio</p>
 <p style="margin:0 0 12px;color:#d2e6c9;font-size:11px;line-height:1.5;font-weight:700;letter-spacing:2px;">YOUR NEXT CONVERSATION</p>
 <h1 class="email-title" style="margin:0 0 14px;color:#fff;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:-1px;">A new idea.<br>A new connection.</h1>
-<p style="margin:0;color:#e0eade;font-size:14px;line-height:1.8;">${escape(enquiry.company_name)} sent a project enquiry. Here is the brief to help you take the next step.</p></td></tr>
+<p style="margin:0;color:#e0eade;font-size:14px;line-height:1.8;">${escape(enquiry.company_name||enquiry.name)} sent a project enquiry. Here is the brief to help you take the next step.</p></td></tr>
 ${section(`${heading('Meet your potential client')}${contact}`)}
 ${section(`${heading('Selected features')}${features.length?table(featureRows):'<p style="margin:0;color:#687365;font-size:14px;line-height:1.7;">No catalogue features selected. Review the brief with the customer to determine the scope.</p>'}`)}
 ${section(`${heading('Preliminary estimate')}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#e3eddd" style="padding:16px;background-color:#e3eddd;border-radius:12px;">${totals}<p style="margin:12px 0 0;color:#45583e;font-size:12px;line-height:1.7;">Billing preference: <strong>${enquiry.billing_period==='yearly'?'Annual':'Monthly'}</strong>. Monthly and annual totals are alternatives; one-time work is separate.</p></td></tr></table><p style="margin:16px 0 0;padding-left:12px;border-left:3px solid #db8156;color:#78513d;font-size:12px;line-height:1.8;">Priced catalogue items only. Custom work, complete scope, third-party charges and final pricing require review. A meeting preference is a request, not a confirmed booking.</p>`)}

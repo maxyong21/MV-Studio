@@ -61,3 +61,16 @@ Expect local and specific searches to move in 2 to 4 months. A top-10 place for 
 - Rich Results Test: `https://search.google.com/test/rich-results`, then paste a page address.
 - Search Console, "Pages" report: shows which addresses Google has indexed.
 - Google no longer shows FAQ drop-downs in results for most business websites. The FAQ data still helps search engines and AI assistants understand the page.
+
+
+## Bahasa Malaysia and Chinese pages
+
+The home page and the five service pages are also published at `/ms/` and `/zh/` (for example `/ms/services/landing-page`), so they can be found in Malay and Chinese searches. Each translated page has:
+
+- its own title and description, written in that language;
+- a canonical address pointing to itself;
+- `hreflang` links to every language version and an `x-default` pointing to English;
+- `<html lang>` and `og:locale` set to its language;
+- structured data with its own address and `inLanguage`.
+
+The sitemap lists all of them with `xhtml:link` alternates. Project pages and the legal pages are not duplicated. After deploying, submit the sitemap again in Google Search Console and check the International Targeting or page indexing report for `hreflang` errors in a few weeks. Titles and descriptions are in `src/lib/seo-locales.mjs` and `src/services/localized.mjs`; have a native speaker review them.

@@ -4,7 +4,7 @@
 .project-kind b{font-weight:700}
 .project-kind-client_project{border-color:var(--orange)}
 .project-kind-detail{margin-bottom:14px}
-.work-meta>div>.project-kind{display:inline-flex;margin-bottom:10px}
+.work-meta>div>.project-kind{display:flex;width:fit-content;max-width:100%;margin-bottom:10px}
 .work-labels-note{max-width:62ch;margin:-8px 0 26px;color:var(--muted);font-size:15px;line-height:1.6}
 
 .terms-block{margin-top:56px;padding:clamp(22px,4vw,40px);border:1px solid var(--line);border-radius:18px;background:var(--paper);scroll-margin-top:100px}
@@ -37,3 +37,77 @@
 .who-note{display:flex;flex-direction:column;gap:4px;max-width:62ch;margin:0 0 28px;padding:16px 20px;border-left:4px solid var(--orange);border-radius:0 12px 12px 0;background:var(--paper);color:var(--ink);font-size:17px;line-height:1.6}
 .who-note b{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 @media(max-width:520px){.art-example-label{left:0;top:6px;font-size:11px;padding:6px 10px}.who-note{padding:14px 16px;font-size:16px}}
+
+/* Package comparison: collapsed by default so it adds no length until opened. */
+.package-compare{margin:22px 0 0;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
+.package-compare summary{cursor:pointer;padding:16px 20px;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px}
+.package-compare summary::-webkit-details-marker{display:none}
+.package-compare summary::after{content:'+';font-size:22px;line-height:1;color:var(--orange)}
+.package-compare[open] summary::after{content:'–'}
+.compare-scroll{overflow-x:auto;padding:0 12px 14px;-webkit-overflow-scrolling:touch}
+.compare-scroll:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}
+.package-compare table{width:100%;min-width:560px;border-collapse:collapse;font-size:15px;line-height:1.5}
+.package-compare th,.package-compare td{padding:12px 10px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.package-compare thead th{border-top:0;color:var(--muted);font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.package-compare tbody th{font-weight:700;white-space:nowrap}
+
+/* What happens after you enquire. */
+.next-steps{display:grid;gap:12px;margin:18px 0 0;padding:0;list-style:none}
+.next-steps li{display:flex;gap:12px;align-items:flex-start}
+.next-steps li>span{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--dark);color:#fff;font-weight:700;font-size:14px}
+.next-steps b{display:block;font-size:16px}
+.next-steps p{margin:2px 0 0;color:var(--muted);font-size:15px;line-height:1.5}
+:root[data-theme=dark] .next-steps li>span{background:#f0efe8;color:#181a17}
+
+/* Phones: a short bar with the two main actions. Leaves room on the right for the assistant button. */
+.mobile-cta{display:none}
+@media(max-width:760px){
+  .mobile-cta{position:fixed;z-index:34;left:12px;right:72px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px;padding:8px;border:1px solid var(--line);border-radius:16px;background:var(--paper);box-shadow:0 8px 30px rgba(34,36,31,.18);transition:opacity .2s,transform .2s}
+  .mobile-cta .button{flex:1;justify-content:center;min-height:44px;padding:10px 12px;font-size:15px;white-space:nowrap}
+  .mobile-cta.is-hidden{opacity:0;transform:translateY(12px);visibility:hidden;pointer-events:none}
+  body:has([role=dialog]) .mobile-cta,body:has(.mobile-menu[aria-expanded=true]) .mobile-cta{visibility:hidden;pointer-events:none}
+  /* So the bar never covers the last line of the footer. */
+  .site-footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+/* Shorter page on phones. */
+@media(max-width:520px){.section-pad{padding-top:52px;padding-bottom:52px}}
+@media(prefers-reduced-motion:reduce){.mobile-cta{transition:none}}
+
+/* FAQ groups. */
+.faq-group{margin-top:34px}
+.faq-group:first-of-type{margin-top:26px}
+.faq-group>h3{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* Phones: a tighter page. Same content, less empty space. */
+@media(max-width:520px){
+  .section-pad{padding-top:42px;padding-bottom:42px}
+  .work-section .work-image{height:190px}
+  .work-card{gap:0}
+  .work-grid{gap:30px 0}
+  .team-card{padding:14px}
+  .terms-block{padding:18px;margin-top:30px}
+  .terms-steps{gap:10px;margin-top:18px}
+  .terms-steps li{padding:12px;gap:10px}
+  .terms-steps li>span{min-width:38px;height:38px;font-size:13px;border-radius:10px}
+  .terms-steps b{font-size:16px}
+  .terms-steps p,.terms-facts{font-size:14px;line-height:1.5}
+  .terms-facts{margin-top:14px;padding-left:18px}
+  .next-steps{gap:8px;margin-top:12px}
+  .next-steps p{font-size:14px}
+  .faq-item summary{padding:14px 16px;min-height:52px}
+  .faq-group{margin-top:22px}
+  .package-compare summary{padding:14px 16px}
+  .site-footer-full .site-footer-main{grid-template-columns:1fr 1fr;gap:20px 16px}
+  .site-footer-full .site-footer-brand,.site-footer-full .footer-contact-column{grid-column:1/-1}
+}
+
+@media(max-width:520px){
+  .service-card{min-height:0;padding:18px 16px 14px}
+  .service-card>p{font-size:15px;line-height:1.5;margin-block:8px}
+  .service-card ul{margin:10px 0}
+  .service-card li{font-size:14.5px;line-height:1.4;padding-block:3px}
+  .service-price{margin:10px 0}
+  .enquiry-form{padding:18px 16px}
+  .enquiry-fields{gap:10px}
+  .package-disclosure{margin-top:14px}
+}

@@ -23,7 +23,10 @@ export function createProjectPage({env=process.env,fetcher=fetch,read=path=>read
       const rows=await result.json();if(!Array.isArray(rows))throw Error('Invalid publication response');
       if(!rows.some(row=>row.id===id))return send(404,'404.html');
       let page;try{page=await read(`projects/${id}/index.html`);}catch{page=await read('index.html');}
-      response.setHeader('Content-Type','text/html; charset=utf-8');response.setHeader('Cache-Control','no-store');
+      response.setHeader('Content-Type','text/html; charset=utf-8');
+      // Checked against the database at most once a minute at the edge, so a visit is fast but an
+      // unpublished project stops being served within about a minute. Errors are never cached.
+      response.setHeader('Cache-Control','public, max-age=0, s-maxage=60, stale-while-revalidate=300');
       return response.status(200).send(request.method==='HEAD'?'':page);
     }catch(error){console.error('Project page unavailable',error.message);return send(503,'maintenance.html');}
   };

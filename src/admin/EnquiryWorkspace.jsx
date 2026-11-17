@@ -18,7 +18,7 @@ const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'
 function summaryText(row){
   const features=(row.selected_features||[]).map(item=>`• ${item.name||'Selected feature'}: ${item.billing_type==='monthly'?`${money(item.price)}/month`:money(item.price)}`).join('\n');
   const assistant=(row.chatbot_answers?.summary||[]).map(item=>`• ${item.label}: ${item.value}`).join('\n');
-  return [`Project enquiry from ${row.name} (${row.company_name})`,`Email: ${row.email}`,`Phone: ${row.phone}`,row.message&&`Brief: ${row.message}`,features&&`Requested features:\n${features}`,assistant&&`Guided brief:\n${assistant}`,row.preferred_meeting_at&&`Meeting request: ${displayDate(row.preferred_meeting_at)}`].filter(Boolean).join('\n');
+  return [`Project enquiry from ${row.name}${row.company_name?` (${row.company_name})`:''}`,`Email: ${row.email}`,`Phone: ${row.phone}`,row.message&&`Brief: ${row.message}`,features&&`Requested features:\n${features}`,assistant&&`Guided brief:\n${assistant}`,row.preferred_meeting_at&&`Meeting request: ${displayDate(row.preferred_meeting_at)}`].filter(Boolean).join('\n');
 }
 function useNotice(notify){return (message,error)=>notify(error?`${message}: ${error.message||error}`:message,error?'error':'success');}
 

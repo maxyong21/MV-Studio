@@ -1,6 +1,7 @@
 import {escapeHtml} from '../../scripts/seo.mjs';
 import {legalPaths} from '../legal/content.mjs';
 import {servicePaths} from '../services/content.mjs';
+import {alternatesFor,canonicalFor,LOCALES} from './locale.mjs';
 
 export const projectIdPattern=/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i;
 
@@ -33,5 +34,14 @@ export function sitemapXml(base,projects=[],extraPaths='') {
     if(demo)urls.add(`${base}${demo}`);
   }
   for(const path of sitemapPaths(extraPaths).paths)urls.add(`${base}${path}`);
-  return ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',...[...urls].map(url=>`  <url><loc>${escapeHtml(url)}</loc></url>`),'</urlset>',''].join('\n');
+  // The home page and the service pages exist in three languages. Each language gets its own entry
+  // that lists all of them as alternates, which is how search engines pair the translations.
+  const entries=new Map();
+  for(const url of urls){
+    const route=url.slice(base.length)||'/',alternates=alternatesFor(route,base);
+    if(!alternates.length){entries.set(url,[]);continue;}
+    for(const lang of LOCALES)entries.set(canonicalFor(route,lang,base),alternates);
+  }
+  const line=([loc,alternates])=>`  <url><loc>${escapeHtml(loc)}</loc>${alternates.map(([code,href])=>`<xhtml:link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}"/>`).join('')}</url>`;
+  return ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',...[...entries].map(line),'</urlset>',''].join('\n');
 }

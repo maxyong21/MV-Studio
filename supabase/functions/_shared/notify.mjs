@@ -32,12 +32,12 @@ export async function notifyEnquiry({admin,enquiry,env,sendMail}){
     if(!env('GMAIL_SMTP_USER')||!env('GMAIL_SMTP_APP_PASSWORD'))throw Object.assign(new Error('Email configuration is incomplete. Set GMAIL_SMTP_USER and GMAIL_SMTP_APP_PASSWORD in Supabase Edge Function secrets.'),{code:'EMAIL_CONFIG'});
     if(typeof sendMail!=='function')throw Object.assign(new Error('Gmail SMTP transport is unavailable. Deploy the updated submit-enquiry and retry-enquiry functions.'),{code:'EMAIL_TRANSPORT'});
     const features=(enquiry.selected_features||[]).map(item=>`${item.name} (${item.billing_type==='quote'?'quote required':`RM ${item.unit_price} / ${item.billing_type}`})`).join('\n')||'No feature selected';
-    const lines=[`Name: ${enquiry.name}`,`Company: ${enquiry.company_name}`,`Phone: ${enquiry.phone}`,`Email: ${enquiry.email}`,'',`Features:\n${features}`,'',`One-time estimate: RM ${enquiry.one_time_estimate}`,`Monthly estimate: RM ${enquiry.monthly_estimate}`,`Annual estimate: RM ${enquiry.annual_estimate}`,`Billing preference: ${enquiry.billing_period}`,`Meeting requested: ${enquiry.meeting_requested?'Yes':'No'}`,`Preferred time (UTC): ${enquiry.preferred_meeting_at||'To be agreed'}`,'',enquiry.message||'No additional message','',`Reference: ${enquiry.id}`];
+    const lines=[`Name: ${enquiry.name}`,`Company: ${enquiry.company_name||'Not provided'}`,`Phone: ${enquiry.phone}`,`Email: ${enquiry.email}`,'',`Features:\n${features}`,'',`One-time estimate: RM ${enquiry.one_time_estimate}`,`Monthly estimate: RM ${enquiry.monthly_estimate}`,`Annual estimate: RM ${enquiry.annual_estimate}`,`Billing preference: ${enquiry.billing_period}`,`Meeting requested: ${enquiry.meeting_requested?'Yes':'No'}`,`Preferred time (UTC): ${enquiry.preferred_meeting_at||'To be agreed'}`,'',enquiry.message||'No additional message','',`Reference: ${enquiry.id}`];
     if(!hasPricedSelection(enquiry.selected_features||[])){const index=lines.findIndex(line=>line.startsWith('One-time estimate:'));if(index>=0)lines.splice(index,3,'Manual quotation required. Scope and pricing are to be discussed.');}
     if(enquiry.chatbot_answers){lines.push('',`Confirmed chatbot brief: ${enquiry.chatbot_answers.brief||''}`,...(enquiry.chatbot_answers.summary||[]).map(item=>`${item.label}: ${item.value}`),'Preliminary estimate; the complete scope needs manual review.');}
     const message={
       to,replyTo:enquiry.email,
-      subject:`Website enquiry · ${cleanHeader(enquiry.company_name)}`,
+      subject:`Website enquiry · ${cleanHeader(enquiry.company_name||enquiry.name)}`,
       text:lines.join('\n'),html:renderEnquiryEmail(enquiry),
       // A stable Message-ID helps diagnosis and client threading. Gmail SMTP does not
       // promise exactly-once delivery, so ambiguous failures remain manually retryable.

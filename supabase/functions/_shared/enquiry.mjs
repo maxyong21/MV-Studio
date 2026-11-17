@@ -9,8 +9,8 @@ export const validateContact = values => {
   const email = String(values.email || '').trim();
   if (!name) errors.name = 'Enter your name.';
   else if (name.length < 2 || name.length > 120 || !/^[\p{L}\p{M}][\p{L}\p{M} .’'\-]*$/u.test(name)) errors.name = 'Use 2–120 letters, spaces, apostrophes, periods, or hyphens.';
-  if (!company) errors.company_name = 'Enter your company or business name.';
-  else if (company.length < 2 || company.length > 160) errors.company_name = 'Use 2–160 characters.';
+  // Optional: many visitors are individuals or have no registered business name yet.
+  if (company && (company.length < 2 || company.length > 160)) errors.company_name = 'Use 2–160 characters, or leave it blank.';
   const phoneDigits = phone.replace(/\D/g, '').length;
   if (!phone) errors.phone = 'Enter a contact number.';
   else if (phone.length>40 || !phonePattern.test(phone) || phoneDigits < 7 || phoneDigits > 15) errors.phone = 'Enter a valid number with 7–15 digits.';
