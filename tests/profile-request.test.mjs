@@ -150,7 +150,7 @@ test('the database update is repeatable and the form is routed but kept out of s
   }finally{await db.close();}
   const config=JSON.parse(await readFile('vercel.json','utf8'));
   assert.ok(config.routes.some(route=>route.src==='/business-profile-form/?'&&route.dest==='/business-profile-form/index.html'));
-  assert.ok(config.headers.some(item=>item.source==='/business-profile-form(.*)'&&item.headers.some(header=>header.key==='X-Robots-Tag'&&/noindex/.test(header.value))));
+  assert.ok(config.routes.some(item=>item.src==='/business-profile-form(.*)'&&item.continue===true&&/noindex/.test(item.headers?.['X-Robots-Tag'])));
   const {sitemapPaths,sitemapXml}=await import('../src/lib/sitemap.mjs');
   assert.deepEqual(sitemapPaths('/business-profile-form').errors,['/business-profile-form']);
   assert.doesNotMatch(sitemapXml(origin,[],''),/business-profile-form/);
