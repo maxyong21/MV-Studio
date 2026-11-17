@@ -26,7 +26,7 @@ export function createSubmitHandler({createAdmin,env,fetcher=fetch,sendMail}){
       await verifyTurnstile(request,input,env,fetcher);
       const chat=input.chatbot_estimate_id?await estimateRecord(admin,input,false):null;
       const ids=[...new Set(chat?chat.selected_feature_ids:input.selected_feature_ids||[])].sort();
-      const normalized={name:input.name.trim(),company_name:input.company_name.trim(),phone:input.phone.trim(),email:input.email.trim().toLowerCase(),message:(input.message||'').trim(),billing_period:input.billing_period||'monthly',meeting_requested:!!input.meeting_requested,preferred_meeting_at:input.preferred_meeting_at?new Date(input.preferred_meeting_at).toISOString():null};
+      const normalized={name:input.name.trim(),company_name:(input.company_name||'').trim(),phone:input.phone.trim(),email:input.email.trim().toLowerCase(),message:(input.message||'').trim(),billing_period:input.billing_period||'monthly',meeting_requested:!!input.meeting_requested,preferred_meeting_at:input.preferred_meeting_at?new Date(input.preferred_meeting_at).toISOString():null};
       const requestId=input.request_id||crypto.randomUUID();
       if(chat)normalized.billing_period=chat.billing_period;
       const fingerprint=await digest(JSON.stringify({...normalized,ids,...(chat?{chatbot_estimate_id:chat.id}:{})}));

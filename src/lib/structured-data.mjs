@@ -2,6 +2,7 @@
 // and by the browser, so both always publish the same description of the studio.
 import {pageForService} from '../services/content.mjs';
 import {projectBadge} from './project-type.mjs';
+import {canonicalFor,htmlLang} from './locale.mjs';
 
 const text=value=>typeof value==='string'?value.trim():'';
 const webUrl=value=>{try{const url=new URL(text(value));return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}};
@@ -49,23 +50,23 @@ export function studioNode({base,content={},services=[],team=[],description}){
   };
 }
 
-export function homeGraph({base,content={},services=[],projects=[],team=[],faqs=[],description}){
+export function homeGraph({base,content={},services=[],projects=[],team=[],faqs=[],description,lang='en'}){
   const faq=faqNode(active(faqs).map(row=>[row.title,row.answer]),`${base}/#faq`);
   return compact({'@context':'https://schema.org','@graph':[
     studioNode({base,content,services,team,description}),
-    {'@type':'WebSite','@id':`${base}/#website`,url:`${base}/`,name:'MV Studio',inLanguage:'en-MY',publisher:{'@id':`${base}/#studio`}},
+    {'@type':'WebSite','@id':`${base}/#website`,url:`${base}/`,name:'MV Studio',inLanguage:['en-MY','ms-MY','zh-Hans-MY'],publisher:{'@id':`${base}/#studio`}},
     {'@type':'ItemList','@id':`${base}/#portfolio`,name:'MV Studio selected projects',itemListElement:active(projects).map((project,index)=>({'@type':'ListItem',position:index+1,item:{'@type':'CreativeWork',name:project.name,keywords:projectBadge(project)?.label,headline:project.seo_title||undefined,description:project.seo_description||project.summary,url:`${base}/projects/${encodeURIComponent(project.id)}`,image:absolute(project.image_url,base)}}))},
     ...(faq?[faq]:[]),
   ]});
 }
 
-export function serviceGraph({base,page,service,content={},services=[],team=[]}){
-  const url=`${base}/services/${page.slug}`,faq=faqNode(page.faqs,`${url}#faq`);
+export function serviceGraph({base,page,service,content={},services=[],team=[],lang='en'}){
+  const url=canonicalFor(`/services/${page.slug}`,lang,base),faq=faqNode(page.faqs,`${url}#faq`),home=canonicalFor('/',lang,base);
   return compact({'@context':'https://schema.org','@graph':[
-    {'@type':'WebPage','@id':url,url,name:page.title,description:page.description,inLanguage:'en-MY',isPartOf:{'@id':`${base}/#website`},breadcrumb:{'@id':`${url}#breadcrumb`}},
+    {'@type':'WebPage','@id':url,url,name:page.title,description:page.description,inLanguage:htmlLang[lang]||'en-MY',isPartOf:{'@id':`${base}/#website`},breadcrumb:{'@id':`${url}#breadcrumb`}},
     {'@type':'Service','@id':`${url}#service`,name:page.name,serviceType:page.name,description:page.description,url,areaServed:malaysia,provider:{'@id':`${base}/#studio`},offers:service?offer(service,url):undefined},
     studioNode({base,content,services,team,description:text(content.seo_description)||text(content.hero_description)}),
-    {'@type':'BreadcrumbList','@id':`${url}#breadcrumb`,itemListElement:[['Home',`${base}/`],['Services',`${base}/#services`],[page.name,url]].map(([name,item],index)=>({'@type':'ListItem',position:index+1,name,item}))},
+    {'@type':'BreadcrumbList','@id':`${url}#breadcrumb`,itemListElement:[['Home',home],['Services',`${home}#services`],[page.name,url]].map(([name,item],index)=>({'@type':'ListItem',position:index+1,name,item}))},
     ...(faq?[faq]:[]),
   ]});
 }

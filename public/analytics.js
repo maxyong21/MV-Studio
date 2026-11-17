@@ -9,7 +9,8 @@
   let consent = '';
   try { consent = localStorage.getItem(consentKey) || ''; } catch {}
   let context = null, lastPath = null, previousLocation = '', configured = false, panel, choices, preferenceReturn;
-  const allowedPath = path => path === '/' || /^\/projects\/(?:[0-9a-f-]{36}|seed-p\d+)$/i.test(path) || demos.has(path);
+  // The home page and the service pages, each also in Bahasa Malaysia (/ms) and Chinese (/zh).
+  const allowedPath = path => path === '/' || /^\/(?:ms|zh)\/?$/.test(path) || /^\/(?:(?:ms|zh)\/)?services\/[a-z0-9-]+\/?$/.test(path) || /^\/projects\/(?:[0-9a-f-]{36}|seed-p\d+)$/i.test(path) || demos.has(path);
   const active = () => context && context.path === location.pathname && allowedPath(location.pathname);
   const syncPanel = () => { if(document.documentElement)document.documentElement.dataset.analyticsPanel=panel&&!panel.hidden?'open':'closed'; };
   const safeReferrer = () => {

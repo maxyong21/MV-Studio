@@ -60,6 +60,9 @@ try{
     assert.equal(await evaluate("document.querySelector('.nav-cta').textContent.trim()"),cta);
     assert.equal(await evaluate("document.querySelector('.service-card h3').textContent"),serviceName,'Admin-typed content is not translated');
     assert.equal(await evaluate("localStorage.getItem('mv-lang')"),code);
+    // The language has its own address, so it can be found and shared.
+    assert.equal(await evaluate('location.pathname'),`/${code}/`);
+    assert.equal(await evaluate("document.querySelector('link[rel=canonical]').href"),`http://127.0.0.1:4188/${code}/`);
     for(const width of [1440,390,320]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`${code} overflows at ${width}px`);}
     // Longer words in this language must not push the menu into the brand or the buttons at any desktop or tablet width.
     for(const width of [1440,1280,1101,1080,1079,1024,900,800,768]){await viewport(width);const nav=await evaluate("(()=>{const links=document.querySelector('.nav-links').getBoundingClientRect(),brand=document.querySelector('.site-nav .brand').getBoundingClientRect(),end=document.querySelector('.nav-end').getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,overlap:links.left<brand.right||links.right>end.left,shown:getComputedStyle(document.querySelector('.nav-end .nav-language')).display!=='none'}})()");assert.equal(nav.overflow,false,`${code} overflows at ${width}px`);assert.equal(nav.overlap,false,`${code} menu overlaps at ${width}px`);assert.equal(nav.shown,width>=1080,`${code} switch visibility at ${width}px`);}
@@ -69,8 +72,9 @@ try{
     if(code==='zh')await screenshot('customer-chinese-mobile.png');
     await viewport(1440);
   }
-  await navigate('http://127.0.0.1:4187/?remembered');await wait("document.documentElement.lang==='zh-Hans-MY'&&document.querySelector('.nav-cta')?.textContent.trim()==='开始项目'");
-  await evaluate("document.querySelector('.nav-language button[lang=\"en-MY\"]').click()");await wait("document.documentElement.lang==='en-MY'&&document.querySelector('.nav-cta').textContent.trim()==='Start a project'");
+  // A returning visitor who chose Chinese is taken to the Chinese address.
+  await send('Page.navigate',{url:'http://127.0.0.1:4187/?remembered'});await wait("location.pathname==='/zh/'&&location.search==='?remembered'&&document.documentElement.lang==='zh-Hans-MY'&&document.querySelector('.nav-cta')?.textContent.trim()==='开始项目'");
+  await evaluate("document.querySelector('.nav-language button[lang=\"en-MY\"]').click()");await wait("location.pathname==='/'&&document.documentElement.lang==='en-MY'&&document.querySelector('.nav-cta').textContent.trim()==='Start a project'");
   await evaluate("localStorage.removeItem('mv-lang')");
   assert.ok(!requests.some(url=>/\/Widgets-[^/]+\.(js|css)/.test(url)),'Widget library must not be loaded by the homepage');
   assert.equal(await evaluate("document.querySelectorAll('a[href*=widgets]').length"),0,'The homepage must not link to the unlisted widget library');

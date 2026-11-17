@@ -12,6 +12,8 @@
     {"src":"/widgets/?","dest":"/widgets/index.html"},
     {"src":"/business-profile-form/?","dest":"/business-profile-form/index.html"},
     {"src":"/services/(landing-page|company-website|ecommerce-website|custom-web-app|google-business-profile)/?","dest":"/services/$1/index.html"},
+    {"src":"/(ms|zh)/?","dest":"/$1/index.html"},
+    {"src":"/(ms|zh)/services/(landing-page|company-website|ecommerce-website|custom-web-app|google-business-profile)/?","dest":"/$1/services/$2/index.html"},
     {"src":"/privacy/?","dest":"/privacy/index.html"},
     {"src":"/terms/?","dest":"/terms/index.html"},
     {"src":"/data-deletion/?","dest":"/data-deletion/index.html"},

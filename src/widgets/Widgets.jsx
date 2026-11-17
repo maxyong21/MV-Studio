@@ -61,7 +61,7 @@ export default function Widgets(){
     try{await navigator.clipboard.writeText(text);toast(`${picked.length} widget name${picked.length===1?'':'s'} copied. Paste them into a message to us.`);}catch{toast('Copying is blocked in this browser. Use “Shortlist only” and take a screenshot instead.','error');}
   };
   return <div className="wg-page">
-    <header className="wg-header"><div className="wg-header-row"><Link className="brand" to="/" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><b className="wg-header-title">Widget library</b>
+    <header className="wg-header"><div className="wg-header-row"><Link className="brand" to="/"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><b className="wg-header-title">Widget library</b>
       <div className="wg-search"><span aria-hidden="true">🔍</span><input className="wg-input" type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={`Search ${TOTAL} widgets, e.g. map, progress, filter`} aria-label="Search widgets"/></div><ThemeToggle/></div>
       <nav className="wg-nav" aria-label="Widget categories">{visible.map(group=><a key={group.id} href={`#${group.id}`}>{group.title} · {group.items.length}</a>)}</nav></header>
     <main className="wg-main" id="widgets-top">

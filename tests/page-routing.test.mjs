@@ -10,11 +10,12 @@ test('project requests distinguish existing, missing, unpublished and unavailabl
  let rows=[{id}],failure=false,calls=0;
  const handler=createProjectPage({env,read,fetcher:async()=>{calls++;return {ok:!failure,json:async()=>rows};}});
  const run=async value=>{const res=response();await handler({method:'GET',query:{id:value}},res);return res;};
- assert.equal((await run(id)).statusCode,200);
- rows=[];const missing=await run(id);assert.equal(missing.statusCode,404);assert.match(missing.body,/404.html/);assert.equal(missing.headers['X-Robots-Tag'],'noindex');
+ const published=await run(id);assert.equal(published.statusCode,200);
+ assert.match(published.headers['Cache-Control'],/s-maxage=60/,'a published project page is cached briefly at the edge');
+ rows=[];const missing=await run(id);assert.equal(missing.statusCode,404);assert.equal(missing.headers['Cache-Control'],'no-store','a missing page is never cached');assert.match(missing.body,/404.html/);assert.equal(missing.headers['X-Robots-Tag'],'noindex');
  const before=calls;assert.equal((await run('../admin')).statusCode,404);assert.equal(calls,before);
  failure=true;const original=console.error;console.error=()=>{};
- try{const unavailable=await run(id);assert.equal(unavailable.statusCode,503);assert.match(unavailable.body,/maintenance.html/);}finally{console.error=original;}
+ try{const unavailable=await run(id);assert.equal(unavailable.statusCode,503);assert.equal(unavailable.headers['Cache-Control'],'no-store');assert.match(unavailable.body,/maintenance.html/);}finally{console.error=original;}
 });
 test('new published projects fall back to the application shell; HEAD and methods are correct',async()=>{
  const handler=createProjectPage({env,read:async path=>{if(path.startsWith('projects/'))throw Error('Not built yet');return read(path);},fetcher:async()=>({ok:true,json:async()=>[{id}]})});

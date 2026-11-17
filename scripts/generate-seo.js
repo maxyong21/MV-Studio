@@ -7,6 +7,9 @@ import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
 import {legalDocuments,legalPaths} from '../src/legal/content.mjs';
 import {renderPage} from '../.generated/ssr/entry-server.js';
 import {servicePages,serviceForPage} from '../src/services/content.mjs';
+import {localizedPage} from '../src/services/localized.mjs';
+import {homeMeta} from '../src/lib/seo-locales.mjs';
+import {alternatesFor,canonicalFor,htmlLang,ogLocale,parseLocale,prefixes,LOCALES} from '../src/lib/locale.mjs';
 import {homeGraph,serviceGraph} from '../src/lib/structured-data.mjs';
 
 const env=loadEnv('production',process.cwd(),'VITE_');
@@ -27,22 +30,30 @@ if(supabaseUrl&&key&&!supabaseUrl.includes('your-project-id')){
 const published=hasPublicContent(data);
 const template=await readFile('dist/index.html','utf8');
 const content=data.site_content?.content||fallbackContent.site_content.content;
+// route is the address the page is published at, such as /ms or /zh/services/landing-page.
 async function page(route,project,service){
-  const legal=legalDocuments[route];
+  const {lang,route:baseRoute}=parseLocale(route),legal=legalDocuments[route];
+  const text=service?localizedPage(service,lang):null,home=homeMeta(lang,content);
   const renderData=legal?{...emptyPublicContent(),site_content:data.site_content}:data;
-  const url=base?`${base}${route}`:'';
-  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':service?service.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):(content.seo_title||'Web Design Malaysia | Affordable Websites | MV Studio');
-  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':service?service.description:project?(project.seo_description||project.summary):(content.seo_description||content.hero_description);
+  const url=base?canonicalFor(baseRoute,lang,base):'';
+  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':service?text.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):home.title;
+  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':service?text.description:project?(project.seo_description||project.summary):home.description;
   const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
-  let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
+  let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`).replace(/<html lang="[^"]*"/i,`<html lang="${htmlLang[lang]}"`);
+  // The page's own language first, the others as alternates.
+  html=html.replace(/<meta property="og:locale:alternate"[^>]*>\s*/gi,'');
+  html=meta(html,'og:locale',ogLocale[lang]);
+  html=html.replace(/(<meta property="og:locale"[^>]*>)/i,`$1\n${LOCALES.filter(code=>code!==lang).map(code=>`<meta property="og:locale:alternate" content="${ogLocale[code]}" />`).join('\n')}`);
   html=meta(html,'description',description,'name');
   if(legal)html=meta(html,'robots','index,follow','name');
   else if(!published)html=meta(html,'robots','noindex,follow','name');
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
-    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:service,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description});
-    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
+    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:text,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members,lang}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description,lang});
+    // The same page in every language, so search engines show each visitor the right one.
+    const alternates=published&&!legal&&!project?alternatesFor(baseRoute,base).map(([code,href])=>`<link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}" />`).join('\n'):'';
+    html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${alternates?`${alternates}\n`:''}${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
   }
   const markup=renderPage(renderData,route);
   html=html.replace('<div id="root"></div>',()=>`<div id="root" data-route="${escapeHtml(route)}">${markup}</div>\n<script id="mv-initial-data" type="application/json">${safeJson(renderData)}</script>\n<noscript>For the interactive enquiry form, enable JavaScript or use the contact details on this page.</noscript>`);
@@ -53,6 +64,12 @@ await page('/');
 for(const path of legalPaths)await page(path);
 // One page per service, so each can be found for its own search. See docs/SEO.md.
 for(const service of servicePages)await page(`/services/${service.slug}`,null,service);
+// The same home and service pages in Bahasa Malaysia and Chinese, each at its own address.
+// Only when the site is published; an unpublished site has nothing to translate.
+if(published)for(const code of LOCALES.filter(code=>code!=='en')){
+  await page(prefixes[code]);
+  for(const service of servicePages)await page(`${prefixes[code]}/services/${service.slug}`,null,service);
+}
 for(const project of data.projects||[]){
   if(!project.active||!/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i.test(project.id))continue;
   await page(`/projects/${project.id}`,project);

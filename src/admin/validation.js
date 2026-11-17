@@ -24,6 +24,7 @@ export function validateEntity(values,config){
   if(config===entityConfig.faqs){
     if(String(values.title||'').trim().length<5)errors.title='Enter a question of at least 5 characters.';
     if(String(values.answer||'').trim().length<10)errors.answer='Enter an answer of at least 10 characters.';
+    if(!['general','costs','process','support'].includes(values.category||'general'))errors.category='Choose a group for this question.';
   }
   const requiredKey=config.fields.find(([key])=>['name','title'].includes(key))?.[0];
   for(const [key,label,type] of config.fields){

@@ -72,7 +72,7 @@ export default function ProfileForm({data,footer}){
   const errorCount=attempted?Object.keys(errors).length:0;
   const optional=<span className="pf-optional">{t('Optional')}</span>;
   return <><DocumentLanguage/><a className="skip-link" href="#profile-content">{t('Skip to main content')}</a>
-    <header className="site-nav"><div className="nav-inner"><Link className="brand" to="/" aria-label="MV Studio home"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><Link className="admin-link" to="/services/google-business-profile">{t('← About this service')}</Link><div className="nav-end"><LanguageSwitch className="nav-language"/><ThemeToggle/></div></div></header>
+    <header className="site-nav"><div className="nav-inner"><Link className="brand" to="/"><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><Link className="admin-link" to="/services/google-business-profile">{t('← About this service')}</Link><div className="nav-end"><LanguageSwitch className="nav-language"/><ThemeToggle/></div></div></header>
     <main className="project-detail pf-page" id="profile-content" tabIndex={-1}>
       {done?<section className="pf-done" aria-labelledby="profile-done-title">
         <span className="pf-done-icon" aria-hidden="true"><Check size={26}/></span>

@@ -1,0 +1,49 @@
+# Checks the live website every 15 minutes. If a check fails, GitHub emails the person who last
+# edited this schedule ("Actions" notifications must be on: GitHub > Settings > Notifications).
+# See docs/MONITORING.md. To check a different address, set the repository variable SITE_URL.
+name: Uptime check
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the live site
+        env:
+          SITE: ${{ vars.SITE_URL || 'https://mv-aistudio.vercel.app' }}
+        run: |
+          set -u
+          failed=0
+          status() { curl -s -o /dev/null -w '%{http_code}' --max-time 25 --retry 2 --retry-delay 5 "$SITE$1" || echo 000; }
+
+          # Pages that must load.
+          for path in / /services/company-website /terms /ms/ /sitemap.xml /api/health; do
+            code=$(status "$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || { echo "::error::$SITE$path returned $code"; failed=1; }
+          done
+
+          # A missing page must still be a real 404, not a blank 200.
+          code=$(status /this-page-does-not-exist)
+          echo "/this-page-does-not-exist -> $code (expected 404)"
+          [ "$code" = "404" ] || { echo "::error::Unknown pages should return 404, got $code"; failed=1; }
+
+          # The home page must show the real site, not the maintenance or coming-soon page.
+          page=$(curl -s --max-time 25 --retry 2 --retry-delay 5 "$SITE/" || true)
+          echo "$page" | grep -q 'MV' || { echo "::error::Home page has no MV Studio content"; failed=1; }
+          if echo "$page" | grep -qiE '<title>(Under maintenance|Coming soon)'; then echo "::error::Home page is showing a maintenance or coming-soon page"; failed=1; fi
+
+          # The security headers must still be sent.
+          headers=$(curl -sI --max-time 25 "$SITE/" || true)
+          echo "$headers" | grep -qi '^content-security-policy:' || { echo "::error::Content-Security-Policy header is missing"; failed=1; }
+          echo "$headers" | grep -qi '^x-frame-options:' || { echo "::error::X-Frame-Options header is missing"; failed=1; }
+
+          exit $failed

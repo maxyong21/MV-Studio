@@ -68,7 +68,8 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
     await t.test('server validates fields before touching the database',async()=>{
       const response=await submit(request({...payload(),name:'1',company_name:'',phone:'abc',email:'bad',preferred_meeting_at:'2020-01-01'}));
       const result=await response.json();assert.equal(response.status,400);
-      for(const key of ['name','company_name','phone','email','preferred_meeting_at'])assert.ok(result.errors[key]);
+      for(const key of ['name','phone','email','preferred_meeting_at'])assert.ok(result.errors[key]);
+      assert.equal(result.errors.company_name,undefined,'the company name is optional');
       assert.equal((await db.query('select count(*)::int as n from enquiries')).rows[0].n,0);
     });
     await t.test('prices are calculated from active DB features, with annual discounts',async()=>{
@@ -78,6 +79,13 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
       const saved=(await db.query('select * from enquiries where id=$1',[result.id])).rows[0];
       assert.equal(+saved.one_time_estimate,449);assert.equal(+saved.monthly_estimate,150);assert.equal(+saved.annual_estimate,1680);
       assert.equal(saved.notification_status,'sent');assert.equal(saved.meeting_requested,true);assert.ok(saved.preferred_meeting_at);
+    });
+    await t.test('an enquiry without a company name is saved and notified',async()=>{
+      const {company_name,...withoutCompany}=payload(),before=mailCalls;
+      const response=await submit(request(withoutCompany));const result=await response.json();
+      assert.equal(response.status,200);assert.ok(result.ok);
+      const saved=(await db.query('select company_name,notification_status from enquiries where id=$1',[result.id])).rows[0];
+      assert.equal(saved.company_name,'');assert.equal(saved.notification_status,'sent');assert.equal(mailCalls,before+1);
     });
     await t.test('unavailable feature IDs are rejected',async()=>{
       assert.equal((await submit(request({...payload(),selected_feature_ids:[crypto.randomUUID()]}))).status,400);
@@ -132,4 +140,12 @@ test('enquiry validation, storage, email failures, idempotency, meetings and adm
 test('estimates handle cents, quoted items and configurable annual discounts',()=>{
   assert.deepEqual(estimateFeatures([{name:'Care',billing_type:'monthly',price:10.1,annual_free_months:2},{name:'Setup',billing_type:'one_time',price:.2},{name:'Custom',billing_type:'quote',price:null}]),{one_time_estimate:.2,monthly_estimate:10.1,annual_estimate:101,quoted:['Custom']});
   assert.ok(validateContact({name:'Alex',company_name:'Company',phone:'+60 12-345 6789',email:'bad'}).email);
+});
+
+test('the company name is optional, but a one-character company name is still rejected',()=>{
+  const base={name:'Alex Tan',phone:'+60 12-345 6789',email:'client@example.test'};
+  assert.deepEqual(validateContact({...base,company_name:''}),{});
+  assert.deepEqual(validateContact({...base}),{});
+  assert.ok(validateContact({...base,company_name:'X'}).company_name);
+  assert.deepEqual(validateContact({...base,company_name:'Bakery Shop'}),{});
 });
