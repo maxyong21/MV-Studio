@@ -5,9 +5,16 @@ import './hero-slogans.css';
 export default function HeroSlogans({first='',second='',third=''}) {
   const slogans=[...new Set([first,second,third].map(text=>String(text||'').trim()).filter(Boolean))];
   const signature=slogans.join('\n');
-  const [index,setIndex]=useState(0),[paused,setPaused]=useState(false),[hovered,setHovered]=useState(false),[focused,setFocused]=useState(false),[visible,setVisible]=useState(true);
+  const [index,setIndex]=useState(0),[paused,setPaused]=useState(false),[hovered,setHovered]=useState(false),[focused,setFocused]=useState(false),[visible,setVisible]=useState(true),[engaged,setEngaged]=useState(false);
   const root=useRef(null);
   useEffect(()=>setIndex(0),[signature]);
+  // Rotation waits for the first touch, click, key press or scroll. Browsers measure "largest content" until
+  // then, and a slogan that swaps in on its own would count as a late largest paint on a page nobody touched.
+  useEffect(()=>{
+    const events=['pointerdown','keydown','scroll','touchstart'],start=()=>setEngaged(true);
+    events.forEach(name=>window.addEventListener(name,start,{once:true,passive:true}));
+    return()=>events.forEach(name=>window.removeEventListener(name,start));
+  },[]);
   useEffect(()=>{
     const media=window.matchMedia('(prefers-reduced-motion: reduce)');
     const preference=()=>setPaused(media.matches);
@@ -23,10 +30,10 @@ export default function HeroSlogans({first='',second='',third=''}) {
     return()=>{observer?.disconnect();document.removeEventListener('visibilitychange',update);};
   },[]);
   useEffect(()=>{
-    if(slogans.length<2||paused||hovered||focused||!visible)return;
+    if(slogans.length<2||!engaged||paused||hovered||focused||!visible)return;
     const timer=window.setInterval(()=>setIndex(value=>(value+1)%slogans.length),5000);
     return()=>window.clearInterval(timer);
-  },[signature,paused,hovered,focused,visible,slogans.length]);
+  },[signature,engaged,paused,hovered,focused,visible,slogans.length]);
   if(!slogans.length)return null;
   const current=index%slogans.length;
   return <div ref={root} className="hero-slogans" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} onFocusCapture={()=>setFocused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget))setFocused(false);}}>

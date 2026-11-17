@@ -8,7 +8,7 @@
   .project-breadcrumb a,.project-breadcrumb span,.project-detail-head>p,.project-detail-lower p,
   .service-lead,.service-note p,.service-block p,.service-offer-price>span,.service-team span,.service-steps p,
   .faq-contact,.faq-group>h3,.pf-optional,.pf-privacy,.pf-privacy a,[id$="-hint"],#profile-required-note,
-  .work-labels-note,.work-footnote,.terms-head p,.terms-steps p,.next-steps p,.who-note b,
+  .work-labels-note,.work-footnote,.project-detail-footer span,.terms-head p,.terms-steps p,.next-steps p,.who-note b,
   .form-heading .section-overline,p[lang]){color:var(--muted)}
 :root:not([data-theme=dark]) :is(.package-disclosure a,.terms-more a,.service-note a,.service-steps li>span,.project-card-links a){color:var(--orange-text)}
 /* Only where the logo sits on a light header; the footer logo is on dark green. */
@@ -22,7 +22,7 @@
 :root[data-theme=dark] .not-found-page{background:#181a17}
 
 /* Dark theme: secondary text that was a fixed grey on near-black. */
-:root[data-theme=dark] :is(.project-detail-head>p,.project-detail-lower p,.service-lead,.service-block p,.service-note p,.service-offer-price>span,.project-breadcrumb a,.project-breadcrumb span){color:var(--muted)}
+:root[data-theme=dark] :is(.project-detail-head>p,.project-detail-lower p,.service-lead,.service-block p,.service-note p,.service-offer-price>span,.project-breadcrumb a,.project-breadcrumb span,.project-detail-footer span){color:var(--muted)}
 /* The not-found page, both themes. */
 .not-found-page p,.not-found-page small{color:var(--muted)}
 .not-found-page small{font-size:12px}
