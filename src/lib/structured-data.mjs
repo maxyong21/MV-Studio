@@ -1,6 +1,7 @@
 // Structured data (schema.org) for search engines. Used by the build (scripts/generate-seo.js)
 // and by the browser, so both always publish the same description of the studio.
 import {pageForService} from '../services/content.mjs';
+import {projectBadge} from './project-type.mjs';
 
 const text=value=>typeof value==='string'?value.trim():'';
 const webUrl=value=>{try{const url=new URL(text(value));return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}};
@@ -31,6 +32,7 @@ export function studioNode({base,content={},services=[],team=[],description}){
   const listed=active(services),prices=listed.map(servicePrice).filter(price=>price!==null);
   const email=Array.isArray(content.contact_emails)?text(content.contact_emails[0]):'';
   const telephone=Array.isArray(content.contact_phones)?text(content.contact_phones[0]):'';
+  const people=active(team).filter(member=>text(member.name)).map(member=>({'@type':'Person',name:text(member.name),jobTitle:text(member.role),sameAs:[member.linkedin_url,member.github_url,member.website_url].map(webUrl).filter(Boolean)}));
   return {
     '@type':'ProfessionalService','@id':`${base}/#studio`,name:'MV Studio',url:`${base}/`,description,
     logo:`${base}/apple-touch-icon.png`,image:`${base}/aphome.png`,
@@ -38,7 +40,8 @@ export function studioNode({base,content={},services=[],team=[],description}){
     email,telephone,
     priceRange:prices.length?`RM ${Math.min(...prices)}–RM ${Math.max(...prices)}+`:undefined,
     knowsAbout:listed.map(service=>text(service.name)).filter(Boolean),
-    employee:active(team).filter(member=>text(member.name)).map(member=>({'@type':'Person',name:text(member.name),jobTitle:text(member.role),sameAs:[member.linkedin_url,member.github_url,member.website_url].map(webUrl).filter(Boolean)})),
+    employee:people,founder:people,
+    contactPoint:email||telephone?{'@type':'ContactPoint',contactType:'customer service',email,telephone,areaServed:'MY',availableLanguage:['English','Malay','Chinese']}:undefined,
     hasOfferCatalog:listed.length?{'@type':'OfferCatalog',name:'Web design and development services',itemListElement:listed.map(service=>{
       const page=pageForService(service),url=page?`${base}/services/${page.slug}`:`${base}/#services`;
       return {'@type':'Offer',url,price:servicePrice(service)??undefined,priceCurrency:servicePrice(service)===null?undefined:currencyCode(service),itemOffered:{'@type':'Service',name:text(service.name),description:text(service.summary),url}};
@@ -51,7 +54,7 @@ export function homeGraph({base,content={},services=[],projects=[],team=[],faqs=
   return compact({'@context':'https://schema.org','@graph':[
     studioNode({base,content,services,team,description}),
     {'@type':'WebSite','@id':`${base}/#website`,url:`${base}/`,name:'MV Studio',inLanguage:'en-MY',publisher:{'@id':`${base}/#studio`}},
-    {'@type':'ItemList','@id':`${base}/#portfolio`,name:'MV Studio selected projects',itemListElement:active(projects).map((project,index)=>({'@type':'ListItem',position:index+1,item:{'@type':'CreativeWork',name:project.name,headline:project.seo_title||undefined,description:project.seo_description||project.summary,url:`${base}/projects/${encodeURIComponent(project.id)}`,image:absolute(project.image_url,base)}}))},
+    {'@type':'ItemList','@id':`${base}/#portfolio`,name:'MV Studio selected projects',itemListElement:active(projects).map((project,index)=>({'@type':'ListItem',position:index+1,item:{'@type':'CreativeWork',name:project.name,keywords:projectBadge(project)?.label,headline:project.seo_title||undefined,description:project.seo_description||project.summary,url:`${base}/projects/${encodeURIComponent(project.id)}`,image:absolute(project.image_url,base)}}))},
     ...(faq?[faq]:[]),
   ]});
 }

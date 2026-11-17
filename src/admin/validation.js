@@ -56,6 +56,11 @@ export function validateEntity(values,config){
     if(String(values.quote||'').trim().length<10||String(values.quote||'').trim().length>2000)errors.quote='Enter a genuine client quote of 10–2,000 characters.';
     if(values.active&&!values.permission_confirmed)errors.permission_confirmed='Confirm permission before publishing.';
   }
+  if(config===entityConfig.projects){
+    if(!['client_project','personal_project','demonstration_project'].includes(values.project_type))errors.project_type='Choose whether this is a client, personal or demonstration project.';
+    else if(values.project_type==='client_project'&&String(values.client_name||'').trim().length<2)errors.client_name='Enter the client’s name, or choose personal or demonstration project.';
+    if(String(values.client_name||'').trim().length>120)errors.client_name='Keep the client name within 120 characters.';
+  }
   if(config===entityConfig.services&&values.price!==''&&values.price!==null&&Number(values.original_price)&&Number(values.original_price)<Number(values.price))errors.original_price='Original price must be at least the sale price.';
   return errors;
 }

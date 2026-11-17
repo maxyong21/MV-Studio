@@ -20,3 +20,8 @@ export function normalizeSiteContent(content={}){
   ['email_max','email_vincent','whatsapp_max','whatsapp_vincent'].forEach(key=>delete clean[key]);
   return clean;
 }
+// The only people named in the footer. MV Studio is not a registered company yet, so no
+// company name, registration number or parent organisation is shown anywhere on the site.
+export const studioOwners='Max Yong & Vincent Teo';
+// How quickly the team replies. Shown in the enquiry form, contact section and success message.
+export const replyWindow={email:'2–3 business days',whatsapp:'usually faster'};

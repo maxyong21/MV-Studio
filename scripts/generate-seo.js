@@ -1,6 +1,7 @@
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {loadEnv} from 'vite';
 import {fallbackContent} from '../src/content.js';
+import {projectBadge} from '../src/lib/project-type.mjs';
 import {emptyPublicContent,hasPublicContent} from '../src/lib/availability.mjs';
 import {siteUrl,escapeHtml,safeJson,meta} from './seo.mjs';
 import {legalDocuments,legalPaths} from '../src/legal/content.mjs';
@@ -40,7 +41,7 @@ async function page(route,project,service){
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
-    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:service,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description});
+    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:service,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description});
     html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
   }
   const markup=renderPage(renderData,route);

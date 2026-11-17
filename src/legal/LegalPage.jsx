@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link,useLocation} from 'react-router-dom';
 import {ArrowLeft,ArrowUpRight,Check,Mail,ShieldCheck} from 'lucide-react';
 import {legalDocuments,legalUpdated,privacyMalay} from './content.mjs';
 import {normalizeContactList} from '../lib/site.js';
@@ -9,7 +9,9 @@ import './legal.css';
 // Fixed locale and time zone, so the server and the browser always print the same date.
 const updatedLabel=new Date(`${legalUpdated}T00:00:00Z`).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
 export default function LegalPage({path,data}){
-  const [language,setLanguage]=useState('en'),[preferencesNotice,setPreferencesNotice]=useState('');
+  const [language,setLanguage]=useState('en'),[preferencesNotice,setPreferencesNotice]=useState(''),{hash}=useLocation();
+  // A link such as /terms#costs from another page lands on that section.
+  useEffect(()=>{if(!hash)return;let id;try{id=decodeURIComponent(hash.slice(1));}catch{return;}const frame=requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView());return()=>cancelAnimationFrame(frame);},[hash,path]);
   const isMalay=path==='/privacy'&&language==='ms';
   const documentContent=path==='/privacy'&&language==='ms'?privacyMalay:legalDocuments[path];
   const emails=normalizeContactList(data?.site_content?.content?.contact_emails).filter(v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
