@@ -35,6 +35,8 @@ test('terms page states the 50/50 payment and the refund rule',()=>{
   assert.match(costs,/first 50%/);assert.match(costs,/remaining 50% is payable before real development begins/);
   assert.match(costs,/within 7 days/);assert.match(costs,/half of the deposit/);
   assert.doesNotMatch(costs,/no-refund policy/);
+  assert.match(costs,/in writing/);assert.match(costs,/whichever comes first/);assert.match(costs,/within 14 days of confirming/);
+  assert.match(costs,/cancel after approving the prototype but before paying the remaining 50%/);assert.match(costs,/starts as soon as the remaining 50% is received/);
 });
 
 test('fallback services carry the agreed payment terms and timelines',()=>{
@@ -80,4 +82,18 @@ test('migration: labels, constraints, terms and FAQs apply once, keep admin edit
     assert.deepEqual((await db.query("select project_type,client_name from projects where name='APMoodle'")).rows[0],{project_type:'client_project',client_name:'Acme Bakery'});
     await db.exec('reset role');
   }finally{await db.close();}
+});
+
+// Vercel ignores a top-level "headers" list when "routes" is used, so the live site once
+// shipped without its Content-Security-Policy and other protections. Keep them in routes.
+test('security headers are sent: defined in routes that continue, before any destination, never in an ignored top-level list',async()=>{
+  const config=JSON.parse(await readFile('vercel.json','utf8'));
+  assert.equal(config.headers,undefined,'a top-level headers list is ignored when routes is present');
+  const all=config.routes.find(route=>route.src==='/(.*)'&&route.headers);
+  assert.ok(all&&all.continue===true,'the site-wide header route must continue to the next route');
+  assert.ok(config.routes.indexOf(all)<config.routes.findIndex(route=>route.dest||route.handle),'headers must be set before the first destination');
+  for(const name of ['Content-Security-Policy','Strict-Transport-Security','X-Content-Type-Options','X-Frame-Options','Referrer-Policy','Permissions-Policy'])assert.ok(all.headers[name],`${name} is missing`);
+  assert.match(all.headers['Content-Security-Policy'],/frame-ancestors 'none'/);
+  assert.match(all.headers['Content-Security-Policy'],/object-src 'none'/);
+  assert.equal(all.headers['X-Frame-Options'],'DENY');
 });
