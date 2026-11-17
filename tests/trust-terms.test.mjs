@@ -97,3 +97,13 @@ test('security headers are sent: defined in routes that continue, before any des
   assert.match(all.headers['Content-Security-Policy'],/object-src 'none'/);
   assert.equal(all.headers['X-Frame-Options'],'DENY');
 });
+
+test('hero artwork is labelled as an example, and the "who we are" note is present in all three languages',async()=>{
+  const app=await readFile('src/App.jsx','utf8');
+  assert.match(app,/className="art-example-label">\{t\('Example design'\)\}/);
+  assert.match(app,/className="who-note"><b>\{t\('Who we are'\)\}/);
+  const ms=(await import('../src/i18n/ms.js')).default,zh=(await import('../src/i18n/zh.js')).default;
+  for(const key of ['Example design','Who we are','We’re two independent developers, building our first client projects. Your project gets our full attention.']){
+    assert.ok(ms[key]&&ms[key]!==key,`BM: ${key}`);assert.ok(zh[key]&&zh[key]!==key,`ZH: ${key}`);
+  }
+});
