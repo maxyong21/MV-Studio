@@ -8,6 +8,7 @@ import './responsive.css';
 import './studio.css';
 import './refinements.css';
 import './motion.css';
+import './trust.css';
 import App from './App.jsx';
 import {emptyPublicContent,recordDiagnostic} from './lib/availability.mjs';
 import {installErrorReporting} from './lib/error-report.mjs';

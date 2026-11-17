@@ -37,7 +37,7 @@ The error message, where on the site it happened, the page path, the time, the b
 
 It does not contain form contents. Email addresses, phone numbers, tokens and keys are removed from the text before sending, and the page address is sent without its query string.
 
-**Privacy policy:** the browser name and the error text are collected from visitors. The published privacy policy does not mention this yet. Add a line under the diagnostics or service-provider section before relying on this in production.
+**Privacy policy:** the browser name and the error text are collected from visitors. This is described in the privacy policy under “Information we collect” (automatic problem reports), in English and Bahasa Malaysia.
 
 ## Files
 

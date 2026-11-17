@@ -56,7 +56,7 @@ A slow connection cannot save a request twice: a repeat of the same answers retu
 - Five submissions an hour per connection, human verification (Turnstile) when configured, and requests from other websites are refused.
 - Visitors cannot read or change the table. Only signed-in administrators can.
 - Deleting a request in the admin erases it for good. It does not go to Recently deleted.
-- **Privacy policy:** this form collects a contact name, phone numbers, an email address and business details. The published privacy policy does not mention it yet. Add a line before sending the form to customers.
+- **Privacy policy:** this form collects a contact name, phone numbers, an email address and business details. The privacy policy describes this under “Information we collect”, “Why we use your information”, “Browser storage” and “Retention”, in English and Bahasa Malaysia. Read the wording once and confirm it matches how you handle these details.
 
 ## What was and was not tested
 

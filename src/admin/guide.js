@@ -68,7 +68,7 @@ export const guides={
   projects:{
     purpose:'Show the work the team has built, each with its own detail page.',
     where:'“Selected work” on the homepage, each project’s page, and up to four in the footer.',
-    steps:['Add a project with its name, type and a short description.','Upload a screenshot and add the demo link or video if there is one.','Fill in challenge, approach and outcome to turn it into a case study.','Tick “Visible on website” and save.'],
+    steps:['Add a project with its name and a short description.','Choose its label: demonstration, personal or client project. Only choose client project, and type the client’s name, when that client has agreed to be named.','Upload a screenshot and add the demo link or video if there is one.','Fill in challenge, approach and outcome to turn it into a case study.','Tick “Visible on website” and save.'],
     notes:[liveNote,'Only state outcomes you can verify.','The footer shows at most four projects.'],
   },
   team_members:{

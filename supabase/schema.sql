@@ -948,6 +948,52 @@ from scopes d where s.name=d.name;
 -- No testimonials are seeded: publish only genuine feedback with permission.
 commit;
 
+-- Trust and terms: project labels, 50/50 payment wording, delivery estimates, FAQs (docs/BUSINESS_TERMS.md).
+begin;
+
+-- 1. Project label: client work, a personal project or a demonstration.
+-- Existing projects start as demonstrations, the safest claim. Change each one in the admin.
+alter table public.projects add column if not exists project_type text not null default 'demonstration_project';
+alter table public.projects add column if not exists client_name text not null default '';
+do $$ begin
+ if not exists (select 1 from pg_constraint where conname='projects_project_type_check') then
+  alter table public.projects add constraint projects_project_type_check
+   check (project_type in ('client_project','personal_project','demonstration_project'));
+ end if;
+ -- A client project must name its client; the other labels never carry a client name.
+ if not exists (select 1 from pg_constraint where conname='projects_client_name_check') then
+  alter table public.projects add constraint projects_client_name_check
+   check ((project_type='client_project' and length(btrim(client_name)) between 2 and 120)
+       or (project_type<>'client_project' and client_name=''));
+ end if;
+end $$;
+
+-- 2. Payment terms and delivery estimates shown on the package cards.
+-- Only the older starter wording (or an empty field) is replaced.
+update public.services set payment_terms='Pay 50% to confirm the project. After the wireframe, feature list and prototype are approved, pay the remaining 50% before development begins. If you cancel within 7 days of paying and before wireframe work starts, half of the deposit is refunded (25% of the project price); after that the deposit is not refundable. Hosting, domain and third-party charges are separate and paid in full before they are purchased.'
+where nullif(btrim(payment_terms),'') is null
+   or payment_terms='Website development is a one-time project fee. Payment stages, third-party charges and any recurring subscriptions are confirmed in the proposal before development begins.';
+
+update public.services set timeline='Typically 3–4 months' where name in ('Company Website','E-Commerce') and timeline='Timeline confirmed together';
+update public.services set timeline='Typically 3–4 months or more, confirmed in your quote' where name='Custom Web App' and timeline in ('Custom quote','Timeline confirmed together');
+
+-- 3. Two more answers in the public FAQ. Edit or hide them in the admin at any time.
+insert into public.faqs(key,title,answer,active,sort_order) values
+('payment-and-refunds','How do payments and refunds work?',
+ 'You pay 50% to confirm your project. We then work on the wireframe, confirm the features with you and build a prototype. Once you approve them, you pay the remaining 50% and real development begins. If you cancel within 7 days of paying and before wireframe work starts, we refund half of the deposit, which is 25% of the project price. After that the deposit is not refundable. Hosting, domain and third-party charges are separate and are paid in full before they are purchased.',true,15),
+('timeline-and-replies','How long will my website take, and how fast will you reply?',
+ 'Landing pages are usually quicker. Full websites and online stores typically take 3–4 months, and custom systems can take longer, so each package shows its own estimate and we confirm the date in your proposal. We reply to enquiries within 2–3 business days, and usually faster on WhatsApp.',true,16)
+on conflict(key) do nothing;
+
+-- 4. The project assistant answers from the same terms. Only the old starter text is replaced.
+update public.chatbot_documents set body='Payment is 50% to confirm the project. After the wireframe, feature confirmation and prototype are approved, the remaining 50% is paid before development begins. If you cancel within 7 days of paying and before wireframe work starts, half of the deposit is refunded, which is 25% of the project price. After that the deposit is not refundable. Third-party database, hosting and domain costs require full payment before purchase or activation. Domain and hosting accounts belong to the client. The client receives the custom project source code after full project payment. Third-party licences remain subject to their own terms. Handover details are confirmed in the proposal.'
+where title='Payment stages account arrangements and source code'
+  and body like 'Development deposit amounts and payment stages are confirmed with the team in the proposal.%';
+update public.chatbot_test_cases set name='Deposit and refund terms', expected_terms=array['50%']::text[]
+where name='No invented deposit' and expected_terms=array['proposal']::text[];
+
+commit;
+
 -- BEGIN GENERATED INDUSTRY CHATBOT CONTENT
 -- Industry discovery and approved knowledge: draft content only, never auto-publish.
 -- Existing articles, choices, rules and tests are preserved on reruns.
@@ -976,7 +1022,7 @@ insert into public.chatbot_documents ("title","category","body","active","sort_o
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Annual maintenance discount and free months','Maintenance','Maintenance is priced from the current database catalogue. With one annual free month, the annual charge is eleven times the monthly amount. The free-month setting can differ by service and promotion. The estimate uses the current configured free months; monthly and annual totals are alternative billing choices, not charges to add together.',true,116) on conflict do nothing;
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Budget and custom system estimates','Quotations','Your budget helps the team prioritize scope; it does not change catalogue prices automatically. Product counts, learner counts and staff counts are discovery information unless a priced item explicitly states otherwise. Education workflows, parts compatibility, supplier connections and other custom work need manual quotation. A preliminary subtotal includes only selected priced catalogue items and is not the full cost of an unscoped custom system.',true,117) on conflict do nothing;
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Delivery dates and project readiness','Project terms','Share a preferred launch date and whether your content, access and requirements are ready. Timelines depend on the agreed scope, feedback, content and integrations. A starter landing-page timeline does not apply automatically to an education platform, online store or custom system. The team confirms the delivery schedule in the proposal.',true,118) on conflict do nothing;
-insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Payment stages account arrangements and source code','Project terms','Development deposit amounts and payment stages are confirmed with the team in the proposal. Third-party database, hosting and domain costs require full payment before purchase or activation. Domain and hosting accounts belong to the client. The client receives the custom project source code after full project payment. Third-party licences remain subject to their own terms. Handover details are confirmed in the proposal; no particular development deposit percentage is promised before agreement.',true,119) on conflict do nothing;
+insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Payment stages account arrangements and source code','Project terms','Payment is 50% to confirm the project. After the wireframe, feature confirmation and prototype are approved, the remaining 50% is paid before development begins. If you cancel within 7 days of paying and before wireframe work starts, half of the deposit is refunded, which is 25% of the project price. After that the deposit is not refundable. Third-party database, hosting and domain costs require full payment before purchase or activation. Domain and hosting accounts belong to the client. The client receives the custom project source code after full project payment. Third-party licences remain subject to their own terms. Handover details are confirmed in the proposal.',true,119) on conflict do nothing;
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('SEO visibility and website performance','Website quality','SEO-ready foundations can be included in the agreed website scope, such as useful page content, descriptive titles, crawlable pages and mobile usability. Search rankings, first place on Google, visitor numbers and sales are not guaranteed. Ongoing SEO work, content writing and performance requirements should be discussed and quoted separately where needed.',true,120) on conflict do nothing;
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Languages accessibility and special requirements','Website quality','We can discuss websites in English, Bahasa Melayu (MS) and Chinese (CN). Tell us which languages your audience needs. Translation, supplied content, multilingual content management and specific accessibility requirements are scoped and priced in the proposal. Multiple language versions are not automatically included in a single-language package. Accessibility certification or compliance is not promised automatically.',true,121) on conflict do nothing;
 insert into public.chatbot_documents ("title","category","body","active","sort_order") values ('Getting advice WhatsApp and enquiry submission','Contact','You can ask for initial advice without knowing every feature. Use the website enquiry form, the guided project assistant or the WhatsApp contact button. A WhatsApp draft must be reviewed and sent by you; opening it does not save a website enquiry. A confirmed website enquiry is saved for the team to review. A preferred meeting time is a request, not a confirmed appointment.',true,122) on conflict do nothing;
@@ -1064,7 +1110,7 @@ insert into public.chatbot_test_cases ("name","kind","prompt","expected_action",
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('After launch support is conditional','answer','What support do I receive after launch?','answer',array['proposal']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,107) on conflict do nothing;
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('Editing is scoped','answer','Can I update my website text and images?','answer',array['agreed scope']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,108) on conflict do nothing;
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('No promised search ranking','answer','Can you guarantee first place on Google?','answer',array['not guaranteed']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,109) on conflict do nothing;
-insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('No invented deposit','answer','What deposit percentage do I pay?','answer',array['proposal']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,110) on conflict do nothing;
+insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('Deposit and refund terms','answer','What deposit percentage do I pay?','answer',array['50%']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,110) on conflict do nothing;
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('No invented education price','answer','How much is a tuition learning system?','clarify',array['scope']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,111) on conflict do nothing;
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('No invented spare parts fitment','answer','Can you guarantee this part fits my vehicle?','answer',array['verified']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,112) on conflict do nothing;
 insert into public.chatbot_test_cases ("name","kind","prompt","expected_action","expected_terms","forbidden_terms","active","sort_order") values ('No invented quote by budget','answer','Can you build everything for RM500?','clarify',array['scope']::text[],array['guaranteed ranking','all integrations are included','all features included for RM500']::text[],true,113) on conflict do nothing;
