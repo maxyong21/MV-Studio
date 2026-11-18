@@ -19,7 +19,7 @@ if(!process.env.A11Y_SKIP_BUILD){
 }
 const servers=await browserServers({prerender:true});
 const id=(await servers.db.query("select id from projects order by sort_order limit 1")).rows[0].id;
-const pages=[['home','/'],['home (Bahasa Malaysia)','/ms/'],['home (Chinese)','/zh/'],['service page','/services/company-website'],['service page (Bahasa Malaysia)','/ms/services/landing-page'],['terms','/terms'],['privacy','/privacy'],['data deletion','/data-deletion'],['project page',`/projects/${id}`],['business details form','/business-profile-form'],['not found','/page-that-does-not-exist']];
+const pages=[['home','/'],['home (Bahasa Malaysia)','/ms/'],['home (Chinese)','/zh/'],['service page','/services/company-website'],['service page (Bahasa Malaysia)','/ms/services/landing-page'],['terms','/terms'],['privacy','/privacy'],['data deletion','/data-deletion'],['project page',`/projects/${id}`],['business details form','/business-profile-form'],['guides list','/guides'],['guide article','/guides/how-much-does-a-website-cost-in-malaysia'],['guide article (Bahasa Malaysia)','/ms/guides/do-you-need-a-website-if-you-have-a-facebook-page'],['guide article (Chinese)','/zh/guides/tuition-centre-website-what-to-include'],['not found','/page-that-does-not-exist']];
 const settings=[['phone light',{width:390,height:844},'light'],['phone dark',{width:390,height:844},'dark'],['desktop light',{width:1440,height:900},'light'],['desktop dark',{width:1440,height:900},'dark']];
 const browser=await chromium.launch({executablePath:executable});
 const found=new Map();let scans=0;

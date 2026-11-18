@@ -36,3 +36,7 @@
   .site-footer-bottom { flex-wrap: wrap; justify-content: flex-start; font-size: 11px; }
   .site-footer-bottom span:last-child { flex-basis: 100%; }
 }
+
+/* A fifth column for the guides. */
+.site-footer-main.has-guides{grid-template-columns:1.25fr .75fr .95fr 1.2fr 1.1fr}
+@media(max-width:900px){.site-footer-main.has-guides{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -3,8 +3,11 @@
 import {pageForService} from '../services/content.mjs';
 import {projectBadge} from './project-type.mjs';
 import {canonicalFor,htmlLang} from './locale.mjs';
+import {plainText} from '../guides/inline.mjs';
+import {fillTokens} from '../guides/tokens.mjs';
 
 const text=value=>typeof value==='string'?value.trim():'';
+const text_=text;
 const webUrl=value=>{try{const url=new URL(text(value));return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}};
 const absolute=(value,base)=>{try{return text(value)?new URL(text(value),`${base}/`).href:undefined;}catch{return undefined;}};
 // Removes empty values so no blank property is published.
@@ -67,6 +70,28 @@ export function serviceGraph({base,page,service,content={},services=[],team=[],l
     {'@type':'Service','@id':`${url}#service`,name:page.name,serviceType:page.name,description:page.description,url,areaServed:malaysia,provider:{'@id':`${base}/#studio`},offers:service?offer(service,url):undefined},
     studioNode({base,content,services,team,description:text(content.seo_description)||text(content.hero_description)}),
     {'@type':'BreadcrumbList','@id':`${url}#breadcrumb`,itemListElement:[['Home',home],['Services',`${home}#services`],[page.name,url]].map(([name,item],index)=>({'@type':'ListItem',position:index+1,name,item}))},
+    ...(faq?[faq]:[]),
+  ]});
+}
+
+const crumbNames={home:{en:'Home',ms:'Laman utama',zh:'首页'},guides:{en:'Guides',ms:'Panduan',zh:'指南'}};
+
+// An article (guide): who wrote it, when, what it is about, where it sits on the site, and its questions.
+// Dates are written in Malaysian time. Authors are the people listed on the Team page of the admin.
+export function articleGraph({base,guide,text,lang='en',team=[],content={},services=[],faqs=[]}){
+  const url=canonicalFor(`/guides/${guide.slug}`,lang,base),home=canonicalFor('/',lang,base),index=canonicalFor('/guides',lang,base);
+  const authors=active(team).filter(member=>text_(member.name)).map(member=>({
+    '@type':'Person',name:text_(member.name),jobTitle:text_(member.role)||undefined,
+    url:webUrl(member.website_url)||webUrl(member.linkedin_url)||undefined,
+    sameAs:[member.linkedin_url,member.github_url,member.website_url].map(webUrl).filter(Boolean),
+  }));
+  const faq=faqNode((faqs||[]).map(([question,answer])=>[question,plainText(fillTokens(answer,{services,lang}))]),`${url}#faq`);
+  return compact({'@context':'https://schema.org','@graph':[
+    {'@type':'BlogPosting','@id':`${url}#article`,headline:text.title,description:text.description,url,mainEntityOfPage:{'@type':'WebPage','@id':url},
+      image:[`${base}/aphome.png`],datePublished:`${guide.published}T09:00:00+08:00`,dateModified:`${guide.modified}T09:00:00+08:00`,
+      inLanguage:htmlLang[lang]||'en-MY',articleSection:guide.topic,author:authors,publisher:{'@id':`${base}/#studio`},isPartOf:{'@id':`${base}/#website`}},
+    {'@type':'BreadcrumbList','@id':`${url}#breadcrumb`,itemListElement:[[crumbNames.home[lang]||crumbNames.home.en,home],[crumbNames.guides[lang]||crumbNames.guides.en,index],[text.title,url]].map(([name,item],position)=>({'@type':'ListItem',position:position+1,name,item}))},
+    studioNode({base,content,services,team,description:text_(content.seo_description)||text_(content.hero_description)}),
     ...(faq?[faq]:[]),
   ]});
 }

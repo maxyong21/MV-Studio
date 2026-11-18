@@ -138,7 +138,7 @@ export async function browserServers({prerender=false}={}){
     if(!prerender){await staticFile(req,res,'dist');return;}
     const path=new URL(req.url,'http://127.0.0.1:4187').pathname;
     const pageRoute=parseLocale(path).route.replace(/(.)\/$/,'$1');
-    if(pageRoute==='/'||legalPaths.includes(path)||servicePaths.includes(pageRoute)||/^\/projects\/(?:seed-p\d+|[0-9a-f-]{36})$/i.test(path)){
+    if(pageRoute==='/'||legalPaths.includes(path)||servicePaths.includes(pageRoute)||/^\/guides(?:\/[a-z0-9-]+)?$/.test(pageRoute)||/^\/projects\/(?:seed-p\d+|[0-9a-f-]{36})$/i.test(path)){
       try{
         const data={};
         for(const table of ['site_content','services','projects','team_members','promotions','feature_options','testimonials','faqs']){

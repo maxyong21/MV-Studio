@@ -47,3 +47,7 @@ The Bahasa Malaysia and Chinese text was written by the developer, not a transla
 1. Wrap the English text in the component: `{t('New text')}`.
 2. Add the same key to `src/i18n/ms.js` and `src/i18n/zh.js`.
 3. Run `npm test`. `tests/i18n.test.mjs` fails if a key is missing from either language.
+
+## Guides
+
+The guides at `/guides` follow the same rule as the service pages. The four most-searched articles (website cost, Facebook page or website, landing page or full website, and tuition centre websites) exist in Bahasa Malaysia at `/ms/guides/<slug>` and in Chinese at `/zh/guides/<slug>`, each with its own title, description and `hreflang` links. The other four are English only. On an English-only article, choosing another language translates the menus and buttons but keeps the English address and text. The translated articles were written by the developer and need a native speaker's review. See [GUIDES.md](GUIDES.md).

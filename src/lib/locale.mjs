@@ -1,8 +1,10 @@
 // Language-specific addresses. Bahasa Malaysia lives under /ms and Chinese under /zh, so each
 // language can be found and indexed on its own. English keeps the plain address.
-// Only the home page and the service pages are translated this way. Project pages, the legal
+// Only the home page, the service pages and the guides are translated this way. Project pages, the legal
 // pages and the admin keep one address; they follow the visitor's chosen language in the browser.
 // See docs/LANGUAGES.md and docs/SEO.md.
+import {guideBySlug,languagesOf} from '../guides/registry.mjs';
+
 export const LOCALES=['en','ms','zh'];
 export const prefixes={ms:'/ms',zh:'/zh'};
 // What search engines call each language. x-default is the English page.
@@ -19,9 +21,19 @@ export function parseLocale(pathname='/'){
   return {lang:match[1],route:match[2]||'/'};
 }
 
-export const isLocalizable=route=>{
+const guideSlug=clean=>clean.match(/^\/guides\/([a-z0-9-]+)$/)?.[1]||null;
+// The languages a page exists in. A guide exists in the languages it has been written in.
+export function languagesFor(route){
   const clean=trimSlash(String(route||'/').split(/[?#]/)[0]||'/');
-  return clean==='/'||/^\/services\/[a-z0-9-]+$/.test(clean);
+  const slug=guideSlug(clean);
+  if(slug)return languagesOf(guideBySlug(slug));
+  return clean==='/'||clean==='/guides'||/^\/services\/[a-z0-9-]+$/.test(clean)?LOCALES:['en'];
+}
+// A page has its own language addresses only when it exists in Bahasa Malaysia and Chinese too.
+// A guide that is English only keeps one address and follows the visitor's language for the menus.
+export const isLocalizable=route=>{
+  const languages=languagesFor(route);
+  return languages.includes('ms')&&languages.includes('zh');
 };
 
 // Turns an English address (optionally with ?query and #section) into the one for a language.
@@ -40,7 +52,7 @@ export function alternatesFor(route,base){
   const clean=trimSlash(route||'/');
   if(!isLocalizable(clean))return [];
   const urlFor=lang=>`${base}${localizePath(clean,lang)}`;
-  return [...LOCALES.map(lang=>[hreflangCodes[lang],urlFor(lang)]),['x-default',urlFor('en')]];
+  return [...languagesFor(clean).map(lang=>[hreflangCodes[lang],urlFor(lang)]),['x-default',urlFor('en')]];
 }
 
 // The address of a page in one language, without trailing-slash drift.

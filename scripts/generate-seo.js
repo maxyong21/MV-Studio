@@ -9,8 +9,10 @@ import {renderPage} from '../.generated/ssr/entry-server.js';
 import {servicePages,serviceForPage} from '../src/services/content.mjs';
 import {localizedPage} from '../src/services/localized.mjs';
 import {homeMeta} from '../src/lib/seo-locales.mjs';
+import articles from '../src/guides/articles.mjs';
+import {guides,guideBySlug,guideText,guidesIndexMeta,hasLanguage} from '../src/guides/registry.mjs';
 import {alternatesFor,canonicalFor,htmlLang,ogLocale,parseLocale,prefixes,LOCALES} from '../src/lib/locale.mjs';
-import {homeGraph,serviceGraph} from '../src/lib/structured-data.mjs';
+import {homeGraph,serviceGraph,articleGraph} from '../src/lib/structured-data.mjs';
 
 const env=loadEnv('production',process.cwd(),'VITE_');
 const base=siteUrl(process.env.VITE_SITE_URL||env.VITE_SITE_URL);
@@ -34,10 +36,13 @@ const content=data.site_content?.content||fallbackContent.site_content.content;
 async function page(route,project,service){
   const {lang,route:baseRoute}=parseLocale(route),legal=legalDocuments[route];
   const text=service?localizedPage(service,lang):null,home=homeMeta(lang,content);
+  // A guide, or the list of guides, at /guides, /ms/guides or /zh/guides.
+  const guideMatch=baseRoute.match(/^\/guides(?:\/([a-z0-9-]+))?$/),guide=guideMatch?.[1]?guideBySlug(guideMatch[1]):null,guidesIndex=guideMatch&&!guideMatch[1]?(guidesIndexMeta[lang]||guidesIndexMeta.en):null;
+  const guideCopy=guide?guideText(guide,lang):null;
   const renderData=legal?{...emptyPublicContent(),site_content:data.site_content}:data;
   const url=base?canonicalFor(baseRoute,lang,base):'';
-  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':service?text.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):home.title;
-  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':service?text.description:project?(project.seo_description||project.summary):home.description;
+  const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':guide?`${guideCopy.seoTitle} | MV Studio`:guidesIndex?`${guidesIndex.seoTitle} | MV Studio`:service?text.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):home.title;
+  const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':guide?guideCopy.description:guidesIndex?guidesIndex.description:service?text.description:project?(project.seo_description||project.summary):home.description;
   const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
   let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`).replace(/<html lang="[^"]*"/i,`<html lang="${htmlLang[lang]}"`);
   // The page's own language first, the others as alternates.
@@ -48,9 +53,10 @@ async function page(route,project,service){
   if(legal)html=meta(html,'robots','index,follow','name');
   else if(!published)html=meta(html,'robots','noindex,follow','name');
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
+  if(guide)for(const [name,value] of [['og:type','article'],['article:published_time',guide.published],['article:modified_time',guide.modified],['article:section',guide.topic]])html=meta(html,name,value);
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
-    const graph=legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:text,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members,lang}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description,lang});
+    const graph=guide?articleGraph({base,guide,text:guideCopy,lang,team:data.team_members,content,services:data.services,faqs:articles[guide.slug]?.[hasLanguage(guide.slug,lang)?lang:'en']?.faqs||[]}):guidesIndex?{'@context':'https://schema.org','@type':'CollectionPage',name:guidesIndex.title,description:guidesIndex.description,url,inLanguage:htmlLang[lang],isPartOf:{'@id':`${base}/#website`}}:legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:text,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members,lang}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description,lang});
     // The same page in every language, so search engines show each visitor the right one.
     const alternates=published&&!legal&&!project?alternatesFor(baseRoute,base).map(([code,href])=>`<link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}" />`).join('\n'):'';
     html=html.replace('</head>',`<link rel="canonical" href="${escapeHtml(url)}" />\n${alternates?`${alternates}\n`:''}${published||legal?`<script id="mv-studio-jsonld" type="application/ld+json">${safeJson(graph)}</script>\n`:''}</head>`);
@@ -66,6 +72,12 @@ for(const path of legalPaths)await page(path);
 for(const service of servicePages)await page(`/services/${service.slug}`,null,service);
 // The same home and service pages in Bahasa Malaysia and Chinese, each at its own address.
 // Only when the site is published; an unpublished site has nothing to translate.
+// The guides: the list and every article, in each language the article has been written in.
+if(published)for(const code of LOCALES){
+  const prefix=code==='en'?'':prefixes[code];
+  await page(`${prefix}/guides`);
+  for(const guide of guides)if(hasLanguage(guide.slug,code))await page(`${prefix}/guides/${guide.slug}`);
+}
 if(published)for(const code of LOCALES.filter(code=>code!=='en')){
   await page(prefixes[code]);
   for(const service of servicePages)await page(`${prefixes[code]}/services/${service.slug}`,null,service);

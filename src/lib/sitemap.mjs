@@ -1,7 +1,8 @@
 import {escapeHtml} from '../../scripts/seo.mjs';
 import {legalPaths} from '../legal/content.mjs';
 import {servicePaths} from '../services/content.mjs';
-import {alternatesFor,canonicalFor,LOCALES} from './locale.mjs';
+import {alternatesFor,canonicalFor,languagesFor} from './locale.mjs';
+import {guides} from '../guides/registry.mjs';
 
 export const projectIdPattern=/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|seed-p\d+)$/i;
 
@@ -26,7 +27,8 @@ export function internalDemoPath(value,base) {
 }
 
 export function sitemapXml(base,projects=[],extraPaths='') {
-  const urls=new Set([`${base}/`,...servicePaths.map(path=>`${base}${path}`),...legalPaths.map(path=>`${base}${path}`)]);
+  const urls=new Set([`${base}/`,`${base}/guides`,...servicePaths.map(path=>`${base}${path}`),...guides.map(guide=>`${base}/guides/${guide.slug}`),...legalPaths.map(path=>`${base}${path}`)]);
+  const modified=new Map(guides.map(guide=>[`/guides/${guide.slug}`,guide.modified]));
   for(const project of projects){
     if(project?.active===false||!projectIdPattern.test(String(project?.id||'')))continue;
     urls.add(`${base}/projects/${project.id}`);
@@ -38,10 +40,10 @@ export function sitemapXml(base,projects=[],extraPaths='') {
   // that lists all of them as alternates, which is how search engines pair the translations.
   const entries=new Map();
   for(const url of urls){
-    const route=url.slice(base.length)||'/',alternates=alternatesFor(route,base);
-    if(!alternates.length){entries.set(url,[]);continue;}
-    for(const lang of LOCALES)entries.set(canonicalFor(route,lang,base),alternates);
+    const route=url.slice(base.length)||'/',alternates=alternatesFor(route,base),lastmod=modified.get(route);
+    if(!alternates.length){entries.set(url,{alternates:[],lastmod});continue;}
+    for(const lang of languagesFor(route))entries.set(canonicalFor(route,lang,base),{alternates,lastmod});
   }
-  const line=([loc,alternates])=>`  <url><loc>${escapeHtml(loc)}</loc>${alternates.map(([code,href])=>`<xhtml:link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}"/>`).join('')}</url>`;
+  const line=([loc,{alternates,lastmod}])=>`  <url><loc>${escapeHtml(loc)}</loc>${lastmod?`<lastmod>${lastmod}</lastmod>`:''}${alternates.map(([code,href])=>`<xhtml:link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}"/>`).join('')}</url>`;
   return ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',...[...entries].map(line),'</urlset>',''].join('\n');
 }

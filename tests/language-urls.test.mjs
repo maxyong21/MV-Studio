@@ -7,6 +7,7 @@ import {servicePages,servicePaths} from '../src/services/content.mjs';
 import {serviceLocalized,localizedPage} from '../src/services/localized.mjs';
 import {homeSeo,homeMeta} from '../src/lib/seo-locales.mjs';
 import {sitemapXml} from '../src/lib/sitemap.mjs';
+import {guides} from '../src/guides/registry.mjs';
 import {serviceGraph,homeGraph} from '../src/lib/structured-data.mjs';
 
 const base='https://example.test';
@@ -71,7 +72,7 @@ test('sitemap: translated pages are listed with alternates; legal and project pa
   const ms=xml.match(/<url><loc>https:\/\/example.test\/ms\/<\/loc>(.*?)<\/url>/)[1];
   assert.equal((ms.match(/hreflang=/g)||[]).length,4,'three languages plus x-default');
   assert.match(ms,/hreflang="x-default" href="https:\/\/example.test\/"/);
-  assert.equal((xml.match(/<loc>/g)||[]).length,3+servicePaths.length*3+3+1,'home x3, services x3, three legal pages, one project');
+  assert.equal((xml.match(/<loc>/g)||[]).length,3+servicePaths.length*3+3+1+3+guides.length+guides.filter(guide=>guide.ms&&guide.zh).length*2,'home x3, services x3, three legal pages, one project, the guides list x3 and every guide in the languages it exists in');
   for(const path of ['/privacy','/terms','/data-deletion'])assert.doesNotMatch(xml,new RegExp(`<loc>${base}/(?:ms|zh)${path}`));
   assert.match(xml.match(/<url><loc>https:\/\/example.test\/privacy<\/loc>(.*?)<\/url>/)[1],/^$/,'no alternates on a page without translations');
   assert.equal(LOCALES.length,3);
