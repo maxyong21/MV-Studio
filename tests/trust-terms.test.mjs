@@ -102,6 +102,15 @@ test('security headers are sent: defined in routes that continue, before any des
   assert.ok(config.routes.indexOf(sitemap)>config.routes.indexOf(all),'the sitemap rule comes after the site-wide one, so it wins');
   assert.match(sitemap.headers['Content-Security-Policy'],/^default-src 'none'; style-src 'unsafe-inline'/);
   assert.doesNotMatch(sitemap.headers['Content-Security-Policy'],/script-src|unsafe-eval/);
+  // The admin page alone allows inline styles. The email preview is an iframe that inherits this policy,
+  // and email HTML is built from inline styles, so under the strict policy it showed as unstyled text.
+  const admin=config.routes.find(route=>route.src==='/admin/?');
+  assert.ok(config.routes.indexOf(admin)>config.routes.indexOf(all),'the admin rule comes after the site-wide one, so it wins');
+  const adminCsp=admin.headers['Content-Security-Policy'];
+  assert.match(adminCsp,/style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com/);
+  assert.equal(adminCsp.replace("'unsafe-inline' ",''),all.headers['Content-Security-Policy'],'apart from inline styles the admin policy is identical to the site-wide one');
+  assert.doesNotMatch(all.headers['Content-Security-Policy'],/unsafe-inline/,'the public site stays strict');
+  assert.doesNotMatch(adminCsp,/script-src[^;]*unsafe/,'no inline or eval scripts, even in the admin');
 });
 
 test('hero artwork is labelled as an example, and the "who we are" note is present in all three languages',async()=>{
