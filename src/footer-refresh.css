@@ -56,3 +56,28 @@
   .site-footer-full .site-footer-bottom>span{order:4;flex-basis:100%}
   .site-footer-full .site-footer-bottom>span:last-child{order:5}
 }
+
+/* Link rhythm: the lines of one wrapped link sit close together, and the space between two links is
+   clearly larger, so each link reads as one item. Icons line up with the first line of text. */
+.site-footer-full .site-footer-column{row-gap:0}
+.site-footer-full .site-footer-column h2{white-space:nowrap}
+.site-footer-full .site-footer-column a{align-items:flex-start;min-height:0;padding-block:8px;line-height:1.35;overflow-wrap:break-word}
+.site-footer-full .site-footer-column a svg{margin-top:3px}
+.site-footer-full .footer-nowrap{white-space:nowrap}
+@media(max-width:699px){.site-footer-full .site-footer-column a{padding-block:12px}}
+@media(min-width:700px){
+  /* The full-width title is only for the phone layout, where these two lists run in a row. In a column it
+     stretched the title and pushed the links to the bottom. */
+  .site-footer-full .footer-projects h2,.site-footer-full .footer-contact-column h2{flex-basis:auto}
+  /* Tablets: the contact column gets the most room, the short Explore list the least. */
+  .site-footer-full .site-footer-main.has-guides{grid-template-columns:.8fr 1fr 1fr 1.25fr}
+  .site-footer-full .site-footer-brand{grid-column:1/-1}
+}
+@media(min-width:1040px){
+  /* More room for the contact column, so email addresses fit on one line where the screen allows. */
+  .site-footer-full .site-footer-main.has-guides{grid-template-columns:1.15fr .8fr 1fr 1fr 1.35fr}
+  .site-footer-full .site-footer-brand{grid-column:auto}
+}
+/* A project name that wraps keeps its arrow right after the last word. */
+.site-footer-full .footer-projects a{display:block}
+.site-footer-full .footer-projects a svg{display:inline;margin:0 0 0 8px;vertical-align:-1px}
