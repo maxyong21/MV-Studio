@@ -38,7 +38,7 @@ The Bahasa Malaysia and Chinese text was written by the developer, not a transla
 - English text is the key. `t('Start a project')` returns the chosen language, or the English text when a translation is missing, so nothing can appear blank.
 - Translation files load only when a visitor picks that language. English visitors download nothing extra.
 - The choice is remembered in the visitor's browser.
-- A translated address is prerendered in its language, so the HTML a search engine receives is already in Bahasa Malaysia or Chinese. Each page names its alternates with `hreflang` and the sitemap lists them (`src/lib/locale.mjs`, `scripts/generate-seo.js`, `src/lib/sitemap.mjs`).
+- A translated address is prerendered in its language, so the HTML a search engine receives is already in Bahasa Malaysia or Chinese. Each page names its alternates with `hreflang` and the sitemap lists each one (`src/lib/locale.mjs`, `scripts/generate-seo.js`, `src/lib/sitemap.mjs`).
 - The language comes from the address on these pages. Elsewhere it is the visitor's saved choice.
 - Because package cards, FAQs and the headline are typed in English in the admin, the translated home page is partly English. The service pages are fully translated apart from the price, timeline and feature list.
 

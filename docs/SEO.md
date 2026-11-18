@@ -12,7 +12,7 @@ What the website does to be found on Google, and what still has to be done outsi
   - `/services/google-business-profile`
 - **Live prices.** The price, timeline and feature list on a service page come from the matching service in the admin. No price is typed in the code.
 - **Structured data.** The homepage tells search engines about the studio, its services and prices, the team, the projects and the published FAQs. Each service page describes the service, its price, a breadcrumb and its questions.
-- **Sitemap.** `/sitemap.xml` lists the homepage, service pages, legal pages and published projects.
+- **Sitemap.** `/sitemap.xml` lists the homepage, service pages, guides, legal pages and published projects, one entry per language version, with the last-changed date on guides. It carries no `hreflang` markup: each page declares its language versions in its own `<head>`, which keeps the file a plain list that a browser can display (a sitemap with language links shows as one run-on block in Chrome).
 - **Internal links.** Each service card on the homepage links to its page, and each service page links to the other three.
 
 ## How a service card finds its page
@@ -73,7 +73,7 @@ The home page and the five service pages are also published at `/ms/` and `/zh/`
 - `<html lang>` and `og:locale` set to its language;
 - structured data with its own address and `inLanguage`.
 
-The sitemap lists all of them with `xhtml:link` alternates. Project pages and the legal pages are not duplicated. After deploying, submit the sitemap again in Google Search Console and check the International Targeting or page indexing report for `hreflang` errors in a few weeks. Titles and descriptions are in `src/lib/seo-locales.mjs` and `src/services/localized.mjs`; have a native speaker review them.
+Each language version is its own entry in the sitemap. Project pages and the legal pages are not duplicated. After deploying, submit the sitemap again in Google Search Console and check the International Targeting or page indexing report for `hreflang` errors in a few weeks. Titles and descriptions are in `src/lib/seo-locales.mjs` and `src/services/localized.mjs`; have a native speaker review them.
 
 ## Guides
 

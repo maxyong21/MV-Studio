@@ -36,7 +36,7 @@ An article exists at `/guides/<slug>`, and at `/ms/guides/<slug>` and `/zh/guide
 4. **Tests.** Run `npm test`. They check the dates, title and description lengths, links, prices, translations and the writing rules below.
 5. **Deploy.** The build creates the page, adds it to the sitemap and puts it in the footer or home page only if you add it to `featuredSlugs` or it is among the three newest.
 
-To translate an article, add `ms` and `zh` to its registry entry and to its article file. Bahasa Malaysia and Chinese always come as a pair, because the page, the sitemap and the language links all depend on it.
+To translate an article, add `ms` and `zh` to its registry entry and to its article file. Bahasa Malaysia and Chinese always come as a pair, because the page and the language links in its `<head>` depend on it.
 
 ## Writing rules (the tests enforce most of these)
 
