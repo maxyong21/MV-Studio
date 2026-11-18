@@ -74,3 +74,9 @@ The home page and the five service pages are also published at `/ms/` and `/zh/`
 - structured data with its own address and `inLanguage`.
 
 The sitemap lists all of them with `xhtml:link` alternates. Project pages and the legal pages are not duplicated. After deploying, submit the sitemap again in Google Search Console and check the International Targeting or page indexing report for `hreflang` errors in a few weeks. Titles and descriptions are in `src/lib/seo-locales.mjs` and `src/services/localized.mjs`; have a native speaker review them.
+
+## Guides
+
+Eight articles at `/guides` target the questions small businesses ask before they hire a developer. Each has its own title and description, a canonical address, `BlogPosting` markup with the two authors and the published and modified dates, a breadcrumb and its questions as `FAQPage`. They are in the sitemap with a `lastmod` date, and the four most-searched ones also exist in Bahasa Malaysia and Chinese with `hreflang` links.
+
+The articles are linked from the header, the footer (a Guides column on every page), a "Latest guides" block on the home page and a "Helpful guides" block under each service page. Each article links to its related articles and services. See [GUIDES.md](GUIDES.md) for how to add one.

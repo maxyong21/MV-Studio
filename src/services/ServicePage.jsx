@@ -9,6 +9,7 @@ import ThemeToggle from '../components/ThemeToggle.jsx';
 import {servicePages,serviceForPage} from './content.mjs';
 import {localizedPage} from './localized.mjs';
 import {canonicalFor} from '../lib/locale.mjs';
+import {RelatedGuides} from '../guides/GuideParts.jsx';
 import '../components/faq.css';
 import './service.css';
 
@@ -52,6 +53,7 @@ export default function ServicePage({page:englishPage,data,footer}){
       <section className="service-block service-note" aria-labelledby="service-costs"><h2 id="service-costs">{t('Clear about costs')}</h2><p>{t('Starting prices cover the listed scope. Hosting, domain and third-party tools are separate. Payment is 50% to confirm and 50% before development begins; refund terms are shown under How we work and pay.')}</p><p>{t('Cancel within 7 days of paying, before wireframe work starts, and we refund 50% of the deposit. After that the deposit is not refundable.')}</p><p><Link to={lp('/#terms')}>{t('See how we work and pay')}</Link> · <Link to="/terms#costs">{t('terms and conditions')}</Link></p></section>
       {team.length>0&&<section className="service-block" aria-labelledby="service-team"><h2 id="service-team">{t('Who builds it')}</h2><p className="service-lead">{t('Work directly with the developers on your project.')}</p><ul className="service-team">{team.map(member=><li key={member.id}><div><b>{member.name}</b><span>{member.role}</span></div>{member.linkedin_url&&<a href={member.linkedin_url} target="_blank" rel="noreferrer" aria-label={`${member.name} LinkedIn`}><Linkedin size={15}/></a>}</li>)}</ul></section>}
       <section className="service-block" aria-labelledby="service-faq"><h2 id="service-faq">{t('Common questions')}</h2><div className="faq-list">{page.faqs.map(([question,answer])=><details className="faq-item" key={question}><summary><span>{question}</span><Plus size={20} aria-hidden="true"/></summary><div className="faq-answer"><p>{answer}</p></div></details>)}</div></section>
+      <RelatedGuides serviceSlug={page.slug} lang={lang}/>
       <section className="service-block service-languages" aria-label="Bahasa Malaysia · 中文"><p lang="ms">{page.ms}</p><p lang="zh-Hans">{page.zh}</p></section>
       <nav className="service-block service-others" aria-labelledby="service-others"><h2 id="service-others">{t('Other services')}</h2><ul>{servicePages.filter(other=>other!==page).map(other=><li key={other.slug}><Link to={lp(`/services/${other.slug}`)}>{localizedPage(other,lang).name} <ArrowRight size={14} aria-hidden="true"/></Link></li>)}</ul></nav>
       <div className="service-cta"><div><h2>{t('Ready when you are.')}</h2><p>{t('Tell us a little about what you have in mind. We’ll take it from there, together.')}</p></div><Link className="button button-dark" to={lp('/#enquiry')}>{t('Start a project')} <ArrowUpRight size={15}/></Link></div>
