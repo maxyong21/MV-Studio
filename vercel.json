@@ -8,7 +8,7 @@
     {"src":"/business-profile-form(.*)","headers":{"X-Robots-Tag":"noindex"},"continue":true},
     {"src":"/sitemap.xml","headers":{"Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"},"dest":"/api/sitemap"},
     {"src":"/projects/([^/]+)/?","dest":"/api/project-page?id=$1"},
-    {"src":"/admin/?","dest":"/admin/index.html"},
+    {"src":"/admin/?","headers":{"Content-Security-Policy":"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; script-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com;"},"dest":"/admin/index.html"},
     {"src":"/widgets/?","dest":"/widgets/index.html"},
     {"src":"/business-profile-form/?","dest":"/business-profile-form/index.html"},
     {"src":"/services/(landing-page|company-website|ecommerce-website|custom-web-app|google-business-profile)/?","dest":"/services/$1/index.html"},
