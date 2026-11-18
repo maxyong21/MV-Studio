@@ -97,6 +97,11 @@ test('security headers are sent: defined in routes that continue, before any des
   assert.match(all.headers['Content-Security-Policy'],/frame-ancestors 'none'/);
   assert.match(all.headers['Content-Security-Policy'],/object-src 'none'/);
   assert.equal(all.headers['X-Frame-Options'],'DENY');
+  // The sitemap alone allows inline styles, so the browser's XML viewer can display it. It still allows no scripts.
+  const sitemap=config.routes.find(route=>route.src==='/sitemap.xml');
+  assert.ok(config.routes.indexOf(sitemap)>config.routes.indexOf(all),'the sitemap rule comes after the site-wide one, so it wins');
+  assert.match(sitemap.headers['Content-Security-Policy'],/^default-src 'none'; style-src 'unsafe-inline'/);
+  assert.doesNotMatch(sitemap.headers['Content-Security-Policy'],/script-src|unsafe-eval/);
 });
 
 test('hero artwork is labelled as an example, and the "who we are" note is present in all three languages',async()=>{

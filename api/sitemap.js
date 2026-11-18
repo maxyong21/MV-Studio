@@ -31,6 +31,9 @@ export default async function sitemap(request,response){
     }
     const extra=settings?.content?.sitemap_paths_text??fallbackContent.site_content.content.sitemap_paths_text;
     const xml=sitemapXml(base,projects,extra);
+    // The site's strict policy blocks the inline styles of the browser's built-in XML viewer, which then shows
+    // the sitemap as one run-on block. XML runs no scripts, so this file only needs styles allowed.
+    response.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'");
     response.setHeader('Content-Type','application/xml; charset=utf-8');
     response.setHeader('Cache-Control','public, max-age=0, s-maxage=300, stale-while-revalidate=600');
     return response.status(200).send(request.method==='HEAD'?'':xml);
