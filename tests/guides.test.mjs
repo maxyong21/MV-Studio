@@ -121,11 +121,11 @@ test('translated guides exist as a pair and get their own address and hreflang',
   assert.equal(guideText(guideBySlug(englishOnly),'ms'),guideBySlug(englishOnly).en,'falls back to English');
 });
 
-test('sitemap lists the guides with each language and the date they last changed',()=>{
+test('sitemap lists the guides in each language they exist in, with the date they last changed',()=>{
   const xml=sitemapXml('https://example.test',[]);
   assert.match(xml,/<loc>https:\/\/example\.test\/guides<\/loc>/);
   for(const guide of guides){
-    assert.match(xml,new RegExp(`<loc>https://example\\.test/guides/${guide.slug}</loc><lastmod>${guide.modified}</lastmod>`),guide.slug);
+    assert.match(xml,new RegExp(`<loc>https://example\\.test/guides/${guide.slug}</loc>\\s*<lastmod>${guide.modified}</lastmod>`),guide.slug);
     for(const lang of ['ms','zh'])assert.equal(xml.includes(`<loc>https://example.test/${lang}/guides/${guide.slug}</loc>`),Boolean(guide.ms&&guide.zh),`${guide.slug}/${lang}`);
   }
 });

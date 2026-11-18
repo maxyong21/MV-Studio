@@ -36,14 +36,16 @@ export function sitemapXml(base,projects=[],extraPaths='') {
     if(demo)urls.add(`${base}${demo}`);
   }
   for(const path of sitemapPaths(extraPaths).paths)urls.add(`${base}${path}`);
-  // The home page and the service pages exist in three languages. Each language gets its own entry
-  // that lists all of them as alternates, which is how search engines pair the translations.
+  // The home page, the service pages and some guides exist in several languages. Each language version is
+  // listed as its own address. Which versions belong together is declared in each page's own <head> with
+  // hreflang links, which search engines accept on their own. Keeping the sitemap free of extra markup also
+  // lets a browser show it as a readable list, where a sitemap with language links shows as one run-on block.
   const entries=new Map();
   for(const url of urls){
-    const route=url.slice(base.length)||'/',alternates=alternatesFor(route,base),lastmod=modified.get(route);
-    if(!alternates.length){entries.set(url,{alternates:[],lastmod});continue;}
-    for(const lang of languagesFor(route))entries.set(canonicalFor(route,lang,base),{alternates,lastmod});
+    const route=url.slice(base.length)||'/',lastmod=modified.get(route);
+    const languages=alternatesFor(route,base).length?languagesFor(route):[null];
+    for(const lang of languages)entries.set(lang?canonicalFor(route,lang,base):url,lastmod);
   }
-  const line=([loc,{alternates,lastmod}])=>`  <url><loc>${escapeHtml(loc)}</loc>${lastmod?`<lastmod>${lastmod}</lastmod>`:''}${alternates.map(([code,href])=>`<xhtml:link rel="alternate" hreflang="${code}" href="${escapeHtml(href)}"/>`).join('')}</url>`;
-  return ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',...[...entries].map(line),'</urlset>',''].join('\n');
+  const line=([loc,lastmod])=>`  <url>\n    <loc>${escapeHtml(loc)}</loc>${lastmod?`\n    <lastmod>${lastmod}</lastmod>`:''}\n  </url>`;
+  return ['<?xml version="1.0" encoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',...[...entries].map(line),'</urlset>',''].join('\n');
 }

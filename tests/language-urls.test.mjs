@@ -65,16 +65,16 @@ test('home page titles and descriptions exist for every language',()=>{
   assert.ok(homeMeta('en',{}).title.includes('MV Studio'),'English falls back when the admin has not set one');
 });
 
-test('sitemap: translated pages are listed with alternates; legal and project pages are not duplicated',()=>{
+test('sitemap: every language version is its own entry, and the file stays a plain readable list',()=>{
   const xml=sitemapXml(base,[{id:'seed-p1'}]);
-  assert.match(xml,/xmlns:xhtml="http:\/\/www.w3.org\/1999\/xhtml"/);
+  assert.match(xml,/^<\?xml version="1\.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+  // Language links in a sitemap make Chrome show it as one run-on block, and every page already declares
+  // its language versions in its own <head>, so the sitemap carries none.
+  assert.doesNotMatch(xml,/xhtml|hreflang|xml-stylesheet/,'no language markup or stylesheet in the sitemap');
   for(const path of ['/','/ms/','/zh/',...servicePaths.flatMap(path=>[path,`/ms${path}`,`/zh${path}`])])assert.ok(xml.includes(`<loc>${base}${path}</loc>`),path);
-  const ms=xml.match(/<url><loc>https:\/\/example.test\/ms\/<\/loc>(.*?)<\/url>/)[1];
-  assert.equal((ms.match(/hreflang=/g)||[]).length,4,'three languages plus x-default');
-  assert.match(ms,/hreflang="x-default" href="https:\/\/example.test\/"/);
   assert.equal((xml.match(/<loc>/g)||[]).length,3+servicePaths.length*3+3+1+3+guides.length+guides.filter(guide=>guide.ms&&guide.zh).length*2,'home x3, services x3, three legal pages, one project, the guides list x3 and every guide in the languages it exists in');
   for(const path of ['/privacy','/terms','/data-deletion'])assert.doesNotMatch(xml,new RegExp(`<loc>${base}/(?:ms|zh)${path}`));
-  assert.match(xml.match(/<url><loc>https:\/\/example.test\/privacy<\/loc>(.*?)<\/url>/)[1],/^$/,'no alternates on a page without translations');
+  assert.equal(new Set(xml.match(/<loc>[^<]+<\/loc>/g)).size,(xml.match(/<loc>/g)||[]).length,'no address is listed twice');
   assert.equal(LOCALES.length,3);
 });
 
