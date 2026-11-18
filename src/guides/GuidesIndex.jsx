@@ -1,19 +1,24 @@
-import {useEffect} from 'react';
+import {useEffect,useState} from 'react';
 import {Link,useLocation} from 'react-router-dom';
-import {ArrowUpRight} from 'lucide-react';
+import {fallbackContent} from '../content.js';
+import {whatsappHref} from '../lib/site.js';
 import {alternatesFor,canonicalFor,htmlLang,ogLocale,parseLocale} from '../lib/locale.mjs';
-import {DocumentLanguage,LanguageSwitch,useLanguage} from '../i18n/index.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
+import {DocumentLanguage,useLanguage} from '../i18n/index.jsx';
+import SiteHeader from '../components/SiteHeader.jsx';
 import {guidesIndexMeta,sortedGuides} from './registry.mjs';
-import {GuideCard} from './GuideParts.jsx';
-import '../services/service.css';
+import {GuideCard,GuideCta,formatGuideDate} from './GuideParts.jsx';
 import './guides.css';
 
 const setMeta=(name,value,attribute='name')=>{let node=document.head.querySelector(`meta[${attribute}="${name}"]`);if(!node){node=document.createElement('meta');node.setAttribute(attribute,name);document.head.appendChild(node);}node.content=value;};
 
-// The list of all guides at /guides (and /ms/guides, /zh/guides). Newest first.
-export default function GuidesIndex({footer}){
+// The list of all guides at /guides (and /ms/guides, /zh/guides). Newest first, with a topic filter.
+export default function GuidesIndex({data={},footer}){
   const {t,lp}=useLanguage(),{pathname}=useLocation(),pageLang=parseLocale(pathname).lang,meta=guidesIndexMeta[pageLang]||guidesIndexMeta.en;
+  const [topic,setTopic]=useState('');
+  const all=sortedGuides(),topics=[...new Set(all.map(guide=>guide.topic))];
+  const shown=topic?all.filter(guide=>guide.topic===topic):all;
+  const latest=all.map(guide=>guide.modified).sort().at(-1);
+  const whatsapp=whatsappHref(data.site_content?.content?.whatsapp_number??fallbackContent.site_content.content.whatsapp_number);
   useEffect(()=>{
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,''),url=canonicalFor('/guides',pageLang,base);
     document.title=`${meta.seoTitle} | MV Studio`;
@@ -27,11 +32,24 @@ export default function GuidesIndex({footer}){
     structured.textContent=JSON.stringify({'@context':'https://schema.org','@type':'CollectionPage',name:meta.title,description:meta.description,url,inLanguage:htmlLang[pageLang],isPartOf:{'@id':`${base}/#website`}});
   },[pageLang,meta]);
   return <><DocumentLanguage/><a className="skip-link" href="#guides-content">{t('Skip to main content')}</a>
-    <header className="site-nav"><div className="nav-inner"><Link className="brand" to={lp('/')}><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></Link><Link className="admin-link" to={lp('/')}>{t('← Home')}</Link><div className="nav-end"><LanguageSwitch className="nav-language"/><ThemeToggle/><Link className="button button-dark nav-cta" to={lp('/#enquiry')}>{t('Start a project')} <ArrowUpRight size={15}/></Link></div></div></header>
-    <main className="project-detail guide-page guides-index" id="guides-content" tabIndex={-1}>
-      <nav className="project-breadcrumb" aria-label="Breadcrumb"><Link to={lp('/')}>{t('Home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{t('Guides')}</span></nav>
-      <header className="guide-head"><span className="section-overline">{t('GUIDES')}</span><h1>{meta.title}</h1><p className="guide-lead">{meta.intro}</p></header>
-      <div className="guide-grid guide-grid-index">{sortedGuides().map(guide=><GuideCard key={guide.slug} slug={guide.slug} lang={pageLang} heading="h2"/>)}</div>
+    <SiteHeader current="/guides"/>
+    <main className="guide-shell guides-index" id="guides-content" tabIndex={-1}>
+      <header className="guide-hero"><div className="guide-wrap">
+        <nav className="guide-crumbs" aria-label="Breadcrumb"><Link to={lp('/')}>{t('Home')}</Link><span aria-hidden="true">/</span><span aria-current="page">{t('Guides')}</span></nav>
+        <span className="guide-pill">{t('Guides')}</span>
+        <h1>{meta.title}</h1>
+        <p className="guide-hero-intro">{meta.intro}</p>
+        <p className="guide-hero-facts"><span>{t('{count} guides',{count:all.length})}</span><span>{t('Updated')} <time dateTime={latest}>{formatGuideDate(latest,pageLang)}</time></span><span>EN · BM · 中文</span></p>
+      </div></header>
+      <div className="guide-wrap">
+        <div className="guide-filter" role="group" aria-label={t('Filter by topic')}>
+          <button type="button" aria-pressed={!topic} onClick={()=>setTopic('')}>{t('All topics')}</button>
+          {topics.map(name=><button type="button" key={name} aria-pressed={topic===name} onClick={()=>setTopic(name)}>{t(name)}</button>)}
+        </div>
+        <p className="guide-count" role="status">{t('{count} guides',{count:shown.length})}</p>
+        <div className="guide-grid guide-grid-index">{shown.map((guide,index)=><GuideCard key={guide.slug} slug={guide.slug} lang={pageLang} heading="h2" featured={!topic&&index===0}/>)}</div>
+        <GuideCta whatsapp={whatsapp}/>
+      </div>
     </main>
     {footer}
   </>;

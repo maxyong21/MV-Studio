@@ -226,4 +226,10 @@ export default {
   'Startups':'Syarikat baharu',
   'Choosing':'Memilih',
   'Getting found':'Dijumpai dalam talian',
+  'Newest':'Terbaharu',
+  '{count} guides':'{count} panduan',
+  'Filter by topic':'Tapis mengikut topik',
+  'All topics':'Semua topik',
+  'Have a project in mind?':'Ada projek dalam fikiran?',
+  'The first call and the written quote are free.':'Panggilan pertama dan sebut harga bertulis adalah percuma.',
 };

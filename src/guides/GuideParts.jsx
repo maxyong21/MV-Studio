@@ -56,18 +56,26 @@ export function formatGuideDate(iso,lang){
 
 // A card for a guide, used on the index, the home page and under a service page.
 // heading: the level of the card's title, so it never skips a level (h2 under the page title, h3 under a section heading).
-export function GuideCard({slug,lang,compact=false,heading='h3'}){
+// The whole card is one link (the title's link is stretched over it), so there is a single, large target.
+// featured: the wide card at the top of the list.
+export function GuideCard({slug,lang,compact=false,featured=false,heading='h3'}){
   const Heading=heading;
-  const {t,lp}=useLanguage();
+  const {t}=useLanguage();
   const guide=guideBySlug(slug);
   if(!guide)return null;
   const shownLang=guideLangFor(slug,lang),text=guideText(guide,shownLang);
-  return <article className={`guide-card${compact?' guide-card-compact':''}`}>
-    <span className="guide-card-topic">{t(guide.topic)}</span>
+  return <article className={`guide-card${compact?' guide-card-compact':''}${featured?' guide-card-featured':''}`}>
+    <div className="guide-card-top"><span className="guide-pill">{t(guide.topic)}</span>{featured&&<span className="guide-pill guide-pill-accent">{t('Newest')}</span>}</div>
     <Heading><Link to={guideHref(slug,lang)} lang={shownLang==='en'?'en':undefined}>{text.title}</Link></Heading>
     {!compact&&<p>{text.description}</p>}
-    <div className="guide-card-foot"><span>{text.minutes} {t('min read')}{lang!=='en'&&shownLang==='en'?` · ${t('English only')}`:''}</span><Link className="guide-card-link" to={guideHref(slug,lang)} aria-label={`${t('Read the guide')}: ${text.title}`}>{t('Read the guide')} <ArrowRight size={14} aria-hidden="true"/></Link></div>
+    <div className="guide-card-foot"><span>{!compact&&<><time dateTime={guide.published}>{formatGuideDate(guide.published,lang)}</time> · </>}{text.minutes} {t('min read')}{lang!=='en'&&shownLang==='en'?` · ${t('English only')}`:''}</span><span className="guide-card-arrow" aria-hidden="true"><ArrowRight size={16}/></span></div>
   </article>;
+}
+
+// The closing call to action on guide pages.
+export function GuideCta({whatsapp}){
+  const {t,lp}=useLanguage();
+  return <section className="guide-cta" aria-labelledby="guide-cta-title"><div><h2 id="guide-cta-title">{t('Ready when you are.')}</h2><p>{t('Start with a free intro call and a written quote. You pay nothing until you accept the quote.')}</p></div><div className="guide-cta-actions"><Link className="button guide-cta-primary" to={lp('/#enquiry')}>{t('Start a project')} <ArrowRight size={16} aria-hidden="true"/></Link>{whatsapp&&<a className="button guide-cta-secondary" href={whatsapp} target="_blank" rel="noreferrer">{t('Chat on WhatsApp')}</a>}</div></section>;
 }
 
 // The three newest guides, on the home page.

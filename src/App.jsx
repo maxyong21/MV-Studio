@@ -112,7 +112,7 @@ function GuideRoute({data}){
   return <GuidePage key={`${lang}/${slug}`} slug={slug} data={data} footer={<SiteFooter projects={sortRows(data.projects)} content={normalizeSiteContent(data.site_content?.content||fallbackContent.site_content.content)} faqs={data.faqs}/>}/>;
 }
 function GuidesRoute({data}){
-  return <GuidesIndex footer={<SiteFooter projects={sortRows(data.projects)} content={normalizeSiteContent(data.site_content?.content||fallbackContent.site_content.content)} faqs={data.faqs}/>}/>;
+  return <GuidesIndex data={data} footer={<SiteFooter projects={sortRows(data.projects)} content={normalizeSiteContent(data.site_content?.content||fallbackContent.site_content.content)} faqs={data.faqs}/>}/>;
 }
 
 // Unknown service addresses show the same 404 page as any other unknown address.
@@ -209,11 +209,12 @@ function SiteFooter({projects,content,faqs=[]}){
   const emails=normalizeContactList(content.contact_emails),phones=normalizeContactList(content.contact_phones);
   const whatsapp=whatsappHref(content.whatsapp_number??fallbackContent.site_content.content.whatsapp_number);
   return <footer className="site-footer site-footer-full">
+    <div className="site-footer-cta"><div><h2>{t('Have a project in mind?')}</h2><p>{t('The first call and the written quote are free.')}</p></div><div className="site-footer-cta-actions"><a className="footer-btn footer-btn-primary" href={sectionLink('enquiry')}>{t('Start a project')} <ArrowUpRight size={15} aria-hidden="true"/></a>{whatsapp&&<a className="footer-btn footer-btn-secondary" href={whatsapp} target="_blank" rel="noreferrer">{t('Chat on WhatsApp')}</a>}</div></div>
     <div className="site-footer-main has-guides">
-      <div className="site-footer-brand"><a className="brand" href={sectionLink('home')}><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a><p>{t('Independent by nature.')}<br/>{t('Collaborative by choice.')}</p><a className="footer-contact-cta" href={sectionLink('enquiry')}>{t('Start a project')} <ArrowUpRight size={15}/></a></div>
+      <div className="site-footer-brand"><a className="brand" href={sectionLink('home')}><span className="brand-symbol">m<span>v</span></span><span>MV<span className="brand-light">Studio</span></span></a><p>{t('Independent by nature.')}<br/>{t('Collaborative by choice.')}</p></div>
       <nav className="site-footer-column" aria-label="Explore the website"><h2>{t('Explore')}</h2><a href={sectionLink('studio')}>{t('Studio')}</a><a href={sectionLink('work')}>{t('Selected work')}</a><a href={sectionLink('services')}>{t('Services')}</a><a href={sectionLink('process')}>{t('How we work')}</a>{sortRows(faqs).length>0&&<a href={sectionLink('faq')}>{t('FAQs')}</a>}<a href={sectionLink('contact')}>{t('Contact us')}</a></nav>
-      <div className="site-footer-column"><h2>{t('Popular projects')}</h2>{footerProjects.length?footerProjects.map(project=><Link key={project.id} to={`/projects/${project.id}`}>{project.name}<ArrowUpRight size={13}/></Link>):<a href={sectionLink('work')}>{t('Explore our work')} <ArrowUpRight size={13}/></a>}</div>
       <nav className="site-footer-column" aria-label="Guides"><h2>{t('Guides')}</h2>{featuredSlugs.map(slug=><Link key={slug} to={lp(`/guides/${slug}`)}>{shortLabel(slug,lang)}</Link>)}<Link to={lp('/guides')}>{t('All guides')} <ArrowRight size={13}/></Link></nav>
+      <div className="site-footer-column footer-projects"><h2>{t('Popular projects')}</h2>{footerProjects.length?footerProjects.map(project=><Link key={project.id} to={`/projects/${project.id}`}>{project.name}<ArrowUpRight size={13}/></Link>):<a href={sectionLink('work')}>{t('Explore our work')} <ArrowUpRight size={13}/></a>}</div>
       <div className="site-footer-column footer-contact-column"><h2>{t('Contact us')}</h2>{emails.map((email,index)=><a key={`${email}-${index}`} href={`mailto:${email}`}><Mail size={14}/>{email}</a>)}{phones.map((phone,index)=><a key={`${phone}-${index}`} href={`tel:${phone.replace(/[^+\d]/g,'')}`}><Globe2 size={14}/>{phone}</a>)}{whatsapp&&<a href={whatsapp} target="_blank" rel="noreferrer">{t('Chat on WhatsApp')} <ArrowUpRight size={14}/></a>}<a href={sectionLink('enquiry')}>{t('Send an enquiry')} <ArrowRight size={14}/></a></div>
     </div>
     <div className="site-footer-bottom"><span>© {new Date().getFullYear()} MV Studio · {studioOwners}</span><a href={sectionLink('home')}>{t('Back to top ↑')}</a><nav className="footer-legal-links" aria-label="Legal information"><Link to="/privacy">{t('Privacy policy')}</Link><Link to="/terms">{t('Terms & conditions')}</Link><Link to="/data-deletion">{t('Data deletion')}</Link></nav><LanguageSwitch className="footer-language"/><span>{t('Made with care in Malaysia.')}</span></div>

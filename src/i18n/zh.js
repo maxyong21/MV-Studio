@@ -226,4 +226,10 @@ export default {
   'Startups':'新创企业',
   'Choosing':'如何选择',
   'Getting found':'被找到',
+  'Newest':'最新',
+  '{count} guides':'{count} 篇指南',
+  'Filter by topic':'按主题筛选',
+  'All topics':'全部主题',
+  'Have a project in mind?':'有项目想法吗？',
+  'The first call and the written quote are free.':'第一次通话和书面报价都是免费的。',
 };
