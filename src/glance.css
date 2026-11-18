@@ -1,0 +1,16 @@
+/* "At a glance" strip under the hero: price, delivery, payment and first step. Two columns on phones,
+   four from tablet width. Light and dark follow the site's theme. */
+.glance{padding-top:6px;padding-bottom:6px}
+.glance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}
+.glance-item{display:flex;flex-direction:column;gap:6px;min-width:0;padding:16px 16px 18px;border:1px solid #d9dfd4;border-radius:14px;background:#fffdf8}
+.glance-item dt{order:-1;color:#a7472a;font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.4;text-transform:uppercase}
+.glance-item dd{display:flex;flex-direction:column;gap:6px;margin:0;min-width:0}
+.glance-item strong{color:#193e32;font-size:clamp(20px,2.2vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
+.glance-item span{color:#5d665b;font-size:13px;line-height:1.5}
+.glance-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:8px;color:#a7472a;font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:4px}
+.glance-link:hover{color:#8a3a20}
+:root[data-theme=dark] .glance-item{border-color:#373a33;background:#20231e}
+:root[data-theme=dark] .glance-item dt,:root[data-theme=dark] .glance-link{color:#f3b591}
+:root[data-theme=dark] .glance-item strong{color:#f0f5ed}
+:root[data-theme=dark] .glance-item span{color:#b9c4b8}
+@media(min-width:700px){.glance-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.glance-item{padding:18px 20px 20px}}

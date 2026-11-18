@@ -504,7 +504,8 @@ try{
   assert.equal(await evaluate("[...document.querySelectorAll('.wg-svg *')].filter(node=>[...node.attributes].some(a=>/NaN|undefined|Infinity/.test(a.value))).length"),0,'Charts stay valid after shuffling');
   await click('#pop-up-modal .wg-demo .wg-btn');await wait("document.querySelector('#pop-up-modal dialog').open");await evaluate("document.querySelector('#pop-up-modal dialog').close()");
   await click('#toast-message .wg-demo .wg-btn');await wait("document.querySelector('.wg-toast')?.textContent.includes('Changes saved')");
-  await click('#donut-chart .wg-star');await navigate('http://127.0.0.1:4188/widgets?again','.wg-card');
+  // The star is saved a moment after the click, so wait for the save before leaving the page.
+  await click('#donut-chart .wg-star');await wait("JSON.parse(localStorage.getItem('mv-widget-shortlist')||'[]').length>0");await navigate('http://127.0.0.1:4188/widgets?again','.wg-card');
   assert.equal(await evaluate("document.querySelector('#donut-chart .wg-star').getAttribute('aria-pressed')"),'true');await evaluate("localStorage.removeItem('mv-widget-shortlist')");
   for(const width of [320,768]){await viewport(width);assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Widget library overflows at ${width}px`);}
   await viewport(1440);await screenshot('widgets.png');
