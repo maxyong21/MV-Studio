@@ -1,0 +1,9 @@
+# How to report a security problem with this website (RFC 9116).
+# Please tell us privately before sharing details publicly. We read these emails ourselves and will
+# reply as soon as we can. Please do not access other people's data, and do not run attacks that
+# slow the site down.
+Contact: mailto:fengzhen221@gmail.com
+Contact: mailto:teovincentkq1611@gmail.com
+Expires: 2027-11-17T00:00:00.000Z
+Preferred-Languages: en, ms, zh
+Canonical: https://mv-aistudio.vercel.app/.well-known/security.txt

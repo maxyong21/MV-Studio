@@ -395,9 +395,11 @@ insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
 values ('site-media','site-media',true,52428800,array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
 on conflict (id) do update set public=true, file_size_limit=52428800, allowed_mime_types=array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'];
 
+-- Public file addresses work without a policy; only listing the file names is limited to administrators.
 drop policy if exists "Public can view site media" on storage.objects;
-create policy "Public can view site media" on storage.objects
-for select to anon, authenticated using (bucket_id = 'site-media');
+drop policy if exists "Admins view site media" on storage.objects;
+create policy "Admins view site media" on storage.objects
+for select to authenticated using (bucket_id = 'site-media' and (select public.is_admin()));
 drop policy if exists "Admins upload site media" on storage.objects;
 create policy "Admins upload site media" on storage.objects
 for insert to authenticated with check (bucket_id = 'site-media' and (select public.is_admin()));
