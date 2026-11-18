@@ -67,7 +67,7 @@
   .mobile-cta.is-hidden{opacity:0;transform:translateY(12px);visibility:hidden;pointer-events:none}
   body:has([role=dialog]) .mobile-cta,body:has(.mobile-menu[aria-expanded=true]) .mobile-cta{visibility:hidden;pointer-events:none}
   /* So the bar never covers the last line of the footer. */
-  .site-footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  body:has(.mobile-cta) .site-footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 }
 /* Shorter page on phones. */
 @media(max-width:520px){.section-pad{padding-top:52px;padding-bottom:52px}}

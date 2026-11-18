@@ -1,0 +1,58 @@
+/* Footer layout, loaded last so it settles the older footer rules spread across several files.
+   Phones: brand, then two columns of links, then projects and contact full width.
+   Tablets: four columns under the brand. Desktop: brand plus four columns.
+   The footer keeps its dark green in both themes. Bottom padding is left alone on purpose:
+   the home page reserves room there for its sticky phone bar. */
+.site-footer.site-footer-full{padding-top:0;padding-inline:clamp(18px,5vw,72px)}
+
+.site-footer-cta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px 32px;max-width:1320px;margin:0 auto;padding:clamp(28px,4vw,46px) 0;border-bottom:1px solid #2f4a3f}
+.site-footer-cta h2{margin:0 0 4px;color:#fffdf8;font-size:clamp(22px,3vw,30px);letter-spacing:-.025em;line-height:1.2}
+.site-footer-cta p{margin:0;color:#c3d5c4;font-size:15px;line-height:1.6}
+.site-footer-cta-actions{display:flex;flex-wrap:wrap;gap:10px}
+.site-footer-full .footer-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:10px;font-size:15px;font-weight:700;transition:background-color .2s,border-color .2s}
+.site-footer-full .footer-btn-primary{background:#f3b591;color:#2a1a10}
+.site-footer-full .footer-btn-primary:hover{background:#f7c7a9}
+.site-footer-full .footer-btn-secondary{border:1px solid #6d856a;color:#f0f5ed}
+.site-footer-full .footer-btn-secondary:hover{border-color:#f3b591}
+
+.site-footer-full .site-footer-main.has-guides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 18px;max-width:1320px;margin:0 auto;padding:clamp(26px,4vw,46px) 0}
+.site-footer-full .site-footer-brand{grid-column:1/-1}
+.site-footer-full .site-footer-brand p{margin:14px 0 0}
+.site-footer-full .site-footer-column{gap:2px;min-width:0}
+.site-footer-full .site-footer-column h2{margin:0 0 6px}
+.site-footer-full .site-footer-column a{min-height:44px;overflow-wrap:anywhere}
+/* Short lists sit in a row on phones, so they do not leave half the screen empty. */
+.site-footer-full .footer-projects,.site-footer-full .footer-contact-column{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;column-gap:22px}
+.site-footer-full .footer-projects h2,.site-footer-full .footer-contact-column h2{flex-basis:100%}
+
+.site-footer-full .site-footer-bottom{display:flex;flex-direction:column;align-items:flex-start;gap:12px;max-width:1320px;margin:0 auto;padding-top:18px}
+.site-footer-full .footer-legal-links{display:flex;flex-wrap:wrap;gap:4px 18px}
+.site-footer-full .site-footer-bottom a{display:inline-flex;align-items:center;min-height:44px}
+
+@media(max-width:520px){
+  .site-footer-cta-actions{width:100%}
+  .site-footer-full .footer-btn{flex:1 1 100%}
+}
+@media(min-width:700px){
+  .site-footer-full .site-footer-main.has-guides{grid-template-columns:repeat(4,minmax(0,1fr));gap:30px 28px}
+  .site-footer-full .footer-projects,.site-footer-full .footer-contact-column{grid-column:auto;flex-direction:column;flex-wrap:nowrap}
+  .site-footer-full .site-footer-column a{min-height:36px}
+  .site-footer-full .site-footer-bottom{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 22px}
+  .site-footer-full .site-footer-bottom a{min-height:36px}
+}
+@media(min-width:1040px){
+  .site-footer-full .site-footer-main.has-guides{grid-template-columns:1.25fr repeat(4,minmax(0,1fr));gap:clamp(24px,3vw,52px)}
+  .site-footer-full .site-footer-brand{grid-column:auto}
+}
+@media(prefers-reduced-motion:reduce){.site-footer-full .footer-btn{transition:none}}
+
+/* Phones: wrapped link text gets breathing room, and the bottom bar packs into three tidy rows. */
+@media(max-width:699px){
+  .site-footer-full .site-footer-column a{padding-block:8px;line-height:1.4}
+  .site-footer-full .site-footer-bottom{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px}
+  .site-footer-full .site-footer-bottom .footer-language{order:1}
+  .site-footer-full .site-footer-bottom>a{order:2}
+  .site-footer-full .footer-legal-links{order:3;flex-basis:100%}
+  .site-footer-full .site-footer-bottom>span{order:4;flex-basis:100%}
+  .site-footer-full .site-footer-bottom>span:last-child{order:5}
+}
