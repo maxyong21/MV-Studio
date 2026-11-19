@@ -1,0 +1,116 @@
+/* The quotation page (/quotation) and its printed A4 form. Colours come from the tokens below. */
+.qd-page, .qd-sheet {
+  --qd-bg: #f1efe9; --qd-paper: #fffdf8; --qd-ink: #1f2a22; --qd-muted: #566157; --qd-line: #d9dfd4;
+  --qd-soft: #f2f5ef; --qd-accent: #173c31; --qd-accent-ink: #fffdf8; --qd-warm: #a7472a; --qd-note: #fff3ec; --qd-note-line: #e3b9a8;
+}
+:root[data-theme=dark] :is(.qd-page, .qd-sheet) {
+  --qd-bg: #161a17; --qd-paper: #20261f; --qd-ink: #eef2ea; --qd-muted: #b4c0b4; --qd-line: #3d4a3f;
+  --qd-soft: #283129; --qd-accent: #f3b591; --qd-accent-ink: #2a1a10; --qd-warm: #f3b591; --qd-note: #33271f; --qd-note-line: #7a5142;
+}
+.qd-page { min-height: 100vh; background: var(--qd-bg); color: var(--qd-ink); font-family: 'DM Sans', sans-serif; }
+.qd-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px clamp(16px, 4vw, 40px); background: var(--qd-paper); border-bottom: 1px solid var(--qd-line); }
+.qd-bar-brand { min-height: 44px; display: inline-flex; align-items: center; font: 800 18px Manrope, sans-serif; letter-spacing: -.02em; color: var(--qd-ink); text-decoration: none; white-space: nowrap; }
+.qd-bar-tools { display: flex; align-items: center; gap: 8px; }
+.qd-bar .qd-theme { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--qd-line); border-radius: 10px; background: transparent; color: var(--qd-ink); cursor: pointer; }
+.qd-button { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--qd-accent); color: var(--qd-accent-ink); font: 700 15px 'DM Sans', sans-serif; text-decoration: none; white-space: nowrap; cursor: pointer; transition: transform .15s ease, opacity .15s ease; }
+.qd-button:hover { opacity: .9; }
+.qd-button:active { transform: translateY(1px); }
+.qd-page :is(a, button):focus-visible { outline: 3px solid var(--qd-warm); outline-offset: 2px; }
+.qd-main { width: min(100%, 920px); margin: 0 auto; padding: clamp(16px, 4vw, 36px) clamp(12px, 3vw, 24px) 64px; }
+.qd-loading { padding: 80px 0; text-align: center; color: var(--qd-muted); }
+.qd-hint { margin: 0 0 14px; font-size: 14px; color: var(--qd-muted); }
+.qd-preview-note { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--qd-note-line); border-radius: 10px; background: var(--qd-note); font-size: 14.5px; line-height: 1.5; }
+.qd-notice { display: grid; justify-items: center; gap: 10px; margin: clamp(24px, 8vh, 80px) auto 0; max-width: 560px; padding: clamp(24px, 5vw, 44px); border: 1px solid var(--qd-line); border-radius: 18px; background: var(--qd-paper); text-align: center; }
+.qd-notice svg { color: var(--qd-warm); }
+.qd-notice h1 { margin: 0; font: 800 clamp(24px, 5vw, 30px)/1.2 Manrope, sans-serif; letter-spacing: -.02em; }
+.qd-notice p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--qd-muted); overflow-wrap: anywhere; }
+.qd-notice p b { color: var(--qd-ink); }
+.qd-notice .qd-button { margin-top: 8px; }
+.qd-contact { font-weight: 600; }
+
+.qd-sheet { padding: clamp(20px, 5vw, 56px); border: 1px solid var(--qd-line); border-radius: 16px; background: var(--qd-paper); color: var(--qd-ink); font-size: 15px; line-height: 1.6; box-shadow: 0 12px 40px #1f2a2212; overflow-wrap: anywhere; }
+/* :where keeps this reset weak, so the spacing rules below always win. */
+.qd-sheet :where(h1, h2, h3, p, dl, dd, ul) { margin: 0; }
+.qd-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px 24px; padding-bottom: 22px; border-bottom: 3px solid var(--qd-accent); }
+.qd-brand { display: flex; align-items: center; gap: 12px; }
+.qd-mark { width: 48px; height: 48px; flex: none; }
+.qd-brand b { display: block; font: 800 22px/1.1 Manrope, sans-serif; letter-spacing: -.02em; }
+.qd-brand span { font-size: 13px; color: var(--qd-muted); }
+.qd-title { text-align: right; margin-left: auto; }
+.qd-title h1 { font: 800 clamp(26px, 6vw, 34px)/1 Manrope, sans-serif; letter-spacing: -.03em; text-transform: uppercase; }
+.qd-title span { display: block; margin-top: 6px; font-weight: 700; color: var(--qd-warm); font-variant-numeric: tabular-nums; }
+.qd-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.qd-meta div { padding: 12px 14px; border-radius: 10px; background: var(--qd-soft); }
+.qd-sheet dt { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--qd-muted); }
+.qd-meta dd { margin-top: 3px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.qd-meta small { display: block; font-size: 12px; font-weight: 400; color: var(--qd-muted); }
+.qd-parties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 24px; }
+.qd-sheet h2 { font: 800 13px Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--qd-warm); margin-bottom: 8px; }
+.qd-name { font-size: 17px; font-weight: 700; }
+.qd-section { margin-top: 30px; }
+.qd-items { width: 100%; border-collapse: collapse; }
+.qd-items th { padding: 9px 10px; border-bottom: 2px solid var(--qd-line); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; text-align: left; color: var(--qd-muted); }
+.qd-items td { padding: 12px 10px; border-bottom: 1px solid var(--qd-line); vertical-align: top; }
+.qd-items td span { display: block; font-size: 13.5px; color: var(--qd-muted); }
+/* Short labels such as "Monthly" stay whole; only the service column wraps. */
+.qd-items :is(th, td):is(:nth-child(2), :nth-child(3)) { white-space: nowrap; overflow-wrap: normal; }
+.qd-items .qd-num { text-align: right; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.qd-totals { display: grid; gap: 6px; width: min(100%, 420px); margin: 16px 0 0 auto; }
+.qd-totals div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 8px 12px; }
+.qd-totals dd { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.qd-totals small { display: block; font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.qd-totals .qd-deposit { border-radius: 10px; background: var(--qd-accent); color: var(--qd-accent-ink); }
+.qd-totals .qd-deposit dt { color: inherit; }
+.qd-note { margin-top: 14px; font-size: 13.5px; color: var(--qd-muted); }
+.qd-pre { white-space: pre-wrap; }
+.qd-term { margin-top: 16px; }
+.qd-term h3 { font: 800 15px Manrope, sans-serif; margin-bottom: 4px; }
+.qd-terms :is(p, li) { font-size: 13.5px; line-height: 1.6; }
+.qd-terms p + p { margin-top: 5px; }
+.qd-terms ul { padding-left: 20px; margin-top: 4px; }
+.qd-terms li + li { margin-top: 3px; }
+.qd-sign { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 24px; align-items: end; margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--qd-line); }
+.qd-accept { padding: 14px 16px; border: 1px solid var(--qd-note-line); border-radius: 12px; background: var(--qd-note); }
+.qd-signature { display: grid; gap: 2px; }
+.qd-signature span { font-size: 12.5px; color: var(--qd-muted); }
+/* A signature is dark ink on a clear background, so it always sits on a light strip. */
+.qd-signature img { width: 100%; max-width: 260px; height: 90px; object-fit: contain; object-position: left bottom; margin: 6px 0 4px; padding: 4px; border-bottom: 1.5px solid var(--qd-ink); border-radius: 6px 6px 0 0; background: #fffdf8; }
+.qd-signature-empty { height: 90px; margin: 6px 0 4px; display: grid; place-items: center; border: 1px dashed var(--qd-line); border-radius: 8px; font-size: 13px; color: var(--qd-muted); }
+.qd-signature small { font-size: 13px; color: var(--qd-muted); }
+.qd-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--qd-line); font-size: 12px; color: var(--qd-muted); }
+
+@media (max-width: 640px) {
+  .qd-title { text-align: left; margin-left: 0; }
+  .qd-meta, .qd-parties, .qd-sign { grid-template-columns: minmax(0, 1fr); }
+  .qd-button { padding: 0 12px; font-size: 14px; }
+  .qd-bar { padding-inline: 12px; }
+  .qd-bar-brand { font-size: 16px; }
+  /* Each price line becomes a small card: a four-column table cannot be read on a phone. */
+  .qd-items thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .qd-items, .qd-items tbody, .qd-items tr, .qd-items td { display: block; width: 100%; }
+  .qd-items tr { padding: 12px 0; border-bottom: 1px solid var(--qd-line); }
+  .qd-items td { padding: 2px 0; border: 0; }
+  .qd-items td:not(:first-child) { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .qd-items td:not(:first-child)::before { content: attr(data-label); color: var(--qd-muted); font-weight: 400; }
+  .qd-items .qd-num { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { .qd-button { transition: none; } }
+
+/* Paper: always light, no page chrome, and no price line or clause heading split across pages. */
+@page { size: A4; margin: 14mm 13mm 16mm; }
+@media print {
+  /* Without this, a visitor in dark mode gets black page margins on paper. */
+  :root, body { background: #fff !important; color-scheme: light !important; }
+  .qd-signature img { background: transparent; }
+  .qd-page, .qd-sheet, :root[data-theme=dark] :is(.qd-page, .qd-sheet) {
+    --qd-bg: #fff; --qd-paper: #fff; --qd-ink: #1f2a22; --qd-muted: #4d574e; --qd-line: #cfd6ca;
+    --qd-soft: #f2f5ef; --qd-accent: #173c31; --qd-accent-ink: #fff; --qd-warm: #a7472a; --qd-note: #fff3ec; --qd-note-line: #e3b9a8;
+  }
+  .qd-bar, .qd-hint, .qd-preview-note { display: none !important; }
+  .qd-page { min-height: 0; }
+  .qd-main { width: auto; padding: 0; }
+  .qd-sheet { padding: 0; border: 0; border-radius: 0; box-shadow: none; font-size: 10.5pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .qd-terms :is(p, li) { font-size: 9pt; line-height: 1.45; }
+  .qd-items tr, .qd-totals, .qd-sign, .qd-meta, .qd-parties, .qd-term li { break-inside: avoid; }
+  .qd-sheet :is(h2, h3) { break-after: avoid; }
+}

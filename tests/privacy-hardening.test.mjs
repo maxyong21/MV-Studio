@@ -59,6 +59,6 @@ test('the privacy notice covers outreach, retention periods and data locations i
     assert.match(text,/Singapore|Singapura/,`${label}: data location`);
     assert.doesNotMatch(text,/not automatically deleted after a fixed period|tidak dipadam secara automatik selepas tempoh tetap/,`${label}: old retention wording is gone`);
   }
-  assert.equal(legalUpdated,'2026-11-18');
+  assert.equal(legalUpdated,'2026-11-19');
   assert.match(JSON.stringify(legalDocuments['/data-deletion']),/marketing email contact/);
 });

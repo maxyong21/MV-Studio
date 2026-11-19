@@ -12,7 +12,9 @@ Where the studio's payment, refund, timeline and reply-time wording lives. Chang
 | Reply time | 2–3 business days, usually faster on WhatsApp. |
 | First steps | A free intro call and a written quote. No payment until the quote is accepted. (A free mockup is not offered.) |
 | Enquiry form | Name, phone and email are required. The company name is optional. |
-| Source code | Handed over after full project payment. |
+| Source code | Ownership transfers to the client and the code is handed over after full project payment. |
+| Design revisions | Up to 2 rounds are included. Further rounds are charged. (19 November 2026) |
+| Bug fixing | Free for 30 days after launch. After that, ongoing care needs a maintenance subscription. (19 November 2026) |
 | Identity | MV Studio is run by Max Yong and Vincent Teo. It is not a registered company yet, so no company name, registration number or parent organisation is shown. |
 
 The 7-day window, the 14-day refund payout and "no refund once development starts" are the studio's own rules written from the 50/50 and half-deposit decisions. Confirm them with the team, and with an adviser once the business is registered.
@@ -27,6 +29,7 @@ The 7-day window, the 14-day refund payout and "no refund once development start
 | `src/legal/content.mjs` (Terms, sections 4 and 6) | Formal payment and refund clause | English |
 | `supabase/migrations/20261117_trust_and_terms.sql` (mirrored in `supabase/schema.sql`) | Package payment terms, timelines, two FAQs, assistant answer | English (database content) |
 | `src/content.js` | Fallback copy of the same package terms | English |
+| `src/quotations/terms.mjs` | The terms printed on every quotation. See [QUOTATIONS.md](QUOTATIONS.md) | English |
 | `supabase/functions/_shared/chatbot/industry-content.mjs` | Project assistant answer and its test. Run `node scripts/generate-chatbot-content.mjs` after editing | English |
 
 Text typed in the admin (packages, FAQs, project descriptions) stays English by design. See [LANGUAGES.md](LANGUAGES.md).

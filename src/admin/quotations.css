@@ -1,0 +1,102 @@
+/* Admin: Quotations list, editor and signatures. Colours come from the tokens below. */
+.quotations {
+  --qt-card: #fffdf8; --qt-ink: #253129; --qt-muted: #586258; --qt-line: #d9dfd4; --qt-field: #cfd8cd; --qt-soft: #f2f5ef;
+  --qt-warm: #a7472a; --qt-note: #fff3ec; --qt-note-line: #e3b9a8; --qt-danger: #a3271c;
+  color: var(--qt-ink); min-width: 0;
+}
+:root[data-theme=dark] .quotations {
+  --qt-card: #252d27; --qt-ink: #eef4eb; --qt-muted: #bbc9bc; --qt-line: #4b5b50; --qt-field: #5a6a5e; --qt-soft: #2d372f;
+  --qt-warm: #f3b591; --qt-note: #33271f; --qt-note-line: #7a5142; --qt-danger: #ffb7a6;
+}
+.quotations code { font-size: .92em; padding: 1px 5px; border-radius: 5px; background: var(--qt-soft); overflow-wrap: anywhere; }
+.quotations .entity-toolbar-actions { flex-wrap: wrap; }
+/* Only the quotation fields: the shared search box keeps its own look. */
+.quotations :is(.qt-form, .qt-link, .qt-filter, .qt-outcome) :is(select, input:not([type=checkbox], [type=file]), textarea) { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--qt-field); border-radius: 9px; background: var(--qt-card); color: var(--qt-ink); font: inherit; font-size: 15px; }
+.quotations textarea { padding: 10px 12px; line-height: 1.5; resize: vertical; }
+.quotations input[type=file] { width: 100%; min-height: 44px; font: inherit; font-size: 14px; color: var(--qt-ink); }
+.quotations :is(input, select, textarea)[aria-invalid=true] { border-color: var(--qt-danger); }
+.quotations :is(input, select, textarea, button, a):focus-visible { outline: 3px solid var(--qt-warm); outline-offset: 2px; }
+.qt-filter select { width: auto; max-width: 100%; padding-right: 34px; font-size: 14px; }
+.qt-tip { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--qt-note-line); border-radius: 10px; background: var(--qt-note); font-size: 14.5px; line-height: 1.5; }
+.qt-help { margin: 8px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--qt-muted); }
+
+.qt-list { display: grid; gap: 12px; }
+.qt-card { display: grid; gap: 14px; min-width: 0; padding: 16px; border: 1px solid var(--qt-line); border-radius: 14px; background: var(--qt-card); }
+.qt-card.status-shared { border-color: var(--qt-note-line); }
+.qt-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.qt-card-title { display: grid; gap: 2px; min-width: 0; }
+.qt-card-title b { font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qt-card-title span { font-size: 14px; color: var(--qt-muted); overflow-wrap: anywhere; }
+.qt-chip { flex: none; padding: 5px 10px; border-radius: 99px; background: #e7ecdf; color: #2f4a33; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.qt-chip.chip-shared { background: #f8d9cb; color: #7a2f17; }
+.qt-chip.chip-accepted { background: #d4ead2; color: #1f4a22; }
+.qt-chip.chip-expired { background: #f6e7b8; color: #5c4400; }
+.qt-chip:is(.chip-declined, .chip-revoked) { background: #e6e6e1; color: #4d524b; }
+.qt-facts { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 10px 20px; margin: 0; }
+.quotations dt { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--qt-muted); }
+.quotations dd { margin: 3px 0 0; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.qt-link { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: var(--qt-soft); }
+.qt-link label { font-size: 13px; font-weight: 650; }
+.qt-link > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.qt-link input { flex: 1 1 220px; width: auto; font-size: 13.5px; }
+.qt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quotations .qt-card .button, .qt-editor-head .button, .qt-save .button, .qt-add .button, .qt-signatures .button { min-height: 44px; padding: 0 14px; border-radius: 9px; font-size: 14px; white-space: nowrap; }
+.qt-outcome { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
+.qt-outcome select { width: auto; padding-right: 30px; font-size: 14px; }
+.qt-delete, .qt-text-button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 9px; background: none; color: var(--qt-danger); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
+.qt-text-button { margin-top: 10px; padding: 0; color: var(--qt-warm); text-decoration: underline; text-underline-offset: 3px; }
+.qt-delete:hover { background: var(--qt-soft); }
+.qt-delete:disabled { opacity: .5; cursor: default; }
+.qt-card .qt-help { margin: 0; }
+
+.qt-editor { display: grid; gap: 18px; }
+.qt-editor-head { display: grid; gap: 14px; justify-items: start; }
+.qt-editor-head h2 { margin: 4px 0; font-size: clamp(22px, 3vw, 28px); outline: none; }
+.qt-editor-head p { margin: 0; color: var(--qt-muted); font-size: 15px; line-height: 1.5; }
+.qt-form { display: grid; gap: 16px; }
+.qt-form fieldset { min-width: 0; margin: 0; padding: 18px; border: 1px solid var(--qt-line); border-radius: 14px; background: var(--qt-card); }
+.qt-form legend { padding: 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--qt-warm); }
+.qt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+.qt-form label { display: grid; gap: 6px; align-content: start; min-width: 0; font-size: 14px; font-weight: 650; }
+.qt-form label > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.qt-form label i { font-style: normal; font-size: 12px; font-weight: 500; color: var(--qt-muted); }
+.qt-form label small, .qt-readonly small { font-size: 12.5px; font-weight: 400; color: var(--qt-muted); line-height: 1.45; }
+.qt-readonly { display: grid; gap: 4px; align-content: start; font-size: 14px; }
+.qt-readonly span { font-weight: 650; }
+.qt-readonly b { min-height: 44px; display: flex; align-items: center; padding: 0 12px; border-radius: 9px; background: var(--qt-soft); font-size: 15px; }
+.qt-add { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.qt-add label { flex: 1 1 260px; }
+.qt-items { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; outline: none; }
+.qt-items li { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.8fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 44px; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--qt-line); border-radius: 12px; background: var(--qt-soft); }
+.qt-item-name { grid-column: 1 / 3; }
+.qt-item-description { grid-column: 3 / -1; }
+.qt-remove { align-self: end; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--qt-field); border-radius: 9px; background: var(--qt-card); color: var(--qt-danger); cursor: pointer; }
+.qt-remove:disabled { opacity: .4; cursor: default; }
+.qt-totals { display: grid; gap: 4px; width: min(100%, 460px); margin: 14px 0 0 auto; }
+.qt-totals div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid var(--qt-line); }
+.qt-totals dd { margin: 0; text-align: right; }
+.qt-save { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.qt-form > .qt-save { position: sticky; bottom: 0; padding: 12px; border: 1px solid var(--qt-line); border-radius: 14px; background: var(--qt-card); box-shadow: 0 -6px 20px #1f2a2212; }
+.qt-signatures { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.qt-signatures li { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--qt-line); border-radius: 12px; background: var(--qt-card); }
+.qt-signatures li > div:not(.inline-confirm) { flex: 1 1 160px; display: grid; gap: 2px; }
+.qt-signatures li span { font-size: 13.5px; color: var(--qt-muted); }
+/* A signature is dark ink, so it is always shown on a light strip. */
+.qt-signatures img, .qt-sign-preview img { width: 180px; max-width: 100%; height: 64px; object-fit: contain; padding: 4px; border: 1px solid var(--qt-line); border-radius: 8px; background: #fffdf8; }
+.qt-choice { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.qt-form .qt-choice label { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 650; cursor: pointer; }
+.qt-choice input { width: 20px; height: 20px; margin: 0; accent-color: var(--qt-warm); }
+.qt-sign-preview img { width: 260px; height: 92px; }
+.qt-sign-preview { min-height: 74px; display: grid; place-items: center start; font-size: 13.5px; color: var(--qt-muted); }
+
+@media (max-width: 900px) {
+  .qt-items li { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .qt-item-name, .qt-item-description { grid-column: 1 / -1; }
+  .qt-remove { justify-self: end; grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .qt-grid, .qt-facts { grid-template-columns: minmax(0, 1fr); }
+  .qt-form fieldset { padding: 14px; }
+  .qt-actions .button, .qt-save .button, .qt-add .button { flex: 1 1 100%; justify-content: center; }
+  .qt-outcome { flex: 1 1 100%; justify-content: space-between; }
+}

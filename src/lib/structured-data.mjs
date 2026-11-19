@@ -39,7 +39,7 @@ export function studioNode({base,content={},services=[],team=[],description}){
   const people=active(team).filter(member=>text(member.name)).map(member=>({'@type':'Person',name:text(member.name),jobTitle:text(member.role),sameAs:[member.linkedin_url,member.github_url,member.website_url].map(webUrl).filter(Boolean)}));
   return {
     '@type':'ProfessionalService','@id':`${base}/#studio`,name:'MV Studio',url:`${base}/`,description,
-    logo:`${base}/apple-touch-icon.png`,image:`${base}/aphome.png`,
+    logo:`${base}/apple-touch-icon.png`,image:`${base}/og-image.png`,
     address:{'@type':'PostalAddress',addressCountry:'MY'},areaServed:malaysia,availableLanguage:['en','ms','zh'],
     email,telephone,
     priceRange:prices.length?`RM ${Math.min(...prices)}–RM ${Math.max(...prices)}+`:undefined,
@@ -88,7 +88,7 @@ export function articleGraph({base,guide,text,lang='en',team=[],content={},servi
   const faq=faqNode((faqs||[]).map(([question,answer])=>[question,plainText(fillTokens(answer,{services,lang}))]),`${url}#faq`);
   return compact({'@context':'https://schema.org','@graph':[
     {'@type':'BlogPosting','@id':`${url}#article`,headline:text.title,description:text.description,url,mainEntityOfPage:{'@type':'WebPage','@id':url},
-      image:[`${base}/aphome.png`],datePublished:`${guide.published}T09:00:00+08:00`,dateModified:`${guide.modified}T09:00:00+08:00`,
+      image:[`${base}/og-image.png`],datePublished:`${guide.published}T09:00:00+08:00`,dateModified:`${guide.modified}T09:00:00+08:00`,
       inLanguage:htmlLang[lang]||'en-MY',articleSection:guide.topic,author:authors,publisher:{'@id':`${base}/#studio`},isPartOf:{'@id':`${base}/#website`}},
     {'@type':'BreadcrumbList','@id':`${url}#breadcrumb`,itemListElement:[[crumbNames.home[lang]||crumbNames.home.en,home],[crumbNames.guides[lang]||crumbNames.guides.en,index],[text.title,url]].map(([name,item],position)=>({'@type':'ListItem',position:position+1,name,item}))},
     studioNode({base,content,services,team,description:text_(content.seo_description)||text_(content.hero_description)}),

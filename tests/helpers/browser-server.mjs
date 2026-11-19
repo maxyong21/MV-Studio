@@ -31,7 +31,7 @@ export async function browserServers({prerender=false}={}){
   const adminRequest=req=>[`Bearer ${token}`,`Bearer ${token2}`].includes(req.headers.authorization);
   const deps={env,createAdmin:()=>client(db,adminId,[token,token2]),sendMail:async message=>{mails++;mailPayloads.push(message);return {messageId:`<local-email-${mails}@gmail.test>`};}};
   const profile=createProfileHandler(deps),report=createReportHandler(deps),submit=createSubmitHandler(deps),retry=createRetryHandler(deps),chatbot=createChatbotHandler(deps),chatbotAdmin=createChatbotAdminHandler(deps);
-  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs','profile_requests']);
+  const tables=new Set(['admin_users','site_content','services','projects','team_members','promotions','feature_options','testimonials','enquiries','enquiry_status_history','enquiry_quotes','faqs','profile_requests','quotations','quotation_signatures']);
   const identifier=value=>{if(!/^[a-z_]+$/.test(value))throw new Error('Invalid field');return `"${value}"`;};
   const fixture=createServer(async(req,res)=>{
     if(['http://127.0.0.1:4187','http://127.0.0.1:4188'].includes(req.headers.origin)){
@@ -92,7 +92,17 @@ export async function browserServers({prerender=false}={}){
       }
       // Database functions (PostgREST /rpc). Runs as the fixture administrator so is_admin() checks pass or fail as they would live.
       if(url.pathname.startsWith('/rest/v1/rpc/')){
-        const name=url.pathname.split('/').at(-1);if(!/^admin_trash_(delete|list|restore|purge)$/.test(name)){send({message:'Could not find the function',code:'PGRST202'},404);return;}
+        const name=url.pathname.split('/').at(-1);
+        // The one function a visitor may call: it returns a single JSON value, as PostgREST does.
+        if(name==='shared_quotation'){
+          const chunks=[];for await(const chunk of req)chunks.push(chunk);const args=JSON.parse(Buffer.concat(chunks).toString()||'{}');
+          await db.exec('set role anon');
+          try{send((await db.query('select public.shared_quotation($1) as result',[args.p_token??null])).rows[0].result);}
+          catch(error){send({message:error.message,code:error.code},400);}
+          finally{await db.exec('reset role');}
+          return;
+        }
+        if(!/^admin_trash_(delete|list|restore|purge)$/.test(name)){send({message:'Could not find the function',code:'PGRST202'},404);return;}
         const chunks=[];for await(const chunk of req)chunks.push(chunk);const args=JSON.parse(Buffer.concat(chunks).toString()||'{}');
         const keys=Object.keys(args);if(keys.some(key=>!/^[a-z_]+$/.test(key))){send({message:'Invalid argument'},400);return;}
         const isAdmin=adminRequest(req);
@@ -105,7 +115,7 @@ export async function browserServers({prerender=false}={}){
       if(url.pathname.startsWith('/rest/v1/')){
         const table=url.pathname.split('/').at(-1);if(!tables.has(table)){send({message:'Unknown table'},404);return;}
         const isAdmin=adminRequest(req);
-        if(!isAdmin&&(req.method!=='GET'||['enquiries','admin_users','profile_requests'].includes(table))){send({message:'Not authorized'},403);return;}
+        if(!isAdmin&&(req.method!=='GET'||['enquiries','admin_users','profile_requests','quotations','quotation_signatures'].includes(table))){send({message:'Not authorized'},403);return;}
         const values=[];const param=value=>{values.push(value!==null&&typeof value==='object'?JSON.stringify(value):value);return `$${values.length}`;};
         const clauses=[];
         for(const [key,value] of url.searchParams){
@@ -126,6 +136,8 @@ export async function browserServers({prerender=false}={}){
           else if(req.method==='DELETE')sql=`delete from public.${identifier(table)}${where()} returning *`;
         }
         const result=await db.query(sql,values);
+        // PostgREST sends a date column as plain text (2026-11-19), not as a timestamp.
+        if(table==='quotations')for(const row of result.rows)for(const key of ['issued_on','valid_until'])if(row[key] instanceof Date)row[key]=row[key].toISOString().slice(0,10);
         if(req.headers.accept?.includes('vnd.pgrst.object+json'))send(result.rows[0]||null);else send(result.rows);
         return;
       }

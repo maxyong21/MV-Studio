@@ -8,6 +8,7 @@ the policy text (`src/legal/content.mjs`, English and Bahasa Melayu) at the same
 | Assistant questions and answers (quality logs) | 30 days | Automatic, every day at 03:30 Malaysia time |
 | Assistant estimates nobody sent | 7 days after they expire | Automatic, same daily job |
 | Enquiries that did not become a project | 24 months after the last contact from either side | Manual review, at least twice a year |
+| Quotations | With the enquiry or client they belong to: 24 months after the last contact if no project followed; kept as a business record if accepted | Manual review, at least twice a year. Delete from the admin Quotations page |
 | Business details forms (Google Business Profile) | While the work lasts, then the same 24 months | Manual review, at least twice a year |
 | Enquiries and records of clients | While you work together, and as long as the law requires business and accounting records | Keep; review when the work ends |
 | Outreach contacts who never replied | 12 months | Manual review, at least twice a year |

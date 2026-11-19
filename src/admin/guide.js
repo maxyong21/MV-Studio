@@ -3,7 +3,7 @@
 // here; AdminGuide.jsx only lays it out.
 export const navGroups=[
   ['Today',['overview']],
-  ['Customers',['enquiries','profile_requests','marketing','chatbot']],
+  ['Customers',['enquiries','quotations','profile_requests','marketing','chatbot']],
   ['Website content',['services','feature_options','projects','team_members','promotions','testimonials','faqs','site_content']],
   ['Housekeeping',['trash','security','system_status']],
 ];
@@ -11,6 +11,12 @@ export const groupOf=key=>navGroups.find(([,keys])=>keys.includes(key))?.[0]||'W
 
 const liveNote='Saved changes show on the live website straight away. Search-engine previews update after the next site deploy.';
 export const guides={
+  quotations:{
+    purpose:'Write a priced, signed quotation for one client and send it as a link that stops working after its valid-until date, or as a PDF.',
+    where:'Private until you create a share link. Then anyone who has the link can read that one quotation at /quotation until the end of its last valid day, Malaysia time.',
+    steps:['Press “Signatures” once and add each signer: type the name to have it written in a signature font, or upload a photo of a handwritten one.','Press “New quotation”, or “Create quotation” on an enquiry to start with the customer’s details.','Add services from your price list, change any price, and add a range where the price is not fixed yet.','Press “Save and preview” to read it as the client will. “Save as PDF” on that page makes the PDF.','Back in the list, press “Create share link”. The link is copied for you to paste into WhatsApp or email.'],
+    notes:['The issue date is set to the day you create the link, and the quotation stays valid for the number of days you chose (normally 7).','A shared quotation is locked. To change it, duplicate it as a new quotation, or revoke the link and edit.','After the valid-until date the link shows an expired notice with no prices. “Reopen” gives it 7 more days.','The terms and conditions are added automatically and a copy is kept with each quotation.','A PDF you have already sent cannot be withdrawn, so check the preview before sharing.'],
+  },
   overview:{
     purpose:'Start here each day. It shows which customers are waiting on you and whether your website is fully filled in.',
     where:'Private. It reads your enquiries and published content; it changes nothing.',
