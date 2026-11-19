@@ -23,7 +23,7 @@ export default function GuidesIndex({data={},footer}){
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,''),url=canonicalFor('/guides',pageLang,base);
     document.title=`${meta.seoTitle} | MV Studio`;
     setMeta('description',meta.description);setMeta('robots','index,follow,max-image-preview:large');
-    for(const [name,value] of [['og:title',document.title],['og:description',meta.description],['og:url',url],['og:type','website'],['og:image',`${base}/aphome.png`],['og:locale',ogLocale[pageLang]]])setMeta(name,value,'property');
+    for(const [name,value] of [['og:title',document.title],['og:description',meta.description],['og:url',url],['og:type','website'],['og:image',`${base}/og-image.png`],['og:locale',ogLocale[pageLang]]])setMeta(name,value,'property');
     setMeta('twitter:title',document.title);setMeta('twitter:description',meta.description);
     let canonical=document.head.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical);}canonical.href=url;
     document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach(node=>node.remove());

@@ -237,7 +237,7 @@ try{
   // Every section explains itself, the menu is grouped, and closing the guide is remembered.
   await wait("document.querySelector('.admin-guide')?.textContent.includes('What we can do')");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.rail-group')].map(el=>el.textContent)"),['Today','Customers','Website content','Housekeeping']);
-  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),16);
+  assert.equal(await evaluate("document.querySelectorAll('.admin-nav-list .rail-item').length"),17);
   assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'Website content›Services & pricing');
   // The tools never move: same place on a short page and a long one, at desktop, tablet and phone widths.
   const toolSpot="(()=>{const b=document.querySelector('.admin-tools').getBoundingClientRect();return [Math.round(b.top),Math.round(innerWidth-b.right),Math.round(b.width)].join()})()";
@@ -471,13 +471,10 @@ try{
   assert.equal((await servers.db.query("select assigned_to,internal_notes,follow_up_at from enquiries where company_name='Learning Centre'")).rows[0].assigned_to,'Vincent');
   await evaluate("(()=>{const card=[...document.querySelectorAll('.enquiry-workspace-card')].find(row=>row.textContent.includes('Learning Centre'));card.querySelector('.enquiry-card-actions select').value='contacted';card.querySelector('.enquiry-card-actions select').dispatchEvent(new Event('change',{bubbles:true}));})()");
   await wait("document.querySelector('.enquiry-history')?.textContent.includes('new → contacted')");
-  await click('.enquiry-quotes-head .button-light');await wait("!!document.querySelector('.quote-editor')");
-  await fill('.quote-editor-fields > label:first-child textarea','Custom learning portal discovery and build.');
-  await evaluate("document.querySelector('.quote-items-head .button-light').click()");
-  await fill('.quote-item-editor input[maxlength="160"]','Learning portal build');
-  await fill('.quote-item-editor input[type=number]','2500');
-  await click('.quote-editor footer .button-dark');await wait("!document.querySelector('.quote-editor')&&!!document.querySelector('.quote-summary')");
-  assert.equal(+((await servers.db.query("select one_time_total from enquiry_quotes where scope='Custom learning portal discovery and build.'")).rows[0].one_time_total),2500);
+  // "Create quotation" on an enquiry opens the Quotations page with the customer's details filled in.
+  await click('.enquiry-quotes-head .button-light');await wait("!!document.querySelector('.qt-editor #qt-client_name')");
+  assert.ok(await evaluate("document.querySelector('#qt-client_name').value.length>1&&document.querySelector('#qt-company_name').value==='Learning Centre'"),'The quotation starts with the enquiry contact details');
+  assert.equal(await evaluate("document.querySelector('.admin-breadcrumb').textContent"),'Customers›Quotations');
   await navigate('http://127.0.0.1:4188/','.site-footer-full');
   await evaluate("document.querySelector('.site-footer-full').scrollIntoView({behavior:'instant',block:'end'})");await screenshot('footer-mobile.png');
   // Public legal pages are readable without API requests or working database content.

@@ -43,7 +43,7 @@ async function page(route,project,service){
   const url=base?canonicalFor(baseRoute,lang,base):'';
   const title=legal?`${legal.title} | MV Studio`:!published?'Coming soon | MV Studio':guide?`${guideCopy.seoTitle} | MV Studio`:guidesIndex?`${guidesIndex.seoTitle} | MV Studio`:service?text.title:project?(project.seo_title||`${project.name} | MV Studio Projects`):home.title;
   const description=legal?legal.description:!published?'A thoughtful digital experience is on the way. Please check back soon.':guide?guideCopy.description:guidesIndex?guidesIndex.description:service?text.description:project?(project.seo_description||project.summary):home.description;
-  const image=base?new URL(project?.image_url||'/aphome.png',`${base}/`).href:'';
+  const image=base?new URL(project?.image_url||'/og-image.png',`${base}/`).href:'';
   let html=template.replace(/<title>[^<]*<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`).replace(/<html lang="[^"]*"/i,`<html lang="${htmlLang[lang]}"`);
   // The page's own language first, the others as alternates.
   html=html.replace(/<meta property="og:locale:alternate"[^>]*>\s*/gi,'');
@@ -54,6 +54,8 @@ async function page(route,project,service){
   else if(!published)html=meta(html,'robots','noindex,follow','name');
   for(const [name,value] of [['og:title',title],['og:description',description],['og:image',image],['og:url',url]])html=meta(html,name,value);
   if(guide)for(const [name,value] of [['og:type','article'],['article:published_time',guide.published],['article:modified_time',guide.modified],['article:section',guide.topic]])html=meta(html,name,value);
+  // A project page shares its own picture, so the size and words of the studio picture do not apply.
+  if(project?.image_url)html=html.replace(/\s*<meta property="og:image:(?:type|width|height|alt)"[^>]*>/gi,'');
   for(const [name,value] of [['twitter:title',title],['twitter:description',description],['twitter:image',image]])html=meta(html,name,value,'name');
   if(base){
     const graph=guide?articleGraph({base,guide,text:guideCopy,lang,team:data.team_members,content,services:data.services,faqs:articles[guide.slug]?.[hasLanguage(guide.slug,lang)?lang:'en']?.faqs||[]}):guidesIndex?{'@context':'https://schema.org','@type':'CollectionPage',name:guidesIndex.title,description:guidesIndex.description,url,inLanguage:htmlLang[lang],isPartOf:{'@id':`${base}/#website`}}:legal?{'@context':'https://schema.org','@type':'WebPage',name:title,description,url}:project?{'@context':'https://schema.org','@type':'CreativeWork',name:project.name,description,url,image,keywords:[...(project.tags||[]),projectBadge(project)?.label].filter(Boolean).join(', ')||undefined,creator:{'@type':'Organization',name:'MV Studio',url:`${base}/`}}:service?serviceGraph({base,page:text,service:serviceForPage(service,data.services),content,services:data.services,team:data.team_members,lang}):homeGraph({base,content,services:data.services,projects:data.projects,team:data.team_members,faqs:data.faqs,description,lang});
@@ -101,6 +103,12 @@ await mkdir('dist/widgets',{recursive:true});await writeFile('dist/widgets/index
 let formHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Google Business Profile details | MV Studio</title>');
 formHtml=meta(formHtml,'robots','noindex,follow','name');
 await mkdir('dist/business-profile-form',{recursive:true});await writeFile('dist/business-profile-form/index.html',formHtml);
+// A quotation is private to the client who holds its link: its own shell, never indexed.
+let quotationHtml=template.replace(/<title>[^<]*<\/title>/,'<title>Quotation | MV Studio</title>');
+quotationHtml=meta(quotationHtml,'robots','noindex,nofollow','name');
+for(const [name,value] of [['og:title','Quotation | MV Studio'],['og:description','A quotation prepared by MV Studio.']])quotationHtml=meta(quotationHtml,name,value);
+quotationHtml=meta(quotationHtml,'description','A quotation prepared by MV Studio.','name');
+await mkdir('dist/quotation',{recursive:true});await writeFile('dist/quotation/index.html',quotationHtml);
 // Prerender the actual error artwork: it remains useful without JavaScript.
 let notFound=meta(template.replace(/<title>[^<]*<\/title>/,'<title>Page not found | MV Studio</title>'),'robots','noindex,follow','name');
 notFound=notFound.replace('<div id="root"></div>',()=>`<div id="root">${renderPage(emptyPublicContent(),'/page-not-found')}</div>`);

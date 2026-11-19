@@ -31,7 +31,7 @@ export default function ServicePage({page:englishPage,data,footer}){
     const meta=(name,value,attribute='name')=>{let node=document.head.querySelector(`meta[${attribute}="${name}"]`);if(!node){node=document.createElement('meta');node.setAttribute(attribute,name);document.head.appendChild(node);}node.content=value;};
     document.title=page.title;
     meta('description',page.description);meta('robots','index,follow,max-image-preview:large');
-    for(const [name,value] of [['og:title',page.title],['og:description',page.description],['og:url',url],['og:image',`${base}/aphome.png`]])meta(name,value,'property');
+    for(const [name,value] of [['og:title',page.title],['og:description',page.description],['og:url',url],['og:image',`${base}/og-image.png`]])meta(name,value,'property');
     meta('twitter:title',page.title);meta('twitter:description',page.description);
     let canonical=document.head.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical);}canonical.href=url;
     let structured=document.getElementById('mv-studio-jsonld');if(!structured){structured=document.createElement('script');structured.id='mv-studio-jsonld';structured.type='application/ld+json';document.head.appendChild(structured);}

@@ -47,7 +47,7 @@ export default function GuidePage({slug,data,footer}){
     const base=(import.meta.env.VITE_SITE_URL||window.location.origin).replace(/\/$/,''),route=`/guides/${slug}`,url=canonicalFor(route,contentLang,base);
     document.title=`${text.seoTitle} | MV Studio`;
     setMeta('description',text.description);setMeta('robots','index,follow,max-image-preview:large');
-    for(const [name,value] of [['og:title',document.title],['og:description',text.description],['og:url',url],['og:type','article'],['og:image',`${base}/aphome.png`],['og:locale',ogLocale[contentLang]],['article:published_time',meta.published],['article:modified_time',meta.modified],['article:section',meta.topic]])setMeta(name,value,'property');
+    for(const [name,value] of [['og:title',document.title],['og:description',text.description],['og:url',url],['og:type','article'],['og:image',`${base}/og-image.png`],['og:locale',ogLocale[contentLang]],['article:published_time',meta.published],['article:modified_time',meta.modified],['article:section',meta.topic]])setMeta(name,value,'property');
     setMeta('twitter:title',document.title);setMeta('twitter:description',text.description);
     let canonical=document.head.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical);}canonical.href=url;
     document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach(node=>node.remove());
