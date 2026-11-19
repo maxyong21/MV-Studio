@@ -1,4 +1,4 @@
-import {BILLING,DEPOSIT_PERCENT,PAID_TO,formatDate,formatRange,itemPrice,totals} from './quotation.mjs';
+import {BILLING,DEPOSIT_PERCENT,GROUPS,GROUP_KEYS,REQUIREMENT_STATUS,cleanItem,formatDate,formatRange,itemPrice,subtotalLines,totals} from './quotation.mjs';
 import './quotation.css';
 
 // The quotation as the client reads it, on screen and on paper.
@@ -7,9 +7,9 @@ const Mark=()=><svg className="qd-mark" viewBox="0 0 64 64" aria-hidden="true"><
 const list=value=>(Array.isArray(value)?value:[]).map(item=>String(item||'').trim()).filter(Boolean);
 
 export default function QuotationDocument({quotation}){
-  const items=Array.isArray(quotation.items)?quotation.items:[],sum=totals(items),terms=Array.isArray(quotation.terms)?quotation.terms:[];
+  const items=(Array.isArray(quotation.items)?quotation.items:[]).map(cleanItem),sum=totals(items),terms=Array.isArray(quotation.terms)?quotation.terms:[];
+  const tables=(Array.isArray(quotation.requirements)?quotation.requirements:[]).filter(table=>table&&((table.rows||[]).length||(table.excluded||[]).length));
   const studio=quotation.studio||{},signer=quotation.signer||{},emails=list(studio.emails),phones=list(studio.phones);
-  const totalRows=[['one_time','One-time total',''],['monthly','Monthly total',' / month'],['yearly','Yearly total',' / year']].filter(([key])=>sum[key].count>0);
   return <article className="qd-sheet" aria-labelledby="qd-title">
     <header className="qd-head">
       <div className="qd-brand"><Mark/><div><b>MV Studio</b><span>Web design and development, Malaysia</span></div></div>
@@ -27,23 +27,45 @@ export default function QuotationDocument({quotation}){
       <div><h2>From</h2><p className="qd-name">MV Studio</p><p>{studio.owners||'Max Yong & Vincent Teo'}</p>{emails.map(email=><p key={email}>{email}</p>)}{phones.map(phone=><p key={phone}>{phone}</p>)}{studio.website&&<p>{studio.website}</p>}</div>
     </section>
 
-    <section className="qd-section" aria-labelledby="qd-services">
-      <h2 id="qd-services">Services and prices</h2>
-      <table className="qd-items">
-        <thead><tr><th scope="col">Service</th><th scope="col">Billing</th><th scope="col">Paid to</th><th scope="col" className="qd-num">Price</th></tr></thead>
-        <tbody>{items.map((item,index)=><tr key={index}>
-          <td data-label="Service"><b>{item.name}</b>{item.description&&<span>{item.description}</span>}</td>
-          <td data-label="Billing">{BILLING[item.billing]||BILLING.one_time}</td>
-          <td data-label="Paid to">{PAID_TO[item.paid_to]||PAID_TO.studio}</td>
-          <td data-label="Price" className="qd-num">{itemPrice(item)}</td>
-        </tr>)}</tbody>
-      </table>
-      <dl className="qd-totals">
-        {totalRows.map(([key,label,suffix])=><div key={key}><dt>{label}</dt><dd>{formatRange(sum[key].min,sum[key].max)}{suffix}</dd></div>)}
-        {sum.deposit.max>0&&<div className="qd-deposit"><dt>Deposit to confirm the project<small>{DEPOSIT_PERCENT}% of MV Studio’s one-time fees</small></dt><dd>{formatRange(sum.deposit.min,sum.deposit.max)}</dd></div>}
-      </dl>
-      <p className="qd-note">Each billing type is totalled separately. {sum.thirdParty>0?'Lines marked “Third-party provider” are estimates of what the provider charges; they are billed by the provider and can change. ':''}Prices are in Ringgit Malaysia and can be discussed before you accept.</p>
-    </section>
+    {/* One block per part of the price, so it is always clear who is paid and what repeats. */}
+    {GROUP_KEYS.filter(group=>sum.groups[group].count>0).map(group=>{
+      const lines=items.filter(item=>item.group===group),subtotals=subtotalLines(sum.groups[group]);
+      return <section className={`qd-section qd-group qd-group-${group}`} key={group} aria-labelledby={`qd-group-${group}`}>
+        <h2 id={`qd-group-${group}`}>{GROUPS[group].title}</h2>
+        <p className="qd-group-note">{GROUPS[group].note}</p>
+        <table className="qd-items">
+          <thead><tr><th scope="col">{group==='third_party'?'Service and provider':'Service'}</th><th scope="col">Billing</th><th scope="col" className="qd-num">{group==='third_party'?'Estimated price':'Price'}</th></tr></thead>
+          <tbody>{lines.map((item,index)=><tr key={index}>
+            <td data-label="Service"><b>{item.name}</b>{item.description&&<span>{item.description}</span>}</td>
+            <td data-label="Billing">{BILLING[item.billing]||BILLING.one_time}</td>
+            <td data-label={group==='third_party'?'Estimated price':'Price'} className="qd-num">{itemPrice(item)}</td>
+          </tr>)}</tbody>
+        </table>
+        <dl className="qd-totals">
+          {subtotals.map(([label,value])=><div key={label}><dt>{label} subtotal</dt><dd>{value}</dd></div>)}
+          {group==='studio'&&sum.deposit.max>0&&<div className="qd-deposit"><dt>Deposit to confirm the project<small>{DEPOSIT_PERCENT}% of the one-time subtotal above</small></dt><dd>{formatRange(sum.deposit.min,sum.deposit.max)}</dd></div>}
+        </dl>
+      </section>;
+    })}
+    <p className="qd-note">Each part and each billing type is totalled separately. Prices are in Ringgit Malaysia and can be discussed before you accept.</p>
+
+    {tables.length>0&&<section className="qd-section qd-requirements" aria-labelledby="qd-requirements">
+      <h2 id="qd-requirements">Requirements</h2>
+      <p className="qd-group-note">What the services above will do. Anything that is not listed here or in the prices above is not included.</p>
+      {tables.map((table,index)=><div className="qd-requirement-table" key={index}>
+        <h3>{table.name}</h3>
+        {(table.rows||[]).length>0&&<table className="qd-items qd-reqs">
+          <thead><tr><th scope="col">ID</th><th scope="col">Requirement</th><th scope="col">Description</th><th scope="col">Included?</th></tr></thead>
+          <tbody>{table.rows.map(row=><tr key={row.id}>
+            <td data-label="ID" className="qd-req-id">{row.id}</td>
+            <td data-label="Requirement"><b>{row.name}</b></td>
+            <td data-label="Description">{row.description}</td>
+            <td data-label="Included?"><span className={`qd-status qd-status-${row.status}`}>{REQUIREMENT_STATUS[row.status]||REQUIREMENT_STATUS.included}</span></td>
+          </tr>)}</tbody>
+        </table>}
+        {(table.excluded||[]).length>0&&<div className="qd-excluded"><h4>Not included</h4><ul>{table.excluded.map((line,lineIndex)=><li key={lineIndex}>{line}</li>)}</ul></div>}
+      </div>)}
+    </section>}
 
     {quotation.extra_requirements&&<section className="qd-section" aria-labelledby="qd-extra"><h2 id="qd-extra">Additional requirements</h2><p className="qd-pre">{quotation.extra_requirements}</p></section>}
 

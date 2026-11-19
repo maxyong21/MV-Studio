@@ -34,6 +34,7 @@ create table if not exists public.quotations (
   valid_until date not null,
   items jsonb not null default '[]'::jsonb check (jsonb_typeof(items) = 'array' and jsonb_array_length(items) <= 40),
   extra_requirements text not null default '' check (length(extra_requirements) <= 3000),
+  requirements jsonb not null default '[]'::jsonb check (jsonb_typeof(requirements) = 'array' and jsonb_array_length(requirements) <= 12 and length(requirements::text) <= 120000),
   terms jsonb not null default '[]'::jsonb check (jsonb_typeof(terms) = 'array'),
   terms_version text not null default '' check (length(terms_version) <= 40),
   signature_id uuid references public.quotation_signatures(id) on delete set null,
@@ -49,6 +50,8 @@ create table if not exists public.quotations (
   -- A draft or revoked quotation has no working link.
   constraint quotations_link check (status not in ('draft','revoked') or share_token is null)
 );
+-- Requirement tables were added after the first version of this file; this covers a database that already has the table.
+alter table public.quotations add column if not exists requirements jsonb not null default '[]'::jsonb check (jsonb_typeof(requirements) = 'array' and jsonb_array_length(requirements) <= 12 and length(requirements::text) <= 120000);
 create index if not exists quotations_created_idx on public.quotations(created_at desc);
 create index if not exists quotations_enquiry_idx on public.quotations(enquiry_id);
 
@@ -122,7 +125,7 @@ begin
   return jsonb_build_object('state', 'active', 'quotation', jsonb_build_object(
     'quote_number', q.quote_number, 'client_name', q.client_name, 'company_name', q.company_name,
     'client_email', q.client_email, 'client_phone', q.client_phone, 'issued_on', q.issued_on,
-    'valid_until', q.valid_until, 'items', q.items, 'extra_requirements', q.extra_requirements,
+    'valid_until', q.valid_until, 'items', q.items, 'requirements', q.requirements, 'extra_requirements', q.extra_requirements,
     'terms', q.terms, 'terms_version', q.terms_version, 'signer', q.signer, 'studio', q.studio, 'status', q.status));
 end;
 $$;

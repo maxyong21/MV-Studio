@@ -53,7 +53,28 @@
 .qd-items td { padding: 12px 10px; border-bottom: 1px solid var(--qd-line); vertical-align: top; }
 .qd-items td span { display: block; font-size: 13.5px; color: var(--qd-muted); }
 /* Short labels such as "Monthly" stay whole; only the service column wraps. */
-.qd-items :is(th, td):is(:nth-child(2), :nth-child(3)) { white-space: nowrap; overflow-wrap: normal; }
+.qd-group .qd-items :is(th, td):nth-child(2) { white-space: nowrap; overflow-wrap: normal; }
+.qd-group-note { margin: -2px 0 10px; font-size: 13.5px; color: var(--qd-muted); }
+/* Third-party charges are set apart: they are not MV Studio's fee. */
+.qd-group-third_party { padding: 16px 18px; border: 1px dashed var(--qd-line); border-radius: 12px; }
+.qd-requirement-table { margin-top: 16px; }
+.qd-requirement-table h3 { font: 800 16px Manrope, sans-serif; margin-bottom: 6px; }
+.qd-reqs td { font-size: 14px; }
+.qd-reqs :is(th, td):is(:first-child, :last-child) { white-space: nowrap; overflow-wrap: normal; }
+.qd-req-id { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--qd-warm); }
+/* Fixed widths, so every requirement table on the page lines up with the others. */
+.qd-reqs { table-layout: fixed; }
+.qd-reqs th:first-child { width: 86px; }
+.qd-reqs th:nth-child(2) { width: 27%; }
+.qd-reqs th:last-child { width: 150px; }
+/* The words carry the meaning; the tint only helps the eye. */
+.qd-items td .qd-status { display: inline-block; padding: 2px 9px; border: 1px solid var(--qd-line); border-radius: 99px; font-size: 12.5px; font-weight: 700; color: var(--qd-ink); white-space: nowrap; }
+.qd-status-included { background: var(--qd-soft); }
+.qd-status-extra { background: var(--qd-note); border-color: var(--qd-note-line); }
+.qd-status-tbc { border-style: dashed; }
+.qd-excluded { margin-top: 10px; padding: 10px 14px; border-left: 3px solid var(--qd-note-line); background: var(--qd-note); border-radius: 0 10px 10px 0; }
+.qd-excluded h4 { margin: 0 0 4px; font: 800 12px Manrope, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--qd-warm); }
+.qd-excluded ul { padding-left: 18px; font-size: 14px; }
 .qd-items .qd-num { text-align: right; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
 .qd-totals { display: grid; gap: 6px; width: min(100%, 420px); margin: 16px 0 0 auto; }
 .qd-totals div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 8px 12px; }
@@ -93,6 +114,18 @@
   .qd-items td:not(:first-child) { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
   .qd-items td:not(:first-child)::before { content: attr(data-label); color: var(--qd-muted); font-weight: 400; }
   .qd-items .qd-num { white-space: normal; }
+  /* A requirement reads top to bottom on a phone: ID, then each labelled part on its own line. */
+  .qd-reqs { table-layout: auto; }
+  .qd-items td:not(:first-child)::before { flex: none; text-align: left; }
+  .qd-items td:not(:first-child) { text-align: right; }
+  .qd-reqs td:not(:first-child) { text-align: left; }
+  /* A subtotal sits under its label, so a long range never squeezes the label into a sliver. */
+  .qd-totals div { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .qd-totals dd { text-align: left; }
+  .qd-reqs td:not(:first-child) { display: block; }
+  .qd-reqs td:not(:first-child)::before { display: block; font-size: 12px; }
+  .qd-reqs :is(th, td):is(:first-child, :last-child) { white-space: normal; }
+  .qd-group-third_party { padding: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .qd-button { transition: none; } }
 
@@ -111,6 +144,7 @@
   .qd-main { width: auto; padding: 0; }
   .qd-sheet { padding: 0; border: 0; border-radius: 0; box-shadow: none; font-size: 10.5pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .qd-terms :is(p, li) { font-size: 9pt; line-height: 1.45; }
-  .qd-items tr, .qd-totals, .qd-sign, .qd-meta, .qd-parties, .qd-term li { break-inside: avoid; }
+  .qd-items tr, .qd-totals, .qd-sign, .qd-meta, .qd-parties, .qd-term li, .qd-excluded { break-inside: avoid; }
+  .qd-requirement-table h3 { break-after: avoid; }
   .qd-sheet :is(h2, h3) { break-after: avoid; }
 }

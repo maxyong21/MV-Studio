@@ -23,7 +23,18 @@ const servers=await browserServers(),browser=await chromium.launch({executablePa
 await servers.db.query("update site_content set content=content||jsonb_build_object('contact_emails',jsonb_build_array('hello@mvstudio.example'))");
 const problems=[];
 const watch=page=>{page.on('pageerror',error=>problems.push(`page error: ${error.message}`));page.on('console',message=>{if(message.type()==='error'&&!/Failed to load resource/.test(message.text()))problems.push(`console: ${message.text()}`);});};
-const noSideways=async(page,label)=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),`${label}: no sideways scrolling`);
+// Measured after the layout has settled: straight after a resize the page can be a pixel or two wide for one frame.
+// On failure the message names what sticks out (elements first, then loose text), so the cause is quick to find.
+const noSideways=async(page,label)=>{
+  await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(done,120)))));
+  const wide=await page.evaluate(()=>{
+    if(document.documentElement.scrollWidth<=window.innerWidth+1)return [];
+    const clipped=node=>{for(let parent=node.parentElement;parent&&parent!==document.body;parent=parent.parentElement)if(getComputedStyle(parent).overflowX!=="visible")return true;return false;};
+    const found=[...document.querySelectorAll("body *")].filter(node=>node.getBoundingClientRect().right>window.innerWidth+1&&!clipped(node)).slice(0,8).map(node=>node.tagName.toLowerCase()+(node.id?"#"+node.id:"")+" "+Math.round(node.getBoundingClientRect().right));
+    return found.length?found:["page is "+document.documentElement.scrollWidth+"px wide in a "+window.innerWidth+"px window"];
+  });
+  assert.deepEqual(wide,[],label+": no sideways scrolling");
+};
 // The admin scans look only at the quotation screens; the shared admin frame around them has its own check.
 const scan=async(page,label,within='body')=>{
   await page.addScriptTag({content:axeSource});
@@ -85,17 +96,50 @@ try{
   assert.equal((await servers.db.query('select count(*)::int as n from quotations')).rows[0].n,0);
   await page.fill('#qt-client_name','Aisyah Rahman');await page.fill('#qt-company_name','Kedai Bunga Aisyah');
   await page.fill('#qt-client_email','aisyah@example.test');await page.fill('#qt-client_phone','+60 12-345 6789');
-  // Prices start from the database price list and can then be changed.
+  // The package is added from a list; maintenance and third-party services are ticked. All prices start from the database.
+  assert.equal(await page.locator('.qt-items li').count(),0,'A new quotation starts with no price lines');
   const options=await page.$$eval('#qt-pick option',nodes=>nodes.map(node=>[node.value,node.textContent]));
   const pickOf=text=>options.find(([,label])=>label.startsWith(text))?.[0];
-  assert.ok(pickOf('Company Website')&&pickOf('Hosting')&&pickOf('Website maintenance')&&pickOf('Domain registration'),'Packages, hosting, domain and maintenance are offered');
-  for(const name of ['Company Website','Hosting','Domain registration','Website maintenance']){await page.selectOption('#qt-pick',pickOf(name));await page.click('button:has-text("Add to quotation")');}
-  assert.equal(await page.inputValue('#qt-item-0-min'),'989');assert.equal(await page.inputValue('#qt-item-1-min'),'30');assert.equal(await page.inputValue('#qt-item-2-min'),'','A feature with no database price must be typed');
+  assert.ok(pickOf('Company Website')&&!pickOf('Hosting')&&!pickOf('Website maintenance')&&!pickOf('Domain registration'),'The package list holds packages and features only');
+  await page.selectOption('#qt-pick',pickOf('Company Website'));await page.click('button:has-text("Add to quotation")');
+  const tick=name=>page.locator(`.qt-ticks label:has-text("${name}") input`);
+  assert.deepEqual(await page.$$eval('.qt-group-third_party .qt-ticks label > span',nodes=>nodes.map(node=>node.firstChild.textContent)),['Hosting','Server setup','Domain registration']);
+  assert.deepEqual(await page.$$eval('.qt-group-maintenance .qt-ticks label > span',nodes=>nodes.map(node=>node.firstChild.textContent)),['Website maintenance']);
+  await tick('Hosting').check();await tick('Domain registration').check();await tick('Website maintenance').check();
+  assert.equal(await page.inputValue('#qt-item-0-min'),'989');assert.equal(await page.inputValue('#qt-item-1-min'),'30');assert.equal(await page.inputValue('#qt-item-2-min'),'','A service with no database price must be typed');assert.equal(await page.inputValue('#qt-item-3-min'),'120');
+  assert.equal(await page.inputValue('#qt-item-3-billing'),'monthly');
+  // Each line sits in its own part, and unticking takes the line away again.
+  assert.deepEqual(await page.$$eval('.qt-group',groups=>groups.map(group=>group.querySelectorAll('.qt-items li').length)),[1,1,2]);
+  await tick('Server setup').check();assert.equal(await page.locator('.qt-group-third_party .qt-items li').count(),3);
+  await tick('Server setup').uncheck();assert.equal(await page.locator('.qt-group-third_party .qt-items li').count(),2);
   await page.fill('#qt-item-0-min','1200');await page.fill('#qt-item-0-max','1500');
   await page.fill('#qt-item-2-min','45');await page.fill('#qt-item-2-max','90');await page.selectOption('#qt-item-2-billing','yearly');
-  await page.fill('#qt-extra_requirements','Bilingual pages (English and Bahasa Malaysia).\nLaunch before Chinese New Year.');
+  assert.match(await page.textContent('.qt-group-studio .qt-totals'),/One-time subtotal\s*RM 1,200 to RM 1,500/);assert.match(await page.textContent('.qt-group-studio .qt-totals'),/RM 600 to RM 750/);
+  assert.match(await page.textContent('.qt-group-maintenance .qt-totals'),/RM 120 \/ month/);
+  const provider=await page.textContent('.qt-group-third_party .qt-totals');assert.match(provider,/RM 30 \/ month/);assert.match(provider,/RM 45 to RM 90 \/ year/);assert.ok(!provider.includes('1,200'),'Third-party subtotals leave MV Studio fees out');
+  // Requirements: one empty table to start with, then more tables and rows as needed.
+  assert.equal(await page.locator('.qt-table').count(),1);assert.equal(await page.locator('.qt-reqs li').count(),1);
+  assert.equal(await page.inputValue('#qt-req-0-prefix'),'REQ');assert.equal(await page.textContent('.qt-req-id output'),'—');
+  await page.fill('#qt-req-0-name','Customer portal');assert.equal(await page.inputValue('#qt-req-0-prefix'),'CP','ID letters follow the table name');
+  await page.fill('#qt-req-0-0-name','Book an appointment');await page.fill('#qt-req-0-0-description','Pick a service, a date and a time, and get a confirmation.');
+  assert.equal(await page.textContent('.qt-req-id output'),'CP-01');
+  await page.click('.qt-table >> nth=0 >> button:has-text("Add a row")');
+  await page.fill('#qt-req-0-1-name','Pay online');await page.selectOption('#qt-req-0-1-status','extra');
+  await page.fill('#qt-req-0-excluded','No mobile app\nNo SMS reminders');
+  await page.click('button:has-text("Add another table")');
+  await page.fill('#qt-req-1-name','Client panel');
+  await page.fill('#qt-req-1-0-name','Manage bookings');await page.selectOption('#qt-req-1-0-status','tbc');
+  // Two tables may not share ID letters, or two requirements would have the same ID.
   await page.selectOption('#qt-signature_id',{label:'Vincent Teo · Co-founder, MV Studio'});
-  assert.match(await page.textContent('.qt-totals'),/RM 1,200 to RM 1,500/);assert.match(await page.textContent('.qt-totals'),/RM 600 to RM 750/);
+  await page.click('button:has-text("Save draft")');
+  await page.waitForSelector('text=“CP” is already used by another table');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'qt-req-1-prefix');
+  await page.fill('#qt-req-1-name','Admin portal');assert.equal(await page.inputValue('#qt-req-1-prefix'),'AP');
+  await page.fill('#qt-req-1-prefix','adm');assert.equal(await page.inputValue('#qt-req-1-prefix'),'ADM','The ID letters can be changed');
+  assert.equal(await page.textContent('.qt-table >> nth=1 >> .qt-req-id output'),'ADM-01');
+  // A third table left empty is simply not saved.
+  await page.click('button:has-text("Add another table")');assert.equal(await page.locator('.qt-table').count(),3);
+  await page.fill('#qt-extra_requirements','Bilingual pages (English and Bahasa Malaysia).\nLaunch before Chinese New Year.');
   await noSideways(page,'admin editor 1440');await page.screenshot({path:`${out}/admin-editor.png`,fullPage:true});
   await scan(page,'admin editor','.quotations');
   for(const width of [320,768]){await page.setViewportSize({width,height:800});await noSideways(page,`admin editor ${width}`);}
@@ -108,7 +152,9 @@ try{
   await page.waitForSelector('.qt-card');
   const row=(await servers.db.query('select * from quotations')).rows[0];
   assert.match(row.quote_number,/^MVQ-\d{8}-001$/);assert.equal(row.status,'draft');assert.equal(row.share_token,null);
-  assert.equal(row.items.length,4);assert.deepEqual([row.items[0].min,row.items[0].max],[1200,1500]);assert.equal(row.items[1].paid_to,'third_party');
+  assert.equal(row.items.length,4);assert.deepEqual([row.items[0].min,row.items[0].max],[1200,1500]);
+  assert.deepEqual(row.items.map(item=>[item.name,item.group,item.paid_to]),[['Company Website','studio','studio'],['Hosting','third_party','third_party'],['Domain registration','third_party','third_party'],['Website maintenance','maintenance','studio']]);
+  assert.deepEqual(row.requirements.map(table=>[table.name,table.prefix,table.rows.map(item=>`${item.id}:${item.status}`).join(','),table.excluded.join('|')]),[['Customer portal','CP','CP-01:included,CP-02:extra','No mobile app|No SMS reminders'],['Admin portal','ADM','ADM-01:tbc','']],'Two tables are saved; the empty third one is not');
   assert.equal(row.terms.length,16);assert.equal(row.signer.name,'Vincent Teo');assert.deepEqual(row.studio.emails,['hello@mvstudio.example'],'Studio contact details are copied onto the quotation');assert.ok(row.studio.phones.length>=1);
   assert.match(await page.textContent('.qt-chip'),/Draft/);
 
@@ -134,8 +180,17 @@ try{
     const client=await visitor.newPage();watch(client);const sent=[];client.on('request',request=>sent.push(request.url()));
     await client.goto(link);await client.waitForSelector('.qd-sheet');
     const text=await client.textContent('.qd-sheet');
-    for(const expected of [row.quote_number,'Aisyah Rahman','Kedai Bunga Aisyah','aisyah@example.test','+60 12-345 6789','RM 1,200 to RM 1,500','RM 30 / month','RM 45 to RM 90 / year','Third-party provider','Deposit to confirm the project','RM 600 to RM 750','Bilingual pages','16. Your responsibilities as the client','up to 2 rounds of design revisions','Personal Data Protection Act 2010','Vincent Teo','Co-founder, MV Studio'])assert.ok(text.includes(expected),`client page shows: ${expected}`);
+    for(const expected of [row.quote_number,'Aisyah Rahman','Kedai Bunga Aisyah','aisyah@example.test','+60 12-345 6789','RM 1,200 to RM 1,500','RM 30 / month','RM 45 to RM 90 / year','RM 120 / month','MV Studio services','Third-party charges','Paid to the provider, not to MV Studio','Deposit to confirm the project','RM 600 to RM 750','Customer portal','CP-01','Book an appointment','Pick a service, a date and a time','CP-02','Extra cost','Admin portal','ADM-01','To be confirmed','Not included','No SMS reminders','Anything that is not listed here','requirements listed in its requirement tables','Bilingual pages','16. Your responsibilities as the client','up to 2 rounds of design revisions','Personal Data Protection Act 2010','Vincent Teo','Co-founder, MV Studio'])assert.ok(text.includes(expected),`client page shows: ${expected}`);
     assert.equal(await client.locator('.qd-term').count(),16);
+    // Three parts in a fixed order, each holding only its own lines and subtotals.
+    assert.deepEqual(await client.$$eval('.qd-group h2',nodes=>nodes.map(node=>node.textContent)),['MV Studio services','Maintenance','Third-party charges']);
+    const parts=await client.$$eval('.qd-group',nodes=>nodes.map(node=>node.textContent));
+    assert.ok(parts[0].includes('Company Website')&&parts[0].includes('Deposit to confirm')&&!parts[0].includes('Hosting')&&!parts[0].includes('Website maintenance'));
+    assert.ok(parts[1].includes('Website maintenance')&&parts[1].includes('Monthly subtotal')&&!parts[1].includes('Deposit'));
+    assert.ok(parts[2].includes('Hosting')&&parts[2].includes('Domain registration')&&parts[2].includes('Yearly subtotal')&&!parts[2].includes('Company Website')&&!parts[2].includes('Deposit'));
+    assert.equal(await client.locator('.qd-requirement-table').count(),2);assert.equal(await client.locator('.qd-reqs tbody tr').count(),3);
+    // Requirements come after the prices and before the terms, so the signature covers them.
+    assert.deepEqual(await client.$$eval('.qd-sheet > section > h2, .qd-sheet > section > div > h2',nodes=>nodes.map(node=>node.textContent).filter(text=>['Third-party charges','Requirements','Terms and conditions','How to accept'].includes(text))),['Third-party charges','Requirements','Terms and conditions','How to accept']);
     assert.ok(await client.evaluate(()=>{const image=document.querySelector('.qd-signature img');return image.complete&&image.naturalWidth>0;}),'The signature picture is drawn');
     assert.equal(await client.title(),`Quotation ${row.quote_number} | MV Studio`);
     assert.equal(await client.getAttribute('meta[name="robots"]','content'),'noindex,nofollow');
@@ -198,6 +253,9 @@ try{
   // Revoked means editable again, then it can be duplicated and deleted.
   await page.click('.qt-card button:has-text("Edit")');await page.waitForSelector('#qt-client_name');
   assert.equal(await page.inputValue('#qt-client_name'),'Aisyah Rahman');assert.equal(await page.inputValue('#qt-item-0-max'),'1500');
+  // A saved quotation opens with its ticks, tables and ID letters as they were left.
+  assert.ok(await page.isChecked('.qt-ticks label:has-text("Hosting") input')&&await page.isChecked('.qt-ticks label:has-text("Website maintenance") input')&&!await page.isChecked('.qt-ticks label:has-text("Server setup") input'));
+  assert.equal(await page.locator('.qt-table').count(),2);assert.equal(await page.inputValue('#qt-req-0-name'),'Customer portal');assert.equal(await page.inputValue('#qt-req-1-prefix'),'ADM');assert.equal(await page.inputValue('#qt-req-0-1-status'),'extra');assert.equal(await page.inputValue('#qt-req-0-excluded'),'No mobile app\nNo SMS reminders');
   await page.click('button:has-text("Back to quotations")');await page.waitForSelector('.qt-card');
   await page.click('.qt-card button:has-text("Duplicate")');await page.waitForSelector('#qt-client_name');await page.click('button:has-text("Save draft")');
   await page.waitForFunction(()=>document.querySelectorAll('.qt-card').length===2);
