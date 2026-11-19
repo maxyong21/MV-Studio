@@ -15,18 +15,19 @@ export const quotationTerms=[
   {id:'prices',title:'2. Prices and scope',paragraphs:[
     'All prices are in Ringgit Malaysia (RM). Prices are open to discussion until you accept: tell us your budget or priorities and we may adjust the scope, the price or both. Any change is only valid once we confirm it in a revised quotation.',
     'Where a price is shown as a range, the final figure depends on details we still need to confirm with you. We will confirm one fixed price in writing before you pay the deposit.',
-    'The price covers only the services listed in this quotation. Anything written under "Additional requirements" is noted for discussion and is included only when it also appears as a priced line or is described as included. If a tax or government charge becomes payable on our services by law, we will tell you before you accept.',
+    'The price covers only the services listed in this quotation and the requirements listed in its requirement tables. Anything that is not listed is not included. A requirement marked "Extra cost" or "To be confirmed" is not part of the price until it is priced in this quotation or a revised one.',
+    'Anything written under "Additional requirements" is noted for discussion and is included only when it also appears as a priced line or as a requirement marked "Included". If a tax or government charge becomes payable on our services by law, we will tell you before you accept.',
   ]},
   {id:'third-party',title:'3. Third-party charges',paragraphs:[
     'Some things a website needs are sold by other companies, not by us. Examples are domain names, hosting, servers, databases, business email, SSL certificates, payment gateways, SMS or WhatsApp services, maps, stock images, fonts, plugins and paid software licences.',
   ],bullets:[
-    'These charges are set and billed by the provider. They are not part of our development fee unless a line in this quotation clearly says so. Lines marked "Third-party provider" are estimates of the provider’s price.',
+    'These charges are set and billed by the provider. They are not part of our development fee. The part of this quotation headed "Third-party charges" lists them separately, as estimates of the provider’s price.',
     'The provider can change its prices, plans and rules at any time. We do not control this and cannot be held responsible for a provider’s price increase, outage, data loss, suspension, policy change or closure.',
     'Third-party purchases are paid in full before we buy or activate them. Where possible, accounts are opened in your name so that you own them.',
     'Renewals are your responsibility. If a domain, hosting plan or subscription is not renewed, your website may go offline or the domain may be lost.',
   ]},
   {id:'payment',title:'4. Deposit and payment',bullets:[
-    'A deposit of 50% of our project fee confirms the project. We do not start or reserve time until it is received.',
+    'A deposit of 50% of our project fee confirms the project. The project fee is the one-time subtotal under "MV Studio services". We do not start or reserve time until it is received.',
     'After the deposit we prepare the wireframe, confirm the feature list with you and build a prototype.',
     'When you approve the wireframe, the feature list and the prototype, the remaining 50% is payable before real development begins. Development starts once it is received.',
     'Monthly and yearly charges, such as maintenance, are billed in advance for each period.',
@@ -59,7 +60,7 @@ export const quotationTerms=[
     'Anything added or changed after launch that is not a bug under section 8 is charged. Additional features start from RM50 per feature, depending on complexity. We send a price first, and work begins only after you agree to it in writing.',
   ]},
   {id:'maintenance',title:'10. Maintenance after launch',bullets:[
-    'Ongoing care of the website after launch is a separate maintenance subscription. It is optional and is included only if it appears as a line in this quotation or you subscribe later.',
+    'Ongoing care of the website after launch is a separate maintenance subscription. It is optional and is included only if it appears under "Maintenance" in this quotation or you subscribe later.',
     'Maintenance covers what your plan states, such as software updates, backups, monitoring and small content updates. It does not include new features.',
     'Without an active maintenance subscription, once the 30 days in section 8 end we are not responsible for updates, backups, security patches, monitoring or uptime, and any work you request is charged per job.',
     'A subscription is billed in advance and continues until either of us cancels it in writing before the next billing date. Fees for a period that has started are not refunded.',

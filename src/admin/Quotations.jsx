@@ -4,7 +4,7 @@ import {supabase} from '../supabase.js';
 import {fallbackContent} from '../content.js';
 import {normalizeSiteContent,studioOwners,whatsappHref} from '../lib/site.js';
 import InlineFieldError from '../components/InlineFieldError.jsx';
-import {BILLING,DEPOSIT_PERCENT,LIMITS,MAX_ITEMS,PAID_TO,STATUS_LABEL,VALID_DAYS,addDays,catalogueOptions,cleanItem,daysBetween,defaultValidUntil,displayStatus,emptyItem,formatDate,formatRange,itemsFromEnquiry,malaysiaToday,newShareToken,shareUrl,totals,validateQuotation} from '../quotations/quotation.mjs';
+import {BILLING,BILLING_SUFFIX,DEPOSIT_PERCENT,GROUPS,GROUP_KEYS,LIMITS,MAX_EXCLUDED,MAX_ITEMS,MAX_ROWS,MAX_TABLES,REQUIREMENT_STATUS,STATUS_LABEL,VALID_DAYS,addDays,catalogueOptions,cleanItem,cleanRequirements,daysBetween,defaultValidUntil,displayStatus,editableRequirements,emptyItem,emptyRequirementRow,emptyRequirementTable,formatDate,formatRange,itemsFromEnquiry,malaysiaToday,newShareToken,requirementId,shareUrl,subtotalLines,tablePrefix,totals,validateQuotation} from '../quotations/quotation.mjs';
 import {TERMS_VERSION,quotationTerms} from '../quotations/terms.mjs';
 import './quotations.css';
 
@@ -12,9 +12,10 @@ import './quotations.css';
 const tablesMissing=error=>['42P01','PGRST205','PGRST204'].includes(error?.code)||/quotation.*(does not exist|schema cache)|Could not find the table/i.test(error?.message||'');
 // The list never loads signature pictures or the terms text: they are large and only the editor needs them.
 const LIST_COLUMNS='id,quote_number,enquiry_id,client_name,company_name,client_email,client_phone,issued_on,valid_until,items,extra_requirements,signature_id,status,share_token,shared_at,created_at';
-const blank=()=>{const today=malaysiaToday();return {client_name:'',company_name:'',client_email:'',client_phone:'',issued_on:today,valid_until:defaultValidUntil(today),items:[emptyItem()],extra_requirements:'',signature_id:'',enquiry_id:null};};
-const fromEnquiry=row=>{const items=itemsFromEnquiry(row.selected_features);return {...blank(),enquiry_id:row.id,client_name:row.name||'',company_name:row.company_name||'',client_email:row.email||'',client_phone:row.phone||'',items:items.length?items:[emptyItem()],extra_requirements:String(row.chatbot_answers?.brief||row.message||'').slice(0,LIMITS.extra_requirements)};};
-const totalText=items=>{const sum=totals(items);return [['one_time',''],['monthly',' / month'],['yearly',' / year']].filter(([key])=>sum[key].count).map(([key,suffix])=>`${formatRange(sum[key].min,sum[key].max)}${suffix}`).join(' · ')||'No prices yet';};
+const blank=()=>{const today=malaysiaToday();return {client_name:'',company_name:'',client_email:'',client_phone:'',issued_on:today,valid_until:defaultValidUntil(today),items:[],requirements:[emptyRequirementTable()],extra_requirements:'',signature_id:'',enquiry_id:null};};
+const fromEnquiry=row=>({...blank(),enquiry_id:row.id,client_name:row.name||'',company_name:row.company_name||'',client_email:row.email||'',client_phone:row.phone||'',items:itemsFromEnquiry(row.selected_features),extra_requirements:String(row.chatbot_answers?.brief||row.message||'').slice(0,LIMITS.extra_requirements)});
+// One line per part of the price, for the list: who is paid, and what repeats.
+const totalText=items=>{const sum=totals(items);return GROUP_KEYS.filter(group=>sum.groups[group].count).map(group=>`${GROUPS[group].title}: ${subtotalLines(sum.groups[group]).map(([,value])=>value).join(' + ')}`);};
 
 // A signature photo is shrunk and saved as a small picture inside the database row.
 async function signatureImage(file){
@@ -60,7 +61,7 @@ export async function typedSignature(text){
 }
 
 export default function Quotations({notify,seed,onSeedUsed,onDirtyChange}){
-  const [rows,setRows]=useState([]),[signatures,setSignatures]=useState([]),[catalogue,setCatalogue]=useState([]),[studio,setStudio]=useState({}),[team,setTeam]=useState([]);
+  const [rows,setRows]=useState([]),[signatures,setSignatures]=useState([]),[catalogue,setCatalogue]=useState({studio:[],maintenance:[],third_party:[]}),[studio,setStudio]=useState({}),[team,setTeam]=useState([]);
   const [state,setState]=useState('loading'),[problem,setProblem]=useState(''),[query,setQuery]=useState(''),[filter,setFilter]=useState('all');
   const [editing,setEditing]=useState(null),[managing,setManaging]=useState(false),[busy,setBusy]=useState(''),[confirming,setConfirming]=useState('');
   const load=useCallback(async()=>{
@@ -118,7 +119,7 @@ export default function Quotations({notify,seed,onSeedUsed,onDirtyChange}){
     try{
       const {data,error}=await supabase.from('quotations').select('*').eq('id',row.id).maybeSingle();
       if(error)throw error;if(!data)throw new Error('This quotation no longer exists. Refresh the list.');
-      const today=malaysiaToday(),values={client_name:data.client_name,company_name:data.company_name,client_email:data.client_email,client_phone:data.client_phone,issued_on:duplicate?today:data.issued_on,valid_until:duplicate?defaultValidUntil(today):data.valid_until,items:(data.items||[]).map(item=>({...emptyItem(),...item,max:item.max??''})),extra_requirements:data.extra_requirements,signature_id:signatures.some(sign=>sign.id===data.signature_id)?data.signature_id:'',enquiry_id:data.enquiry_id};
+      const today=malaysiaToday(),values={client_name:data.client_name,company_name:data.company_name,client_email:data.client_email,client_phone:data.client_phone,issued_on:duplicate?today:data.issued_on,valid_until:duplicate?defaultValidUntil(today):data.valid_until,items:(data.items||[]).map(item=>({...emptyItem(),...item,group:cleanItem(item).group,max:item.max??''})),requirements:editableRequirements(data.requirements),extra_requirements:data.extra_requirements,signature_id:signatures.some(sign=>sign.id===data.signature_id)?data.signature_id:'',enquiry_id:data.enquiry_id};
       setManaging(false);setEditing({row:duplicate?null:data,values});
     }catch(error){notify(error.message||'The quotation could not be opened.','error');}
     finally{setBusy('');}
@@ -145,7 +146,7 @@ export default function Quotations({notify,seed,onSeedUsed,onDirtyChange}){
       const whatsapp=live&&row.client_phone?whatsappHref(row.client_phone):'',message=`Hi ${row.client_name}, here is your quotation ${row.quote_number} from MV Studio, valid until ${formatDate(row.valid_until)}:\n${link}`;
       return <article className={`qt-card status-${status}`} key={row.id}>
         <div className="qt-card-head"><div className="qt-card-title"><b>{row.quote_number}</b><span>{row.client_name}{row.company_name?` · ${row.company_name}`:''}</span></div><span className={`qt-chip chip-${status}`}>{STATUS_LABEL[status]}</span></div>
-        <dl className="qt-facts"><div><dt>Total</dt><dd>{totalText(row.items)}</dd></div><div><dt>Issued</dt><dd>{formatDate(row.issued_on)}</dd></div><div><dt>{status==='expired'?'Expired after':'Valid until'}</dt><dd>{formatDate(row.valid_until)}</dd></div></dl>
+        <dl className="qt-facts"><div><dt>Prices</dt><dd className="qt-price-lines">{totalText(row.items).map(text=><span key={text}>{text}</span>)}{!totalText(row.items).length&&'No prices yet'}</dd></div><div><dt>Issued</dt><dd>{formatDate(row.issued_on)}</dd></div><div><dt>{status==='expired'?'Expired after':'Valid until'}</dt><dd>{formatDate(row.valid_until)}</dd></div></dl>
         {link&&<div className="qt-link"><label htmlFor={`qt-link-${row.id}`}>{live?'Share link (anyone with it can read the quotation)':'Share link (now shows an expired notice)'}</label><div><input id={`qt-link-${row.id}`} readOnly value={link} onFocus={event=>event.target.select()}/><button type="button" className="button button-light" onClick={()=>copy(link)}><Copy size={15}/> Copy</button>{whatsapp&&<a className="button button-light" href={`${whatsapp}${whatsapp.includes('?')?'&':'?'}text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a>}</div></div>}
         <div className="qt-actions">
           <a className="button button-light" href={`/quotation?preview=${row.id}`} target="_blank" rel="noopener"><Eye size={15}/> Preview and PDF</a>
@@ -171,13 +172,20 @@ function QuotationEditor({row,initial,signatures,catalogue,studio,notify,onDirty
   useEffect(()=>{heading.current?.focus();},[]);
   const set=(key,value)=>{const next={...values,[key]:value};setValues(next);if(attempted)setErrors(validateQuotation(next));};
   const setItem=(index,key,value)=>set('items',values.items.map((item,i)=>i===index?{...item,[key]:value}:item));
-  const addFromList=()=>{const option=catalogue.find(entry=>entry.key===pick);if(!option)return;const only=values.items.length===1&&!values.items[0].name&&values.items[0].min==='';set('items',[...(only?[]:values.items),{...emptyItem(),...option.item}]);setPick('');};
-  const groups=useMemo(()=>[...new Set(catalogue.map(option=>option.group))].map(group=>[group,catalogue.filter(option=>option.group===group)]),[catalogue]);
+  const room=values.items.length<MAX_ITEMS;
+  // A ticked service is the line that came from that tick, or a line of the same name in the same part.
+  const lineOf=option=>values.items.findIndex(item=>item.group===option.group&&(item.source===option.key||item.name===option.label));
+  const addOption=option=>set('items',[...values.items,{...emptyItem(option.group),...option.item,source:option.key}]);
+  const toggleOption=option=>{const index=lineOf(option);if(index>=0)set('items',values.items.filter((_,i)=>i!==index));else if(room)addOption(option);};
+  const addFromList=()=>{const option=catalogue.studio.find(entry=>entry.key===pick);if(!option||!room)return;addOption(option);setPick('');};
+  const sections=useMemo(()=>[...new Set(catalogue.studio.map(option=>option.section))].map(section=>[section,catalogue.studio.filter(option=>option.section===section)]),[catalogue]);
+  const setTable=(index,changes)=>set('requirements',values.requirements.map((table,i)=>i===index?{...table,...changes}:table));
+  const setRow=(index,rowIndex,key,value)=>setTable(index,{rows:values.requirements[index].rows.map((row,i)=>i===rowIndex?{...row,[key]:value}:row)});
   const save=async preview=>{
     setAttempted(true);const found=validateQuotation(values);setErrors(found);
     if(Object.keys(found).length){document.getElementById(`qt-${Object.keys(found)[0]}`)?.focus();notify('Please review the highlighted fields.','error');return;}
     const sign=signatures.find(item=>item.id===values.signature_id);
-    const payload={client_name:values.client_name.trim(),company_name:values.company_name.trim(),client_email:values.client_email.trim().toLowerCase(),client_phone:values.client_phone.trim(),issued_on:values.issued_on,valid_until:values.valid_until,items:values.items.map(cleanItem),extra_requirements:values.extra_requirements.trim(),signature_id:sign.id,signer:{name:sign.name,role:sign.role,image:sign.image},studio,terms:quotationTerms,terms_version:TERMS_VERSION,enquiry_id:values.enquiry_id||null};
+    const payload={client_name:values.client_name.trim(),company_name:values.company_name.trim(),client_email:values.client_email.trim().toLowerCase(),client_phone:values.client_phone.trim(),issued_on:values.issued_on,valid_until:values.valid_until,items:values.items.map(cleanItem),requirements:cleanRequirements(values.requirements),extra_requirements:values.extra_requirements.trim(),signature_id:sign.id,signer:{name:sign.name,role:sign.role,image:sign.image},studio,terms:quotationTerms,terms_version:TERMS_VERSION,enquiry_id:values.enquiry_id||null};
     // The preview tab is opened before saving, while the click still counts, so pop-up blockers allow it.
     const tab=preview?window.open('','_blank'):null;
     setSaving(true);
@@ -191,6 +199,23 @@ function QuotationEditor({row,initial,signatures,catalogue,studio,notify,onDirty
     }catch(error){tab?.close();notify(`Not saved: ${error.message||'connection error'}. Your typing is still here; please try again.`,'error');}
     finally{setSaving(false);}
   };
+  // One price line. The same fields are used in all three parts of the price.
+  const line=(item,index,number)=>{const id=`qt-item-${index}`,bad=key=>errors[`item-${index}-${key}`];return <li key={index}>
+    <label className={`qt-item-name ${bad('name')?'has-error':''}`} htmlFor={`${id}-name`}><span>Line {number}</span><input id={`${id}-name`} maxLength={LIMITS.item_name} value={item.name} aria-invalid={Boolean(bad('name'))} onChange={event=>setItem(index,'name',event.target.value)}/>{bad('name')&&<InlineFieldError message={bad('name')}/>}</label>
+    <label className="qt-item-description" htmlFor={`${id}-description`}><span>What it covers<i>Optional</i></span><input id={`${id}-description`} maxLength={LIMITS.item_description} value={item.description} onChange={event=>setItem(index,'description',event.target.value)}/></label>
+    <label className="qt-item-billing" htmlFor={`${id}-billing`}><span>Billing</span><select id={`${id}-billing`} value={item.billing} onChange={event=>setItem(index,'billing',event.target.value)}>{Object.entries(BILLING).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+    <label className={`qt-item-min ${bad('min')?'has-error':''}`} htmlFor={`${id}-min`}><span>Price (RM)</span><input id={`${id}-min`} type="number" inputMode="decimal" min="0" step="0.01" value={item.min} aria-invalid={Boolean(bad('min'))} onChange={event=>setItem(index,'min',event.target.value)}/>{bad('min')&&<InlineFieldError message={bad('min')}/>}</label>
+    <label className={`qt-item-max ${bad('max')?'has-error':''}`} htmlFor={`${id}-max`}><span>Up to (RM)</span><input id={`${id}-max`} placeholder="Range only" type="number" inputMode="decimal" min="0" step="0.01" value={item.max} aria-invalid={Boolean(bad('max'))} onChange={event=>setItem(index,'max',event.target.value)}/>{bad('max')&&<InlineFieldError message={bad('max')}/>}</label>
+    <button type="button" className="qt-remove" aria-label={`Remove ${item.name||`line ${number}`} from ${GROUPS[item.group].title}`} onClick={()=>set('items',values.items.filter((_,i)=>i!==index))}><Trash2 size={16}/></button>
+  </li>;};
+  // Maintenance and third-party services are ticked from the price list; ticking adds a line, unticking removes it.
+  const ticks=(options,label)=>options.length?<div className="qt-ticks" role="group" aria-label={label}>{options.map(option=>{const checked=lineOf(option)>=0,id=`qt-tick-${option.key.replace(':','-')}`;return <label key={option.key} htmlFor={id}><input id={id} type="checkbox" checked={checked} disabled={!checked&&!room} onChange={()=>toggleOption(option)}/><span>{option.label}<small>{option.item.min===''?'No price set: type one below':`RM ${option.item.min}${BILLING_SUFFIX[option.item.billing]}`}</small></span></label>;})}</div>:<p className="qt-help">Nothing of this kind is in your price list yet. Add it under “Enquiry features”, or use “Add a blank line”.</p>;
+  const groupBlock=(group,legend,intro,picker)=>{const rows=values.items.map((item,index)=>[item,index]).filter(([item])=>item.group===group),part=sum.groups[group];return <fieldset className={`qt-group qt-group-${group}`} id={group==='studio'?'qt-items':undefined} tabIndex={group==='studio'?-1:undefined}><legend>{legend}</legend>
+    <p className="qt-help">{intro}</p>{picker}
+    {rows.length>0&&<ol className="qt-items">{rows.map(([item,index],position)=>line(item,index,position+1))}</ol>}
+    <div className="qt-group-foot"><button type="button" className="button button-light" disabled={!room} onClick={()=>set('items',[...values.items,emptyItem(group)])}><Plus size={15}/> Add a blank line</button>
+      <dl className="qt-totals" aria-live="polite">{subtotalLines(part).map(([label,value])=><div key={label}><dt>{label} subtotal</dt><dd>{value}</dd></div>)}{group==='studio'&&sum.deposit.max>0&&<div><dt>Deposit ({DEPOSIT_PERCENT}% of the one-time subtotal)</dt><dd>{formatRange(sum.deposit.min,sum.deposit.max)}</dd></div>}</dl></div>
+  </fieldset>;};
   const field=(key,label,props={},note='')=>{const id=`qt-${key}`,error=errors[key];return <label className={error?'has-error':''} htmlFor={id}><span>{label}{note&&<i>{note}</i>}</span><input id={id} value={values[key]} aria-invalid={Boolean(error)} aria-describedby={error?`${id}-error`:undefined} onChange={event=>set(key,event.target.value)} {...props}/>{error&&<InlineFieldError id={`${id}-error`} message={error}/>}</label>;};
   return <section className="quotations qt-editor" aria-labelledby="qt-editor-title">
     <div className="qt-editor-head"><button type="button" className="button button-light" onClick={()=>dirty?setLeaving(true):onClose(false)}><ArrowLeft size={15}/> Back to quotations</button><div><span className="section-overline">{row?`EDIT ${row.quote_number}`:'NEW QUOTATION'}</span><h2 id="qt-editor-title" tabIndex={-1} ref={heading}>{row?'Edit quotation':'Prepare a quotation'}</h2><p>It is saved as a private draft. The client sees nothing until you create a share link.</p></div></div>
@@ -206,20 +231,31 @@ function QuotationEditor({row,initial,signatures,catalogue,studio,notify,onDirty
         <div className="qt-readonly"><span>Date issued</span><b>{formatDate(values.issued_on)}</b><small>Malaysia time. It is set to the day you create the share link.</small></div>
         {field('valid_until','Valid until (last valid day)',{type:'date',min:malaysiaToday(),max:addDays(values.issued_on,90)},'Required')}
       </div><p className="qt-help">The usual validity is {VALID_DAYS} days: a quotation issued today is good until the end of {formatDate(defaultValidUntil(malaysiaToday()))}, Malaysia time, and expires the next day.</p></fieldset>
-      <fieldset><legend>Services and prices</legend>
-        <div className="qt-add"><label htmlFor="qt-pick">Add from your price list<select id="qt-pick" value={pick} onChange={event=>setPick(event.target.value)}><option value="">{catalogue.length?'Choose a package, feature or charge':'No price list loaded'}</option>{groups.map(([group,options])=><optgroup key={group} label={group}>{options.map(option=><option key={option.key} value={option.key}>{option.label}{option.item.min===''?' (no price set)':` · RM ${option.item.min}`}</option>)}</optgroup>)}</select></label><button type="button" className="button button-light" disabled={!pick||values.items.length>=MAX_ITEMS} onClick={addFromList}><Plus size={15}/> Add to quotation</button><button type="button" className="button button-light" disabled={values.items.length>=MAX_ITEMS} onClick={()=>set('items',[...values.items,emptyItem()])}><Plus size={15}/> Add a blank line</button></div>
-        <p className="qt-help">Prices start from “Services & pricing” and “Enquiry features”, and you can change any of them here. Fill “Up to” only when the price is a range. Use 0 for something that is included.</p>
-        {errors.items&&<InlineFieldError id="qt-items-error" message={errors.items}/>}
-        <ol className="qt-items" id="qt-items" tabIndex={-1}>{values.items.map((item,index)=>{const id=`qt-item-${index}`;return <li key={index}>
-          <label className={`qt-item-name ${errors[`item-${index}-name`]?'has-error':''}`} htmlFor={`${id}-name`}><span>Service or charge {index+1}</span><input id={`${id}-name`} maxLength={LIMITS.item_name} value={item.name} aria-invalid={Boolean(errors[`item-${index}-name`])} onChange={event=>setItem(index,'name',event.target.value)}/>{errors[`item-${index}-name`]&&<InlineFieldError message={errors[`item-${index}-name`]}/>}</label>
-          <label className="qt-item-description" htmlFor={`${id}-description`}><span>What it covers<i>Optional</i></span><input id={`${id}-description`} maxLength={LIMITS.item_description} value={item.description} onChange={event=>setItem(index,'description',event.target.value)}/></label>
-          <label htmlFor={`${id}-billing`}><span>Billing</span><select id={`${id}-billing`} value={item.billing} onChange={event=>setItem(index,'billing',event.target.value)}>{Object.entries(BILLING).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
-          <label htmlFor={`${id}-paid`}><span>Paid to</span><select id={`${id}-paid`} value={item.paid_to} onChange={event=>setItem(index,'paid_to',event.target.value)}>{Object.entries(PAID_TO).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
-          <label className={errors[`item-${index}-min`]?'has-error':''} htmlFor={`${id}-min`}><span>Price (RM)</span><input id={`${id}-min`} type="number" inputMode="decimal" min="0" step="0.01" value={item.min} aria-invalid={Boolean(errors[`item-${index}-min`])} onChange={event=>setItem(index,'min',event.target.value)}/>{errors[`item-${index}-min`]&&<InlineFieldError message={errors[`item-${index}-min`]}/>}</label>
-          <label className={errors[`item-${index}-max`]?'has-error':''} htmlFor={`${id}-max`}><span>Up to (RM)</span><input id={`${id}-max`} placeholder="Range only" type="number" inputMode="decimal" min="0" step="0.01" value={item.max} aria-invalid={Boolean(errors[`item-${index}-max`])} onChange={event=>setItem(index,'max',event.target.value)}/>{errors[`item-${index}-max`]&&<InlineFieldError message={errors[`item-${index}-max`]}/>}</label>
-          <button type="button" className="qt-remove" aria-label={`Remove line ${index+1}${item.name?`: ${item.name}`:''}`} disabled={values.items.length===1} onClick={()=>set('items',values.items.filter((_,i)=>i!==index))}><Trash2 size={16}/></button>
-        </li>;})}</ol>
-        <dl className="qt-totals" aria-live="polite">{[['one_time','One-time total',''],['monthly','Monthly total',' / month'],['yearly','Yearly total',' / year']].filter(([key])=>sum[key].count).map(([key,label,suffix])=><div key={key}><dt>{label}</dt><dd>{formatRange(sum[key].min,sum[key].max)}{suffix}</dd></div>)}<div><dt>Deposit ({DEPOSIT_PERCENT}% of MV Studio’s one-time fees)</dt><dd>{formatRange(sum.deposit.min,sum.deposit.max)}</dd></div></dl>
+      {errors.items&&<InlineFieldError id="qt-items-error" message={errors.items}/>}
+      {groupBlock('studio','MV Studio services','Your package and any features you build. Prices start from “Services & pricing” and “Enquiry features”, and you can change any of them. Fill “Up to” only when the price is a range. Use 0 for something that is included.',
+        <div className="qt-add"><label htmlFor="qt-pick">Add a package or feature<select id="qt-pick" value={pick} onChange={event=>setPick(event.target.value)}><option value="">{catalogue.studio.length?'Choose from your price list':'No price list loaded'}</option>{sections.map(([section,options])=><optgroup key={section} label={section}>{options.map(option=><option key={option.key} value={option.key}>{option.label}{option.item.min===''?' (no price set)':` · RM ${option.item.min}`}</option>)}</optgroup>)}</select></label><button type="button" className="button button-light" disabled={!pick||!room} onClick={addFromList}><Plus size={15}/> Add to quotation</button></div>)}
+      {groupBlock('maintenance','Maintenance','Ongoing care after launch, paid to MV Studio. Tick what this client wants, or leave it empty if they have not asked for maintenance.',ticks(catalogue.maintenance,'Maintenance plans'))}
+      {groupBlock('third_party','Third-party charges','Domain, hosting and anything else the provider bills, not MV Studio. Tick what the project needs. The quotation shows these in their own part, as estimates of the provider’s price.',ticks(catalogue.third_party,'Third-party services'))}
+      <fieldset className="qt-requirements"><legend>Requirements</legend>
+        <p className="qt-help">One table for each portal or role, such as “Customer portal”, “Admin portal” or “Staff portal”. Every row gets an ID from the table’s letters. A table left empty is not shown to the client.</p>
+        {errors.requirements&&<InlineFieldError id="qt-requirements-error" message={errors.requirements}/>}
+        {values.requirements.map((table,index)=>{const id=`qt-req-${index}`,prefix=tablePrefix(table),bad=key=>errors[`req-${index}-${key}`],used=table.rows.filter(row=>row.name.trim()||row.description.trim());return <div className="qt-table" key={index}>
+          <div className="qt-table-head">
+            <label className={bad('name')?'has-error':''} htmlFor={`${id}-name`}><span>Table {index+1} name</span><input id={`${id}-name`} maxLength={LIMITS.table_name} value={table.name} placeholder="For example: Customer portal" aria-invalid={Boolean(bad('name'))} onChange={event=>setTable(index,{name:event.target.value})}/>{bad('name')&&<InlineFieldError message={bad('name')}/>}</label>
+            <label className={bad('prefix')?'has-error':''} htmlFor={`${id}-prefix`}><span>ID letters</span><input id={`${id}-prefix`} maxLength={LIMITS.prefix} value={prefix} aria-invalid={Boolean(bad('prefix'))} onChange={event=>setTable(index,{prefix:event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''),prefixEdited:true})}/>{bad('prefix')&&<InlineFieldError message={bad('prefix')}/>}</label>
+            <button type="button" className="qt-delete" disabled={values.requirements.length===1} onClick={()=>set('requirements',values.requirements.filter((_,i)=>i!==index))}><Trash2 size={15}/> Remove table</button>
+          </div>
+          <ol className="qt-reqs">{table.rows.map((row,rowIndex)=>{const rowId=`${id}-${rowIndex}`,filled=row.name.trim()||row.description.trim(),number=filled?requirementId(prefix,used.indexOf(row)):'';return <li key={rowIndex}>
+            <div className="qt-req-id"><span>ID</span><output aria-label={`Requirement ID for row ${rowIndex+1}`}>{number||'—'}</output></div>
+            <label className={bad(`${rowIndex}-name`)?'has-error':''} htmlFor={`${rowId}-name`}><span>Requirement</span><input id={`${rowId}-name`} maxLength={LIMITS.requirement_name} value={row.name} placeholder="For example: Book an appointment" aria-invalid={Boolean(bad(`${rowIndex}-name`))} onChange={event=>setRow(index,rowIndex,'name',event.target.value)}/>{bad(`${rowIndex}-name`)&&<InlineFieldError message={bad(`${rowIndex}-name`)}/>}</label>
+            <label className="qt-req-description" htmlFor={`${rowId}-description`}><span>Description</span><textarea id={`${rowId}-description`} rows={2} maxLength={LIMITS.requirement_description} value={row.description} onChange={event=>setRow(index,rowIndex,'description',event.target.value)}/></label>
+            <label htmlFor={`${rowId}-status`}><span>Included?</span><select id={`${rowId}-status`} value={row.status} onChange={event=>setRow(index,rowIndex,'status',event.target.value)}>{Object.entries(REQUIREMENT_STATUS).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+            <button type="button" className="qt-remove" aria-label={`Remove row ${rowIndex+1} from table ${index+1}`} disabled={table.rows.length===1} onClick={()=>setTable(index,{rows:table.rows.filter((_,i)=>i!==rowIndex)})}><Trash2 size={16}/></button>
+          </li>;})}</ol>
+          <button type="button" className="button button-light" disabled={table.rows.length>=MAX_ROWS} onClick={()=>setTable(index,{rows:[...table.rows,emptyRequirementRow()]})}><Plus size={15}/> Add a row</button>
+          <label htmlFor={`${id}-excluded`}><span>Not included<i>Optional, one per line</i></span><textarea id={`${id}-excluded`} rows={2} value={table.excluded} placeholder={'For example:\nNo mobile app\nNo online payment'} onChange={event=>setTable(index,{excluded:event.target.value})}/><small>Things the client might assume. Up to {MAX_EXCLUDED} lines are shown under this table.</small></label>
+        </div>;})}
+        <button type="button" className="button button-light" disabled={values.requirements.length>=MAX_TABLES} onClick={()=>set('requirements',[...values.requirements,emptyRequirementTable()])}><Plus size={15}/> Add another table</button>
       </fieldset>
       <fieldset><legend>Additional requirements</legend><label htmlFor="qt-extra_requirements"><span>Anything else the client asked for<i>Optional</i></span><textarea id="qt-extra_requirements" rows={4} maxLength={LIMITS.extra_requirements} value={values.extra_requirements} onChange={event=>set('extra_requirements',event.target.value)} placeholder="For example: bilingual pages, a booking calendar, launch before Chinese New Year."/><small>{values.extra_requirements.length} of {LIMITS.extra_requirements} characters. The terms say these are included only when they are also priced above.</small></label></fieldset>
       <fieldset><legend>Signature and terms</legend><div className="qt-grid">

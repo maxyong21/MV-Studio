@@ -12,10 +12,13 @@ Built 19 November 2026. Decisions marked "agreed" were confirmed by the studio t
 | Q3 | Client name is required. Company, email and phone are optional. | `validateQuotation` |
 | Q4 | The issue date is today's date in Malaysia (GMT+8). It is set again on the day the share link is created. | `malaysiaToday`, `share` in `Quotations.jsx` |
 | Q5 | Valid for 7 days by default: issued Thursday, good until the end of the next Thursday, expired from Friday. The admin can choose another last day, up to 90 days. | `defaultValidUntil`, `isExpired`, `shared_quotation` |
-| Q6 | Price lines start from the price list in the database ("Services & pricing" and "Enquiry features", which hold hosting, domain and maintenance) and can be changed. A line is one price or a range. (agreed) | `catalogueOptions` |
-| Q7 | One-time, monthly and yearly charges are totalled separately. The deposit is 50% of MV Studio's own one-time fees. | `totals` |
+| Q6 | Price lines start from the price list in the database ("Services & pricing" and "Enquiry features") and can be changed. A line is one price or a range. (agreed) | `catalogueOptions` |
+| Q6a | The price has three separate parts: "MV Studio services" (the package and features, added from a list), "Maintenance" and "Third-party charges" such as domain and hosting (both ticked from the price list). Which part a feature belongs to comes from its Category under "Enquiry features". (agreed) | `GROUPS`, `catalogueOptions` |
+| Q7 | Each part has its own subtotals, and one-time, monthly and yearly charges are never added together. The deposit is 50% of the one-time subtotal of "MV Studio services"; maintenance and third-party charges are left out. | `totals`, `subtotalLines` |
 | Q8 | Optional free-text "Additional requirements". | Editor |
-| Q9 | Terms and conditions are added automatically, and a copy is stored with each quotation. | `src/quotations/terms.mjs` |
+| Q8a | Requirement tables, one per portal or role with a name the admin types. A new quotation starts with one empty table; tables and rows can be added. Each row has an ID, a name, a description and "Included?" (Included, Extra cost, To be confirmed). Each table can list what is not included. They sit after the prices and before the terms, so the signature covers them. A table left empty is not saved or shown. (agreed) | `cleanRequirements`, `quotations.requirements` |
+| Q8b | Requirement IDs are made from the table's letters and the row order: "Customer portal" gives CP-01, CP-02. The letters can be changed, and two tables cannot share them. (agreed) | `requirementPrefix`, `requirementId` |
+| Q9 | Terms and conditions are added automatically, and a copy is stored with each quotation. Section 2 says the price covers the listed services and the requirements in the tables, and that anything not listed is not included. (agreed) | `src/quotations/terms.mjs` |
 | Q10 | Signed by a team member chosen per quotation. A signature is either typed (the name or initials drawn in a bold, slanted signature font) or an uploaded picture of a handwritten one. (agreed; typed option added 19 November 2026) | "Signatures" in the admin, `typedSignature`, `quotation_signatures` |
 | Q11 | A share link that anyone holding it can read until the end of the valid-until day. After that it shows an expired notice with no prices. (agreed) | `/quotation#<secret>`, `shared_quotation` |
 | Q12 | The admin can extend or reopen a link by 7 days, revoke it, and record the outcome (awaiting reply, accepted, declined). The client only views and downloads; acceptance is by WhatsApp or email. (agreed) | List actions |
@@ -47,7 +50,7 @@ What is stored, and why:
 | Data | Where | Why |
 | --- | --- | --- |
 | Client name, company, email, phone | `quotations` | To address the quotation (Q3) |
-| Price lines, extra requirements, dates, status | `quotations` | The quotation itself (Q4 to Q8, Q12) |
+| Price lines, requirement tables, extra requirements, dates, status | `quotations` | The quotation itself (Q4 to Q8b, Q12) |
 | Copy of terms, signer and studio contacts | `quotations` | So a sent quotation does not change (Q9, Q10) |
 | Link secret | `quotations.share_token` | So the admin can copy the link again (Q11) |
 | Signature pictures | `quotation_signatures` (database, not public file storage) | Q10. A typed signature is turned into a picture when saved, so both kinds are stored and printed the same way. A signature is only ever shown on a quotation |
@@ -57,7 +60,7 @@ What is stored, and why:
 
 Do these in order. Until step 1 is done, the Quotations page in the admin says it is not switched on yet; nothing else breaks.
 
-1. Run `supabase/migrations/20261119_quotations.sql` in the Supabase SQL Editor. It is safe to run twice.
+1. Run `supabase/migrations/20261119_quotations.sql` in the Supabase SQL Editor. It is safe to run twice, and running it again adds the requirement tables to a database that already had the first version.
 2. Deploy the website.
 3. In the admin open Quotations, press "Signatures" and add each signer. Type the name to have it written in the signature font, or upload a photo (dark ink on white paper, cropped close).
 4. Check that "Site content" lists the email addresses and phone numbers you want on quotations. If no phone list is set, the WhatsApp number is used.
@@ -68,7 +71,8 @@ Do these in order. Until step 1 is done, the Quotations page in the admin says i
 - **Wording of the terms:** edit `src/quotations/terms.mjs` and change `TERMS_VERSION`. Quotations already saved keep their old copy. Keep `docs/BUSINESS_TERMS.md` and the public Terms page in step.
 - **Default validity or deposit:** `VALID_DAYS` and `DEPOSIT_PERCENT` in `src/quotations/quotation.mjs`. The deposit percentage is also written in the terms.
 - **Signature font:** `public/fonts/dancing-script-latin-700-normal.woff2` (Dancing Script, SIL Open Font Licence, licence text beside it). It is loaded only in the admin when a signature is typed. To use another font, replace the file and its path in `src/admin/Quotations.jsx`; signatures already saved keep their look.
-- **Prices offered in the picker:** "Services & pricing" and "Enquiry features" in the admin.
+- **Prices offered in the editor:** "Services & pricing" and "Enquiry features" in the admin. A feature whose Category is "third party" appears as a tick under Third-party charges, "maintenance" under Maintenance, and anything else in the package list.
+- **Names of the three parts, or the "Included?" choices:** `GROUPS` and `REQUIREMENT_STATUS` in `src/quotations/quotation.mjs`. The terms quote the part names, so change both together.
 
 ## Fallbacks
 
@@ -86,8 +90,8 @@ Do these in order. Until step 1 is done, the Quotations page in the admin says i
 
 ## Checks
 
-- `npm test` includes `tests/quotations.test.mjs`: dates and expiry in Malaysia time, totals and deposit, the price list, form checks, the terms' required topics, and the database rules (IDs, who can read, link states, expiry, private fields).
-- `npm run test:quotations` drives a real browser against a local database: signature upload, writing and sharing a quotation, every client-page state, six widths from 320 to 1920 px in light and dark, the printed form, and an accessibility scan. Screenshots and a sample PDF land in `.generated/quotation-check`.
+- `npm test` includes `tests/quotations.test.mjs`: dates and expiry in Malaysia time, the three price parts and the deposit, the price list, requirement tables and their IDs, form checks, the terms' required topics, and the database rules (IDs, who can read, link states, expiry, private fields).
+- `npm run test:quotations` drives a real browser against a local database: typed and uploaded signatures, ticking services, filling requirement tables, writing and sharing a quotation, every client-page state, six widths from 320 to 1920 px in light and dark, the printed form, and an accessibility scan. Screenshots and a sample PDF land in `.generated/quotation-check`.
 
 ## Limits to know about
 
